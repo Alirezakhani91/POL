@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۸ SafeCoin Shadow Reward Model</title>
+<title>POL | نسخه ۴.۹ SafeCoin Shadow Ledger & Daily Best</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3350,6 +3350,40 @@ body.trip-replay-mode .trip-replay-event-strip{
   color:#94a3b8!important;
 }
 
+
+/* ===== v4.9 SafeCoin Shadow Ledger & Daily Best ===== */
+.shadow-ledger-card{border-color:rgba(245,158,11,.20)!important}
+.shadow-ledger-overview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.shadow-ledger-stat{padding:10px 8px;border-radius:12px;background:#101923;border:1px solid #293b50;text-align:center}
+.shadow-ledger-stat b{display:block;font-size:17px}
+.shadow-ledger-stat span{display:block;margin-top:3px;color:#8fa0b6;font-size:7px}
+.shadow-ledger-stat.actual{border-color:#6d551d}
+.shadow-ledger-stat.actual b{color:#fbbf24}
+.shadow-ledger-policy{margin-top:9px;padding:9px 10px;border-radius:11px;background:#3b2d0d;border:1px solid #6d551d}
+.shadow-ledger-policy b{display:block;color:#fde68a;font-size:8px}
+.shadow-ledger-policy span{display:block;margin-top:3px;color:#d9c995;font-size:7px;line-height:1.55}
+.shadow-ledger-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #293b50}
+.shadow-ledger-head>b{font-size:9px}
+.shadow-ledger-audit{display:grid;gap:7px;margin-top:8px}
+.shadow-ledger-entry{padding:9px;border-radius:11px;background:#101923;border:1px solid #293b50}
+.shadow-ledger-entry-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.shadow-ledger-entry-head b{font-size:9px}
+.shadow-ledger-entry-head span{font-size:7px;color:#8fa0b6}
+.shadow-ledger-entry-action{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;font-size:7px;background:#172334;border:1px solid #3b526f;color:#bfdbfe}
+.shadow-ledger-entry-action.SELECTED,.shadow-ledger-entry-action.UPGRADED{background:#12351d;border-color:#28543c;color:#86efac}
+.shadow-ledger-entry-action.NO_CHANGE,.shadow-ledger-entry-action.IDEMPOTENT{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.shadow-ledger-entry-action.BLOCKED{background:#441717;border-color:#7d3030;color:#fecaca}
+.shadow-ledger-entry-copy{margin-top:6px;color:#a8b6c7;font-size:7px;line-height:1.55}
+.shadow-ledger-debug-box{border-color:rgba(245,158,11,.25)!important}
+.shadow-ledger-debug-box .eligibilityStatus.good{background:#12351d;border-color:#28543c;color:#86efac}
+.shadow-ledger-debug-box .eligibilityStatus.warn{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.shadow-ledger-debug-box .eligibilityStatus.bad{background:#441717;border-color:#7d3030;color:#fecaca}
+.summary-shadow-ledger-card{display:none;margin-top:10px;padding:11px;border-radius:14px;background:#101923;border:1px solid #6d551d}
+.summary-shadow-ledger-card.show{display:block}
+.summary-shadow-ledger-card.selected{border-color:#28543c}
+.summary-shadow-ledger-card.blocked{border-color:#7d3030}
+@media(max-width:650px){.shadow-ledger-overview{grid-template-columns:repeat(2,1fr)}}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4103,9 +4137,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.8</span>
+              <span class="lab-version-chip">v4.9</span>
               <div>
-                <b>SafeCoin Shadow Reward Model</b>
+                <b>SafeCoin Shadow Ledger & Daily Best</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4124,6 +4158,24 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox shadow-ledger-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Shadow Reward Ledger</b>
+                  <div class="small">Idempotent • Daily Best • Audit Trail • Actual Wallet = 0</div>
+                </div>
+                <div id="shadowLedgerDebugStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="shadowLedgerDebugTrip">--</b><span>Trip Candidate</span></div>
+                <div class="eligibilityCell"><b id="shadowLedgerDebugToday">--</b><span>Daily Winner</span></div>
+                <div class="eligibilityCell"><b id="shadowLedgerDebugAction">--</b><span>Ledger Action</span></div>
+              </div>
+              <div id="shadowLedgerDebugReason" class="reasonList">
+                پس از پایان سفر واقعی، Ledger به‌صورت Idempotent تصمیم را ثبت می‌کند.
+              </div>
             </div>
 
             <div class="eligibilityBox safecoin-shadow-box">
@@ -4485,6 +4537,34 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
         </div>
       </div>
 
+      <div class="section-card shadow-ledger-card">
+        <div class="section-head">
+          <h3>دفتر کل Shadow SafeCoin</h3>
+          <small>Audit آزمایشی • کیف پول واقعی همچنان صفر</small>
+        </div>
+
+        <div class="shadow-ledger-overview">
+          <div class="shadow-ledger-stat"><b id="shadowLedgerToday">۰</b><span>بهترین Candidate امروز</span></div>
+          <div class="shadow-ledger-stat"><b id="shadowLedgerProjected">۰</b><span>مجموع Shadow منتخب</span></div>
+          <div class="shadow-ledger-stat"><b id="shadowLedgerDays">۰</b><span>روز دارای Candidate</span></div>
+          <div class="shadow-ledger-stat actual"><b id="shadowLedgerActual">۰</b><span>SafeCoin واقعی</span></div>
+        </div>
+
+        <div class="shadow-ledger-policy">
+          <b>قانون Anti-Stacking</b>
+          <span>در هر روز فقط بهترین سفر انتخاب می‌شود. سفر بیشتر = Coin بیشتر نیست.</span>
+        </div>
+
+        <div class="shadow-ledger-head">
+          <b>آخرین تصمیم‌های Ledger</b>
+          <button id="clearShadowLedgerBtn" class="trusted-clear-btn">پاک‌کردن Ledger آزمایشی</button>
+        </div>
+
+        <div id="shadowLedgerAudit" class="shadow-ledger-audit">
+          <div class="small">هنوز تصمیم Shadow Reward ثبت نشده است.</div>
+        </div>
+      </div>
+
       <div class="section-card">
         <div class="section-head"><h3>روند رانندگی</h3><small>آخرین سفرهای معتبر</small></div>
 
@@ -4766,6 +4846,23 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       <div class="summary-shadow-lock">مسافت، مدت و تعداد سفر هیچ Coin اضافه‌ای ایجاد نمی‌کنند</div>
     </div>
 
+    <div id="summaryShadowLedgerCard" class="summary-shadow-ledger-card">
+      <div class="summary-shadow-head">
+        <div>
+          <small>Shadow Ledger • Daily Best</small>
+          <b id="summaryShadowLedgerTitle">در انتظار ثبت</b>
+        </div>
+        <div id="summaryShadowLedgerWinner" class="summary-shadow-confidence">--</div>
+      </div>
+      <div class="summary-shadow-grid">
+        <div><b id="summaryShadowLedgerTrip">--</b><span>این سفر</span></div>
+        <div><b id="summaryShadowLedgerDaily">--</b><span>برنده امروز</span></div>
+        <div><b id="summaryShadowLedgerActual">۰</b><span>Coin واقعی</span></div>
+      </div>
+      <div id="summaryShadowLedgerReason" class="summary-shadow-reason">--</div>
+      <div class="summary-shadow-lock">Ledger فقط Shadow است؛ هیچ Transaction واقعی Wallet ساخته نشده</div>
+    </div>
+
     <div id="summaryRewardShadowCard" class="summary-reward-shadow-card">
       <div class="summary-shadow-head">
         <div>
@@ -4986,6 +5083,199 @@ let confidenceSafetyScoreState={
   evidence:""
 };
 
+
+
+const SHADOW_REWARD_LEDGER_KEY="pol_shadow_reward_ledger_v1";
+const SHADOW_REWARD_LEDGER_MAX_DAYS=30;
+const SHADOW_REWARD_AUDIT_MAX=80;
+let shadowRewardLedgerLastDecision=null;
+
+function emptyShadowRewardLedger(){return{version:1,days:{},audit:[]}}
+
+function loadShadowRewardLedger(){
+  try{
+    const x=JSON.parse(localStorage.getItem(SHADOW_REWARD_LEDGER_KEY)||"null");
+    if(!x||typeof x!=="object")return emptyShadowRewardLedger();
+    if(!x.days||typeof x.days!=="object")x.days={};
+    if(!Array.isArray(x.audit))x.audit=[];
+    return x;
+  }catch(e){return emptyShadowRewardLedger()}
+}
+function saveShadowRewardLedger(ledger){
+  try{
+    const keys=Object.keys(ledger.days||{}).sort().slice(-SHADOW_REWARD_LEDGER_MAX_DAYS);
+    ledger.days=Object.fromEntries(keys.map(k=>[k,ledger.days[k]]));
+    ledger.audit=(ledger.audit||[]).slice(-SHADOW_REWARD_AUDIT_MAX);
+    localStorage.setItem(SHADOW_REWARD_LEDGER_KEY,JSON.stringify(ledger));
+    return true;
+  }catch(e){return false}
+}
+function shadowLedgerActionFa(action){
+  if(action==="SELECTED")return"انتخاب شد";
+  if(action==="UPGRADED")return"برنده روز ارتقا یافت";
+  if(action==="NO_CHANGE")return"برنده روز تغییر نکرد";
+  if(action==="BLOCKED")return"بدون Candidate";
+  if(action==="IDEMPOTENT")return"قبلاً ثبت شده";
+  return action||"--";
+}
+function registerShadowRewardDecision({
+  tripId,savedAt,candidateCoins,tier,status,score,routeLabel
+}={}){
+  const dayKey=shadowRewardDayKey(savedAt||Date.now());
+
+  if(!tripId){
+    const decision={
+      action:"BLOCKED",dayKey,tripCandidate:Number(candidateCoins||0),
+      dailyWinner:0,reason:"Trip ID معتبر برای Ledger وجود ندارد."
+    };
+    shadowRewardLedgerLastDecision=decision;
+    renderShadowLedgerDebug(decision);
+    return decision;
+  }
+
+  const ledger=loadShadowRewardLedger();
+
+  const previous=(ledger.audit||[]).find(x=>x.tripId===tripId);
+  if(previous){
+    const day=ledger.days?.[dayKey];
+    const decision={
+      ...previous,
+      action:"IDEMPOTENT",
+      dailyWinner:Number(day?.winnerCoins||0),
+      reason:"این Trip ID قبلاً در Shadow Ledger ثبت شده است."
+    };
+    shadowRewardLedgerLastDecision=decision;
+    renderShadowRewardLedger();
+    renderShadowLedgerDebug(decision);
+    return decision;
+  }
+
+  if(!ledger.days[dayKey]){
+    ledger.days[dayKey]={
+      dateKey:dayKey,winnerTripId:null,winnerCoins:0,winnerTier:"--",
+      winnerScore:null,updatedAt:0
+    };
+  }
+
+  const day=ledger.days[dayKey];
+  const candidate=Math.max(0,Number(candidateCoins||0));
+  const beforeCoins=Number(day.winnerCoins||0);
+  const beforeTripId=day.winnerTripId||null;
+
+  let action="BLOCKED";
+  let reason="این سفر Candidate ندارد.";
+
+  if(status==="CANDIDATE"&&candidate>0){
+    if(beforeCoins<=0){
+      action="SELECTED";
+      reason=`این سفر با ${candidate} Shadow Coin برنده فعلی امروز شد.`;
+      day.winnerTripId=tripId;
+      day.winnerCoins=candidate;
+      day.winnerTier=tier||"--";
+      day.winnerScore=Number.isFinite(Number(score))?Number(score):null;
+      day.updatedAt=Date.now();
+    }else if(candidate>beforeCoins){
+      action="UPGRADED";
+      reason=`Candidate امروز از ${beforeCoins} به ${candidate} ارتقا یافت؛ Coinها با هم جمع نشدند.`;
+      day.winnerTripId=tripId;
+      day.winnerCoins=candidate;
+      day.winnerTier=tier||"--";
+      day.winnerScore=Number.isFinite(Number(score))?Number(score):null;
+      day.updatedAt=Date.now();
+    }else{
+      action="NO_CHANGE";
+      reason=`Candidate این سفر ${candidate} است؛ برنده فعلی امروز ${beforeCoins} باقی ماند.`;
+    }
+  }
+
+  const entry={
+    id:`shadow_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    at:Date.now(),tripId,dayKey,action,tripCandidate:candidate,
+    tier:tier||"--",score:Number.isFinite(Number(score))?Number(score):null,
+    dailyWinner:Number(day.winnerCoins||0),previousWinner:beforeCoins,
+    previousWinnerTripId:beforeTripId,routeLabel:routeLabel||"",
+    actualCoins:0,reason
+  };
+
+  ledger.audit.push(entry);
+  saveShadowRewardLedger(ledger);
+  shadowRewardLedgerLastDecision=entry;
+  renderShadowRewardLedger();
+  renderShadowLedgerDebug(entry);
+  return entry;
+}
+function shadowLedgerProjectedTotal(){
+  const ledger=loadShadowRewardLedger();
+  return Object.values(ledger.days||{}).reduce((sum,d)=>sum+Number(d.winnerCoins||0),0);
+}
+function renderShadowLedgerDebug(decision=shadowRewardLedgerLastDecision){
+  const status=$('shadowLedgerDebugStatus');
+  if(!decision){
+    if(status){status.className='eligibilityStatus review';status.textContent="در انتظار"}
+    if($('shadowLedgerDebugTrip'))$('shadowLedgerDebugTrip').textContent="--";
+    if($('shadowLedgerDebugToday'))$('shadowLedgerDebugToday').textContent="--";
+    if($('shadowLedgerDebugAction'))$('shadowLedgerDebugAction').textContent="--";
+    if($('shadowLedgerDebugReason'))$('shadowLedgerDebugReason').textContent=
+      "پس از پایان سفر واقعی، Ledger به‌صورت Idempotent تصمیم را ثبت می‌کند.";
+    return;
+  }
+
+  if($('shadowLedgerDebugTrip'))$('shadowLedgerDebugTrip').textContent=
+    Number(decision.tripCandidate||0).toLocaleString('fa-IR');
+  if($('shadowLedgerDebugToday'))$('shadowLedgerDebugToday').textContent=
+    Number(decision.dailyWinner||0).toLocaleString('fa-IR');
+  if($('shadowLedgerDebugAction'))$('shadowLedgerDebugAction').textContent=
+    shadowLedgerActionFa(decision.action);
+  if($('shadowLedgerDebugReason'))$('shadowLedgerDebugReason').textContent=
+    decision.reason||"--";
+
+  if(status){
+    status.classList.remove('good','warn','bad','review');
+    if(["SELECTED","UPGRADED"].includes(decision.action)){
+      status.classList.add('good');status.textContent="SELECTED";
+    }else if(["NO_CHANGE","IDEMPOTENT"].includes(decision.action)){
+      status.classList.add('warn');status.textContent="NO STACK";
+    }else{
+      status.classList.add('bad');status.textContent="BLOCKED";
+    }
+  }
+}
+function renderShadowRewardLedger(){
+  const ledger=loadShadowRewardLedger();
+  const today=ledger.days?.[shadowRewardDayKey()];
+
+  if($('shadowLedgerToday'))$('shadowLedgerToday').textContent=
+    Number(today?.winnerCoins||0).toLocaleString('fa-IR');
+  if($('shadowLedgerProjected'))$('shadowLedgerProjected').textContent=
+    Number(shadowLedgerProjectedTotal()).toLocaleString('fa-IR');
+  if($('shadowLedgerDays')){
+    const n=Object.values(ledger.days||{}).filter(d=>Number(d.winnerCoins||0)>0).length;
+    $('shadowLedgerDays').textContent=n.toLocaleString('fa-IR');
+  }
+  if($('shadowLedgerActual'))$('shadowLedgerActual').textContent="۰";
+
+  const box=$('shadowLedgerAudit');
+  if(!box)return;
+  const audit=(ledger.audit||[]).slice().reverse().slice(0,12);
+
+  if(!audit.length){
+    box.innerHTML='<div class="small">هنوز تصمیم Shadow Reward ثبت نشده است.</div>';
+    return;
+  }
+
+  box.innerHTML=audit.map(e=>`
+    <div class="shadow-ledger-entry">
+      <div class="shadow-ledger-entry-head">
+        <div><b>${e.routeLabel||"سفر GPS واقعی"}</b><span>${trustedDateTime(e.at)}</span></div>
+        <b>${Number(e.tripCandidate||0).toLocaleString('fa-IR')} Coin</b>
+      </div>
+      <span class="shadow-ledger-entry-action ${e.action}">${shadowLedgerActionFa(e.action)}</span>
+      <div class="shadow-ledger-entry-copy">
+        ${e.reason} • برنده روز: ${Number(e.dailyWinner||0).toLocaleString('fa-IR')} • Coin واقعی: ۰
+      </div>
+    </div>
+  `).join('');
+}
 
 let safeCoinShadowState={
   status:"LOCKED",
@@ -7279,6 +7569,7 @@ resetRealRewardShadow();
 resetRealTripIntegrity();
 resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
+renderShadowRewardLedger();
 renderTrustedRealTrips();
 renderRecentDestinations();
 }
@@ -10638,19 +10929,9 @@ function evaluateSafeCoinShadow({
 
     rules.push(`Quality Tier ${tier.tier}: ${tier.coins} Coin`);
 
-    // Anti-incentive: more trips in the same day do not stack rewards.
-    // The highest candidate of the day wins in production policy.
-    const currentDay=shadowRewardDayKey(savedAt);
-    const todayBest=bestShadowCandidateToday(tripId);
-
-    if(todayBest>0){
-      rules.push(
-        `Daily anti-stacking: بهترین Candidate امروز ${todayBest} Coin است`
-      );
-      candidate=Math.max(candidate,todayBest);
-    }else{
-      rules.push("Daily anti-stacking: فقط یک Quality Reward در روز");
-    }
+    // v4.9: candidate belongs only to this trip.
+    // Daily best-of-day is selected by the separate Shadow Ledger.
+    rules.push("Daily anti-stacking: انتخاب برنده روز در Shadow Ledger انجام می‌شود");
   }else{
     if(gate.status!=="ELIGIBLE"){
       rules.push(`Reward Gate = ${gate.status||"WAITING"}`);
@@ -12052,6 +12333,12 @@ function trustedHistoryCopy(result){
     safeCoinShadowTier:result.safeCoinShadowTier||"--",
     safeCoinShadowReason:result.safeCoinShadowReason||"",
 
+    shadowLedgerAction:result.shadowLedgerAction||"LEGACY",
+    shadowLedgerTripCandidate:Number(result.shadowLedgerTripCandidate||0),
+    shadowLedgerDailyWinner:Number(result.shadowLedgerDailyWinner||0),
+    shadowLedgerReason:result.shadowLedgerReason||"",
+    shadowLedgerActualCoins:0,
+
     score:result.score==null?null:Number(result.score),
     behaviorScore:result.behaviorScore==null?null:Number(result.behaviorScore),
     scoreStatus:result.scoreStatus||(result.navigationOnly?"insufficient":"preliminary"),
@@ -12198,6 +12485,7 @@ function renderTrustedTrendChart(trips){
   });
 }
 function renderTrustedRealTrips(){
+  renderShadowRewardLedger();
   const trips=loadTrustedRealTrips();
   const scored=trips.filter(t=>
     t.integrityStatus==="TRUSTED" &&
@@ -12360,6 +12648,8 @@ function buildRealTelemetryResult(){
 
   const mappedCompliance=mappedSpeedCompliancePreview();
   const mappedCoverage=mappedSpeedCoveragePreview();
+  const realTripId=trustedTripId();
+  const realTripSavedAt=Date.now();
   const integrity=computeRealTripIntegrity({finalize:true});
   if(integrity.status==="INVALID"){
     scoreModel.status="insufficient";
@@ -12377,8 +12667,18 @@ function buildRealTelemetryResult(){
   const safeCoinShadow=evaluateSafeCoinShadow({
     shadowGate:shadowEligibility,
     score:scoreModel.score,
-    tripId:lastTripResult?.id||null,
-    savedAt:Date.now()
+    tripId:realTripId,
+    savedAt:realTripSavedAt
+  });
+
+  const shadowLedgerDecision=registerShadowRewardDecision({
+    tripId:realTripId,
+    savedAt:realTripSavedAt,
+    candidateCoins:safeCoinShadow.candidateCoins,
+    tier:safeCoinShadow.tier,
+    status:safeCoinShadow.status,
+    score:scoreModel.score,
+    routeLabel:`${(navOrigin&&navOrigin.label)||"مبدأ"} ← ${(navDestination&&navDestination.label)||"مقصد"}`
   });
 
   const coach=coachActionForWeakness(
@@ -12388,6 +12688,8 @@ function buildRealTelemetryResult(){
   );
 
   lastTripResult={
+    id:realTripId,
+    savedAt:realTripSavedAt,
     navigationOnly:false,
     telemetryOnly:true,
     safetyScoreV1:true,
@@ -12414,6 +12716,12 @@ function buildRealTelemetryResult(){
     safeCoinShadowActual:0,
     safeCoinShadowTier:safeCoinShadow.tier,
     safeCoinShadowReason:safeCoinShadow.reason,
+
+    shadowLedgerAction:shadowLedgerDecision.action,
+    shadowLedgerTripCandidate:shadowLedgerDecision.tripCandidate,
+    shadowLedgerDailyWinner:shadowLedgerDecision.dailyWinner,
+    shadowLedgerReason:shadowLedgerDecision.reason,
+    shadowLedgerActualCoins:0,
 
     score:scoreModel.score,
     behaviorScore:scoreModel.score,
@@ -12897,6 +13205,8 @@ async function triggerRealGpsReroute(rawPoint){
   }
 }
 function buildRealGpsNavigationResult(){
+  const realTripId=trustedTripId();
+  const realTripSavedAt=Date.now();
   const integrity=computeRealTripIntegrity({finalize:true});
 
   const navShadow=evaluateRealRewardShadow({
@@ -12916,7 +13226,19 @@ function buildRealGpsNavigationResult(){
     Number(realGpsState.distanceFromRoute||999)
   );
 
+  const navLedgerDecision=registerShadowRewardDecision({
+    tripId:realTripId,
+    savedAt:realTripSavedAt,
+    candidateCoins:0,
+    tier:"--",
+    status:"BLOCKED",
+    score:null,
+    routeLabel:`${(navOrigin&&navOrigin.label)||"مبدأ"} ← ${(navDestination&&navDestination.label)||"مقصد"}`
+  });
+
   lastTripResult={
+    id:realTripId,
+    savedAt:realTripSavedAt,
     navigationOnly:true,
     telemetryOnly:false,
     navigationMode:"real-gps",
@@ -12942,6 +13264,12 @@ function buildRealGpsNavigationResult(){
     safeCoinShadowActual:0,
     safeCoinShadowTier:"--",
     safeCoinShadowReason:"Navigation-only trip has no reward candidate.",
+
+    shadowLedgerAction:navLedgerDecision.action,
+    shadowLedgerTripCandidate:0,
+    shadowLedgerDailyWinner:navLedgerDecision.dailyWinner,
+    shadowLedgerReason:navLedgerDecision.reason,
+    shadowLedgerActualCoins:0,
 
     score:null,
     scoreStatus:"insufficient",
@@ -14961,10 +15289,21 @@ document.querySelectorAll('.marketFilter').forEach(btn=>{
   };
 });
 
+$('clearShadowLedgerBtn')?.addEventListener('click',()=>{
+  if(!confirm("Ledger آزمایشی SafeCoin پاک شود؟"))return;
+  localStorage.removeItem(SHADOW_REWARD_LEDGER_KEY);
+  shadowRewardLedgerLastDecision=null;
+  renderShadowRewardLedger();
+  renderShadowLedgerDebug(null);
+});
+
 $('clearTrustedTripsBtn')?.addEventListener('click',()=>{
-  if(!confirm("تاریخچه سفرهای GPS واقعی پاک شود؟"))return;
+  if(!confirm("تاریخچه سفرهای GPS واقعی و Shadow Ledger مرتبط پاک شود؟"))return;
   localStorage.removeItem(TRUSTED_REAL_TRIPS_KEY);
+  localStorage.removeItem(SHADOW_REWARD_LEDGER_KEY);
+  shadowRewardLedgerLastDecision=null;
   renderTrustedRealTrips();
+  renderShadowLedgerDebug(null);
 });
 
 $('resetProfile').onclick=()=>{
@@ -15295,6 +15634,32 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const r=lastTripResult;
       const p=loadProfile();
       const lr=p.lastReward||{};
+
+      const ledgerCard=document.getElementById('summaryShadowLedgerCard');
+
+      if(ledgerCard){
+        const showLedger=r.navigationMode==="real-gps";
+        ledgerCard.classList.toggle('show',showLedger);
+        ledgerCard.classList.remove('selected','blocked');
+
+        if(showLedger){
+          const action=r.shadowLedgerAction||"BLOCKED";
+          const selected=["SELECTED","UPGRADED"].includes(action);
+          ledgerCard.classList.add(selected?'selected':'blocked');
+
+          document.getElementById('summaryShadowLedgerTitle').textContent=
+            shadowLedgerActionFa(action);
+          document.getElementById('summaryShadowLedgerWinner').textContent=
+            `${Number(r.shadowLedgerDailyWinner||0).toLocaleString('fa-IR')} Coin`;
+          document.getElementById('summaryShadowLedgerTrip').textContent=
+            Number(r.shadowLedgerTripCandidate||0).toLocaleString('fa-IR');
+          document.getElementById('summaryShadowLedgerDaily').textContent=
+            Number(r.shadowLedgerDailyWinner||0).toLocaleString('fa-IR');
+          document.getElementById('summaryShadowLedgerActual').textContent='۰';
+          document.getElementById('summaryShadowLedgerReason').textContent=
+            r.shadowLedgerReason||"Shadow Ledger تصمیم این سفر را ثبت کرد.";
+        }
+      }
 
       const coinCard=document.getElementById('summarySafeCoinShadowCard');
 
