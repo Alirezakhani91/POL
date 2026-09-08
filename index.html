@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۰ Live ETA Engine</title>
+<title>POL | نسخه ۴.۱ Real Driving Telemetry</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2631,6 +2631,27 @@ body.driving-mode .live-eta-source{
   color:#bfdbfe;
 }
 
+
+/* ===== v4.1 Real Driving Telemetry ===== */
+.telemetry-debug-box{
+  border-color:rgba(14,165,233,.20)!important;
+}
+.telemetry-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.telemetry-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.telemetry-debug-box .eligibilityStatus.review{
+  background:#172334;
+  border-color:#3b526f;
+  color:#bfdbfe;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3352,9 +3373,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.0</span>
+              <span class="lab-version-chip">v4.1</span>
               <div>
-                <b>Live ETA & Remaining Route Engine</b>
+                <b>Real Driving Telemetry Foundation</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -3373,6 +3394,32 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox telemetry-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Real Driving Telemetry</b>
+                  <div class="small">GPS-derived braking / acceleration / cornering • بدون Speed Limit</div>
+                </div>
+                <div id="telemetryDebugStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="telemetryLongA">--</b><span>شتاب طولی m/s²</span></div>
+                <div class="eligibilityCell"><b id="telemetryLatA">--</b><span>شتاب جانبی m/s²</span></div>
+                <div class="eligibilityCell"><b id="telemetryConfidence">--</b><span>Sensor Confidence</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="telemetryMotion">--</b><span>Device Motion</span></div>
+                <div class="eligibilityCell"><b id="telemetryEvents">۰</b><span>رویداد معتبر</span></div>
+                <div class="eligibilityCell"><b id="telemetrySamples">۰</b><span>نمونه معتبر</span></div>
+              </div>
+
+              <div id="telemetryDebugText" class="reasonList">
+                در GPS واقعی، بعد از شروع حرکت فعال می‌شود.
+              </div>
             </div>
 
             <div class="eligibilityBox eta-debug-box">
@@ -3920,6 +3967,33 @@ let offRouteTestState={
   snapDistance:null,
   error:""
 };
+
+let realTelemetryState={
+  active:false,
+  startedAt:0,
+  prevSpeedKmh:null,
+  prevHeading:null,
+  prevTimestamp:null,
+  longA:0,
+  latA:0,
+  confidence:0,
+  rows:[],
+  events:[],
+  activeBrake:null,
+  activeAccel:null,
+  activeCorner:null,
+  validSamples:0,
+  rejectedSamples:0,
+  motion:{
+    supported:false,
+    permission:"unknown",
+    listening:false,
+    lastAt:0,
+    magnitude:0,
+    rawMagnitude:0
+  }
+};
+
 let realGpsState={
   watchId:null,
   active:false,
@@ -6123,7 +6197,8 @@ function saveRecentDestination(dest){
     ts:Date.now()
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
-  renderRecentDestinations();
+  resetRealTelemetry();
+renderRecentDestinations();
 }
 function renderRecentDestinations(){
   const wrap=$('recentDestinationsWrap');
@@ -8679,8 +8754,617 @@ async function getRealGpsFix(){
     );
   });
 }
+
+function resetRealTelemetry(){
+  stopDeviceMotionTelemetry();
+  realTelemetryState={
+    active:false,
+    startedAt:0,
+    prevSpeedKmh:null,
+    prevHeading:null,
+    prevTimestamp:null,
+    longA:0,
+    latA:0,
+    confidence:0,
+    rows:[],
+    events:[],
+    activeBrake:null,
+    activeAccel:null,
+    activeCorner:null,
+    validSamples:0,
+    rejectedSamples:0,
+    motion:{
+      supported:typeof DeviceMotionEvent!=="undefined",
+      permission:"unknown",
+      listening:false,
+      lastAt:0,
+      magnitude:0,
+      rawMagnitude:0
+    }
+  };
+  renderRealTelemetryDiagnostics();
+}
+
+function telemetryHeadingDelta(a,b){
+  if(!Number.isFinite(Number(a))||!Number.isFinite(Number(b)))return null;
+  return (((Number(b)-Number(a)+540)%360)-180);
+}
+
+function realTelemetryConfidence({
+  accuracy=999,
+  temporalConfidence=0,
+  dt=0,
+  speedKmh=0,
+  mapDistance=Infinity
+}={}){
+  let c=100;
+
+  if(accuracy>12)c-=8;
+  if(accuracy>20)c-=12;
+  if(accuracy>35)c-=24;
+  if(accuracy>55)c-=30;
+
+  if(temporalConfidence<80)c-=8;
+  if(temporalConfidence<65)c-=18;
+  if(temporalConfidence<50)c-=25;
+
+  if(dt<.25||dt>3.5)c-=28;
+  if(mapDistance>45)c-=8;
+  if(mapDistance>80)c-=18;
+  if(speedKmh<4)c-=8;
+
+  return clamp(Math.round(c),0,100);
+}
+
+function telemetryEventSeverity(type,value){
+  const v=Math.abs(Number(value||0));
+
+  if(type==="brake"){
+    if(v>=5.5)return"critical";
+    if(v>=4.0)return"severe";
+    return"moderate";
+  }
+
+  if(type==="accel"){
+    if(v>=4.2)return"critical";
+    if(v>=3.2)return"severe";
+    return"moderate";
+  }
+
+  if(type==="corner"){
+    if(v>=4.4)return"critical";
+    if(v>=3.4)return"severe";
+    return"moderate";
+  }
+
+  return"moderate";
+}
+
+function closeRealTelemetryEvent(key,type){
+  const holder=realTelemetryState[key];
+  if(!holder)return;
+
+  const duration=Math.max(0,holder.endAt-holder.startAt);
+  const qualifies=
+    duration>=300 ||
+    holder.sev==="severe" ||
+    holder.sev==="critical";
+
+  if(qualifies){
+    realTelemetryState.events.push({
+      ...holder,
+      type
+    });
+  }
+
+  realTelemetryState[key]=null;
+}
+
+function updateRealTelemetryEvents(sample){
+  const valid=sample.confidence>=68;
+
+  if(!valid){
+    closeRealTelemetryEvent("activeBrake","brake");
+    closeRealTelemetryEvent("activeAccel","accel");
+    closeRealTelemetryEvent("activeCorner","corner");
+    return;
+  }
+
+  const now=sample.timestamp;
+
+  if(sample.longA<=-2.7){
+    const sev=telemetryEventSeverity("brake",sample.longA);
+    if(!realTelemetryState.activeBrake){
+      realTelemetryState.activeBrake={
+        title:sev==="critical"?"ترمز بحرانی":"ترمز شدید",
+        sev,
+        startAt:now,
+        endAt:now,
+        peak:Math.abs(sample.longA),
+        confidence:sample.confidence
+      };
+    }else{
+      const e=realTelemetryState.activeBrake;
+      e.endAt=now;
+      e.peak=Math.max(e.peak,Math.abs(sample.longA));
+      e.confidence=Math.min(e.confidence,sample.confidence);
+      if(sev==="critical")e.sev="critical";
+      else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
+    }
+  }else{
+    closeRealTelemetryEvent("activeBrake","brake");
+  }
+
+  if(sample.longA>=2.7){
+    const sev=telemetryEventSeverity("accel",sample.longA);
+    if(!realTelemetryState.activeAccel){
+      realTelemetryState.activeAccel={
+        title:"شتاب شدید",
+        sev,
+        startAt:now,
+        endAt:now,
+        peak:sample.longA,
+        confidence:sample.confidence
+      };
+    }else{
+      const e=realTelemetryState.activeAccel;
+      e.endAt=now;
+      e.peak=Math.max(e.peak,sample.longA);
+      e.confidence=Math.min(e.confidence,sample.confidence);
+      if(sev==="critical")e.sev="critical";
+      else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
+    }
+  }else{
+    closeRealTelemetryEvent("activeAccel","accel");
+  }
+
+  if(Math.abs(sample.latA)>=2.8 && sample.speedKmh>=25){
+    const sev=telemetryEventSeverity("corner",sample.latA);
+    if(!realTelemetryState.activeCorner){
+      realTelemetryState.activeCorner={
+        title:"پیچ شدید",
+        sev,
+        startAt:now,
+        endAt:now,
+        peak:Math.abs(sample.latA),
+        confidence:sample.confidence
+      };
+    }else{
+      const e=realTelemetryState.activeCorner;
+      e.endAt=now;
+      e.peak=Math.max(e.peak,Math.abs(sample.latA));
+      e.confidence=Math.min(e.confidence,sample.confidence);
+      if(sev==="critical")e.sev="critical";
+      else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
+    }
+  }else{
+    closeRealTelemetryEvent("activeCorner","corner");
+  }
+}
+
+function telemetryMotionFresh(){
+  return realTelemetryState.motion.lastAt &&
+    Date.now()-realTelemetryState.motion.lastAt<=1500;
+}
+
+function handleDeviceMotionTelemetry(event){
+  if(!realTelemetryState.active)return;
+
+  let magnitude=null;
+  const a=event.acceleration;
+
+  if(
+    a &&
+    Number.isFinite(Number(a.x)) &&
+    Number.isFinite(Number(a.y)) &&
+    Number.isFinite(Number(a.z))
+  ){
+    magnitude=Math.sqrt(
+      Number(a.x)**2+
+      Number(a.y)**2+
+      Number(a.z)**2
+    );
+  }else{
+    const g=event.accelerationIncludingGravity;
+    if(
+      g &&
+      Number.isFinite(Number(g.x)) &&
+      Number.isFinite(Number(g.y)) &&
+      Number.isFinite(Number(g.z))
+    ){
+      const raw=Math.sqrt(
+        Number(g.x)**2+
+        Number(g.y)**2+
+        Number(g.z)**2
+      );
+      realTelemetryState.motion.rawMagnitude=raw;
+      magnitude=Math.abs(raw-9.81);
+    }
+  }
+
+  if(Number.isFinite(magnitude)){
+    realTelemetryState.motion.magnitude=
+      realTelemetryState.motion.magnitude*.75+
+      magnitude*.25;
+    realTelemetryState.motion.lastAt=Date.now();
+  }
+}
+
+async function startDeviceMotionTelemetry(){
+  realTelemetryState.motion.supported=
+    typeof DeviceMotionEvent!=="undefined";
+
+  if(!realTelemetryState.motion.supported){
+    realTelemetryState.motion.permission="unsupported";
+    renderRealTelemetryDiagnostics();
+    return false;
+  }
+
+  try{
+    if(typeof DeviceMotionEvent.requestPermission==="function"){
+      const permission=await DeviceMotionEvent.requestPermission();
+      realTelemetryState.motion.permission=permission;
+
+      if(permission!=="granted"){
+        renderRealTelemetryDiagnostics();
+        return false;
+      }
+    }else{
+      realTelemetryState.motion.permission="granted";
+    }
+
+    if(!realTelemetryState.motion.listening){
+      window.addEventListener(
+        'devicemotion',
+        handleDeviceMotionTelemetry,
+        {passive:true}
+      );
+      realTelemetryState.motion.listening=true;
+    }
+
+    renderRealTelemetryDiagnostics();
+    return true;
+  }catch(e){
+    realTelemetryState.motion.permission="denied";
+    renderRealTelemetryDiagnostics();
+    return false;
+  }
+}
+
+function stopDeviceMotionTelemetry(){
+  if(realTelemetryState?.motion?.listening){
+    try{
+      window.removeEventListener(
+        'devicemotion',
+        handleDeviceMotionTelemetry
+      );
+    }catch(e){}
+  }
+
+  if(realTelemetryState?.motion){
+    realTelemetryState.motion.listening=false;
+  }
+}
+
+function updateRealDrivingTelemetry({
+  speedKmh,
+  heading,
+  accuracy,
+  timestamp,
+  temporalConfidence,
+  mapDistance
+}={}){
+  if(!realTelemetryState.active)return null;
+
+  const prevAt=realTelemetryState.prevTimestamp;
+  const prevSpeed=realTelemetryState.prevSpeedKmh;
+  const prevHeading=realTelemetryState.prevHeading;
+
+  realTelemetryState.prevTimestamp=timestamp;
+  realTelemetryState.prevSpeedKmh=speedKmh;
+  realTelemetryState.prevHeading=heading;
+
+  if(!prevAt || !Number.isFinite(Number(prevSpeed))){
+    renderRealTelemetryDiagnostics();
+    return null;
+  }
+
+  const dt=Math.max(.001,(timestamp-prevAt)/1000);
+  const confidence=realTelemetryConfidence({
+    accuracy,
+    temporalConfidence,
+    dt,
+    speedKmh,
+    mapDistance
+  });
+
+  let rawLongA=
+    ((Number(speedKmh)-Number(prevSpeed))/3.6)/dt;
+
+  rawLongA=clamp(rawLongA,-8,8);
+
+  const deltaHeading=telemetryHeadingDelta(
+    prevHeading,
+    heading
+  );
+
+  let rawLatA=0;
+
+  if(
+    Number.isFinite(deltaHeading) &&
+    Number(speedKmh)>=8
+  ){
+    const yawRateRad=
+      (deltaHeading*Math.PI/180)/dt;
+    const speedMps=Number(speedKmh)/3.6;
+    rawLatA=clamp(
+      speedMps*yawRateRad,
+      -8,
+      8
+    );
+  }
+
+  // Smooth aggressively enough to remove GPS quantization,
+  // but keep harsh events visible.
+  const alpha=
+    dt<=.7?.36:
+    dt<=1.4?.48:.62;
+
+  realTelemetryState.longA=
+    realTelemetryState.longA*(1-alpha)+
+    rawLongA*alpha;
+
+  realTelemetryState.latA=
+    realTelemetryState.latA*(1-alpha)+
+    rawLatA*alpha;
+
+  let finalConfidence=confidence;
+
+  // Device Motion is corroboration only.
+  // Phone orientation is intentionally NOT assumed.
+  if(
+    telemetryMotionFresh() &&
+    realTelemetryState.motion.magnitude>=1.0 &&
+    (
+      Math.abs(realTelemetryState.longA)>=2.3 ||
+      Math.abs(realTelemetryState.latA)>=2.4
+    )
+  ){
+    finalConfidence=clamp(finalConfidence+6,0,100);
+  }
+
+  const sample={
+    timestamp,
+    dt,
+    speedKmh:Number(speedKmh||0),
+    longA:Number(realTelemetryState.longA||0),
+    latA:Number(realTelemetryState.latA||0),
+    accuracy:Number(accuracy||999),
+    temporalConfidence:Number(temporalConfidence||0),
+    confidence:finalConfidence,
+    motionMagnitude:Number(realTelemetryState.motion.magnitude||0)
+  };
+
+  realTelemetryState.confidence=finalConfidence;
+
+  if(finalConfidence>=55){
+    realTelemetryState.rows.push(sample);
+    realTelemetryState.rows=
+      realTelemetryState.rows.slice(-5000);
+    realTelemetryState.validSamples+=1;
+    updateRealTelemetryEvents(sample);
+  }else{
+    realTelemetryState.rejectedSamples+=1;
+    updateRealTelemetryEvents({
+      ...sample,
+      confidence:0
+    });
+  }
+
+  if($('longA')){
+    $('longA').textContent=
+      realTelemetryState.longA.toFixed(2);
+  }
+
+  renderRealTelemetryDiagnostics();
+  return sample;
+}
+
+function renderRealTelemetryDiagnostics(){
+  const s=realTelemetryState;
+
+  if($('telemetryLongA')){
+    $('telemetryLongA').textContent=
+      Number(s.longA||0).toFixed(2);
+  }
+
+  if($('telemetryLatA')){
+    $('telemetryLatA').textContent=
+      Number(s.latA||0).toFixed(2);
+  }
+
+  if($('telemetryConfidence')){
+    $('telemetryConfidence').textContent=
+      `${Math.round(Number(s.confidence||0)).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('telemetryEvents')){
+    $('telemetryEvents').textContent=
+      Number(s.events.length||0).toLocaleString('fa-IR');
+  }
+
+  if($('telemetrySamples')){
+    $('telemetrySamples').textContent=
+      Number(s.validSamples||0).toLocaleString('fa-IR');
+  }
+
+  if($('telemetryMotion')){
+    const m=s.motion;
+
+    $('telemetryMotion').textContent=
+      m.permission==="granted"
+        ?"فعال"
+        :m.permission==="unsupported"
+          ?"پشتیبانی نمی‌شود"
+          :m.permission==="denied"
+            ?"رد شد"
+            :"GPS-only";
+  }
+
+  const status=$('telemetryDebugStatus');
+
+  if(status){
+    if(!s.active){
+      status.className='eligibilityStatus review';
+      status.textContent='در انتظار';
+    }else if(s.confidence>=75){
+      status.className='eligibilityStatus good';
+      status.textContent='پایدار';
+    }else if(s.confidence>=55){
+      status.className='eligibilityStatus warn';
+      status.textContent='متوسط';
+    }else{
+      status.className='eligibilityStatus review';
+      status.textContent='کم‌اطمینان';
+    }
+  }
+
+  if($('telemetryDebugText')){
+    $('telemetryDebugText').textContent=
+      s.active
+        ?`نمونه‌های ضعیف جریمه نمی‌شوند • Device Motion فقط سیگنال کمکی است • ${s.rejectedSamples.toLocaleString('fa-IR')} نمونه رد شده`
+        :"در GPS واقعی، بعد از شروع حرکت فعال می‌شود.";
+  }
+}
+
+function flushRealTelemetryEvents(){
+  closeRealTelemetryEvent("activeBrake","brake");
+  closeRealTelemetryEvent("activeAccel","accel");
+  closeRealTelemetryEvent("activeCorner","corner");
+  renderRealTelemetryDiagnostics();
+}
+
+function realTelemetryComponentScores(){
+  const events=realTelemetryState.events;
+
+  let brakePenalty=0;
+  let accelPenalty=0;
+  let cornerPenalty=0;
+
+  events.forEach(e=>{
+    const base=
+      e.sev==="critical"?13:
+      e.sev==="severe"?7:2.5;
+
+    const confidenceWeight=
+      clamp(Number(e.confidence||70)/100,.55,1);
+
+    const penalty=base*confidenceWeight;
+
+    if(e.type==="brake")brakePenalty+=penalty;
+    if(e.type==="accel")accelPenalty+=penalty;
+    if(e.type==="corner")cornerPenalty+=penalty;
+  });
+
+  return{
+    brakeScore:clamp(Math.round(100-brakePenalty*2.15),0,100),
+    accelScore:clamp(Math.round(100-accelPenalty*2.15),0,100),
+    cornerScore:clamp(Math.round(100-cornerPenalty*2.15),0,100)
+  };
+}
+
+function buildRealTelemetryResult(){
+  flushRealTelemetryEvents();
+
+  const rows=realTelemetryState.rows;
+  const scores=realTelemetryComponentScores();
+
+  const avgConfidence=rows.length
+    ?rows.reduce((sum,r)=>sum+Number(r.confidence||0),0)/rows.length
+    :0;
+
+  const validRatio=
+    realTelemetryState.validSamples/
+    Math.max(
+      1,
+      realTelemetryState.validSamples+
+      realTelemetryState.rejectedSamples
+    );
+
+  const tripConfidence=clamp(
+    Math.round(
+      avgConfidence*.72+
+      validRatio*100*.28
+    ),
+    0,
+    100
+  );
+
+  // This is intentionally NOT a full Safety Score:
+  // speed compliance is excluded until authoritative speed limits are connected.
+  const behaviorScore=Math.round(
+    scores.brakeScore*.38+
+    scores.accelScore*.24+
+    scores.cornerScore*.38
+  );
+
+  const ranked=[
+    ["ترمز",scores.brakeScore],
+    ["شتاب",scores.accelScore],
+    ["پیچ",scores.cornerScore]
+  ].sort((a,b)=>a[1]-b[1]);
+
+  const topEvent=[...realTelemetryState.events]
+    .sort((a,b)=>{
+      const rank=x=>x.sev==="critical"?3:x.sev==="severe"?2:1;
+      return rank(b)-rank(a) || Number(b.peak||0)-Number(a.peak||0);
+    })[0]||null;
+
+  lastTripResult={
+    navigationOnly:false,
+    telemetryOnly:true,
+    navigationMode:"real-gps",
+    score:behaviorScore,
+    behaviorScore,
+    speedScore:null,
+    brakeScore:scores.brakeScore,
+    accelScore:scores.accelScore,
+    cornerScore:scores.cornerScore,
+    tripConfidence,
+    speedCompliance:null,
+    maxExcess:null,
+    topRiskEvent:topEvent?.title||null,
+    weakestBehavior:ranked[0][0],
+    telemetryEventCount:realTelemetryState.events.length,
+    telemetryValidSamples:realTelemetryState.validSamples,
+    telemetryRejectedSamples:realTelemetryState.rejectedSamples,
+    deviceMotionPermission:realTelemetryState.motion.permission,
+    routeKm:Number((Number(routeDistanceM||0)/1000).toFixed(1)),
+    originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
+    destinationLabel:(navDestination&&navDestination.label)||"مقصد",
+    plannedDurationMin:Math.max(1,Math.round(Number(routeDurationS||0)/60)),
+    rerouteCount:rerouteState.count||0,
+    gpsAccuracyM:Math.round(Number(realGpsState.accuracy||0)),
+    mapMatchConfidence:Math.round(Number(realGpsState.networkMatch.confidence||0)*100),
+    mapMatchRatio:Math.round(Number(realGpsState.networkMatch.matchedRatio||0)*100),
+    rewardEligibility:"REVIEW",
+    dataIntegrity:null,
+    fraudRisk:null,
+    eligibilityConfidence:null,
+    eligibilityReasons:[
+      "Behavior telemetry is experimental.",
+      "Authoritative road speed limits are not connected yet.",
+      "Rewards remain paused."
+    ]
+  };
+
+  persistTripToProfile(lastTripResult);
+}
+
 function stopRealGps(){
   realGpsState.active=false;
+  stopDeviceMotionTelemetry();
+  realTelemetryState.active=false;
   if(realGpsState.watchId!=null){
     try{navigator.geolocation.clearWatch(realGpsState.watchId)}catch(e){}
   }
@@ -8805,6 +9489,15 @@ async function processRealGps(position){
   realGpsState.distanceFromRoute=networkRouteMatch.distance;
   realGpsState.matchedPoint=temporal.point||roadDecisionPoint;
 
+  updateRealDrivingTelemetry({
+    speedKmh:speed,
+    heading,
+    accuracy,
+    timestamp:stamp,
+    temporalConfidence:Number(temporal.confidence||0),
+    mapDistance:Number(networkRouteMatch.distance||Infinity)
+  });
+
   const threshold=Math.max(55,accuracy*1.8);
 
   const trustedOffRoute=
@@ -8917,6 +9610,10 @@ async function processRealGps(position){
 function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
+  resetRealTelemetry();
+  realTelemetryState.active=true;
+  realTelemetryState.startedAt=Date.now();
+  startDeviceMotionTelemetry();
   realGpsState.active=true;
   realGpsState.firstFix=false;
   realGpsState.routeProgress=0;
@@ -9668,6 +10365,7 @@ function finish(){
   if(timer)clearInterval(timer);
   timer=null;
   if(!wasRealGps)flush();
+  if(wasRealGps)flushRealTelemetryEvents();
   stopRealGps();
   $('scenario').disabled=false;
   $('start').disabled=false;
@@ -9675,8 +10373,13 @@ function finish(){
   $('csv').disabled=!rows.length;
   $('status').textContent=wasRealGps?"سفر GPS واقعی پایان یافت.":"به مقصد رسیدی.";
   if(!wasRealGps)updateTurnByTurn(1);
-  if(wasRealGps)buildRealGpsNavigationResult();
-  else buildScore();
+  if(wasRealGps){
+    if(realTelemetryState.validSamples>=4){
+      buildRealTelemetryResult();
+    }else{
+      buildRealGpsNavigationResult();
+    }
+  }else buildScore();
   releaseScreenWakeLock();
   try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
   exitDrivingMode();
@@ -9684,6 +10387,7 @@ function finish(){
 }
 function reset(full=true,keepRoute=false){
   stopRealGps();
+  resetRealTelemetry();
   pendingRealGpsFix=null;
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
   rerouteState.active=false;
@@ -11086,6 +11790,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
         document.getElementById('summaryCompliance').textContent='—';
         document.getElementById('summaryXp').textContent='—';
         document.getElementById('summaryCoins').textContent='—';
+      }else if(r.telemetryOnly){
+        document.getElementById('summaryScore').textContent=fa(r.behaviorScore||0);
+        document.getElementById('summaryCompliance').textContent='—';
+        document.getElementById('summaryXp').textContent='—';
+        document.getElementById('summaryCoins').textContent='—';
       }else{
         document.getElementById('summaryScore').textContent=fa(r.score||0);
         document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
@@ -11096,6 +11805,9 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       if(r.navigationOnly){
         st.textContent='تست Navigation واقعی';
         st.className='summary-status review';
+      }else if(r.telemetryOnly){
+        st.textContent='تحلیل رفتاری آزمایشی';
+        st.className='summary-status review';
       }else if(r.rewardEligibility==='ELIGIBLE'){
         st.textContent='مجاز برای پاداش'; st.className='summary-status good';
       }else if(r.rewardEligibility==='REVIEW'){
@@ -11105,19 +11817,29 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       }
       document.getElementById('summaryWhy').textContent=
         r.navigationOnly
-          ? `این سفر با GPS واقعی اجرا شد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود، اطمینان آخر Map Matching ${Number(r.mapMatchConfidence||0).toLocaleString('fa-IR')}٪ و ${Number(r.rerouteCount||0).toLocaleString('fa-IR')} بار محاسبه مجدد مسیر انجام شد. امتیاز رفتاری عمداً محاسبه نشد چون Sensorهای واقعی رانندگی هنوز به نسخه وب متصل نیستند.`
+          ? `این سفر با GPS واقعی اجرا شد، اما نمونه کافی برای تحلیل رفتاری معتبر ثبت نشد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود.`
+          : r.telemetryOnly
+            ? (
+              r.topRiskEvent
+                ? `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود. مهم‌ترین رویداد ثبت‌شده: ${r.topRiskEvent}. سرعت غیرمجاز هنوز در این امتیاز محاسبه نشده است.`
+                : `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود و رویداد شدید معتبری ثبت نشد. سرعت غیرمجاز هنوز در این امتیاز محاسبه نشده است.`
+            )
           : r.topRiskEvent
             ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
             : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
       if(document.getElementById('summaryCoach')){
         document.getElementById('summaryCoach').innerHTML=r.navigationOnly
-          ? `<b>داده واقعی</b><span>در این مرحله فقط GPS و Navigation واقعی ثبت شده‌اند؛ هشدارهای رفتاری نیازمند Sensor معتبر هستند.</span>`
-          : `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
+          ? `<b>داده واقعی</b><span>نمونه معتبر کافی برای تحلیل رفتاری ثبت نشد.</span>`
+          : r.telemetryOnly
+            ? `<b>Telemetry واقعی</b><span>ترمز و شتاب از تغییر سرعت GPS و پیچ از تغییر Heading محاسبه شده‌اند. Device Motion فقط نقش تأیید کمکی دارد و محورهای گوشی فرض نشده‌اند.</span>`
+            : `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
       }
       if(document.getElementById('summaryComparison')){
         document.getElementById('summaryComparison').innerHTML=r.navigationOnly
-          ? `<b>وضعیت Navigation</b><span>این تست وارد پروفایل امتیازی راننده نمی‌شود؛ هدف آن فقط اعتبارسنجی GPS، مسیر و Re-route است.</span>`
-          : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
+          ? `<b>وضعیت Navigation</b><span>این تست وارد پروفایل امتیازی راننده نمی‌شود.</span>`
+          : r.telemetryOnly
+            ? `<b>محدوده این امتیاز</b><span>این Behavior Score فقط ترمز، شتاب و پیچ را پوشش می‌دهد. تا اتصال Speed Limit معتبر، Reward، SafeCoin، Streak و Mission عمداً متوقف هستند.</span>`
+            : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
       const sheet=document.getElementById('tripSummarySheet');
       sheet.classList.add('open');
