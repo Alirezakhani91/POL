@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۷.۲ Manual Explore Strict</title>
+<title>POL | نسخه ۳.۸ Heading-Up Navigation</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.css"/>
 
 <style>
 :root{
@@ -2409,6 +2410,57 @@ body.driving-mode #driveRecenterBtn{
   z-index:1003!important;
 }
 
+
+/* ===== v3.8 Heading-Up Navigation ===== */
+.drive-heading-btn{
+  position:relative!important;
+  font-size:18px!important;
+  transition:.18s ease!important;
+}
+.drive-heading-btn.active{
+  background:#2563eb!important;
+  border-color:#3b82f6!important;
+  color:#fff!important;
+  box-shadow:0 8px 22px rgba(37,99,235,.26)!important;
+}
+.drive-heading-btn.north-up{
+  background:rgba(8,15,25,.94)!important;
+  color:#e2e8f0!important;
+}
+.drive-heading-btn.north-up::after{
+  content:"N";
+  position:absolute;
+  right:4px;
+  top:3px;
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  color:#111827;
+  font:900 7px/1 Arial,sans-serif;
+}
+.drive-heading-btn.rotation-unavailable{
+  display:none!important;
+}
+
+/* Plugin compass is not used; our own navigation control owns heading mode. */
+.leaflet-control-rotate{
+  display:none!important;
+}
+
+/* Smooth map visual during heading updates. */
+body.driving-mode #map .leaflet-map-pane,
+body.driving-mode #map .leaflet-tile-pane{
+  will-change:transform;
+}
+
+/* While manually exploring, compass remains available but follow is visibly paused. */
+body.driving-mode.map-manual-explore #driveHeadingBtn{
+  opacity:.86;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3083,6 +3135,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <span class="drive-recenter-icon">◎</span>
                   <b class="drive-recenter-label">برگشت به موقعیت من</b>
                 </button>
+                <button id="driveHeadingBtn" class="drive-circle-btn drive-heading-btn active" title="جهت حرکت بالا">🧭</button>
                 <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
                 <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
               </div>
@@ -3525,6 +3578,8 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- @tomickigrzegorz/leaflet-rotate 0.2.4 — MIT License -->
+<script src="https://unpkg.com/@tomickigrzegorz/leaflet-rotate@0.2.4/dist/leaflet-rotate.umd.min.js"></script>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -3550,7 +3605,15 @@ const presets={
   }
 };
 
-let map=L.map('map',{zoomControl:true}).setView([35.756,51.412],13);
+let map=L.map('map',{
+  zoomControl:true,
+  rotate:true,
+  bearing:0,
+  dragRotate:false,
+  touchRotate:false,
+  shiftKeyRotate:false,
+  rotateControl:false
+}).setView([35.756,51.412],13);
 map.getContainer().setAttribute('dir','ltr');
 map.getContainer().style.direction='ltr';
 // Base map intentionally uses a no-key public OSM tile endpoint. Do not replace with a client-side API-key map.
@@ -3582,6 +3645,9 @@ mapResizeObserver.observe(document.getElementById('map'));
 
 let routeCoords=[],routeLine=null,trackLine=null,carMarker=null,eventMarkers=[],speedLayers=[];
 let manualExploreLock=false;
+let headingUpEnabled=true;
+let lastNavigationHeading=null;
+let headingRotationAvailable=false;
 
 let timer=null,t=0,rows=[],events=[],routeDistanceM=0;
 
@@ -6096,6 +6162,137 @@ async function searchDestinationV3(){
   await runLiveDestinationSearch(rawQ);
 }
 
+
+function detectHeadingRotationSupport(){
+  headingRotationAvailable=
+    typeof map?.setHeading==="function" &&
+    typeof map?.setBearing==="function" &&
+    typeof map?.getBearing==="function";
+
+  const btn=$('driveHeadingBtn');
+  if(btn){
+    btn.classList.toggle('rotation-unavailable',!headingRotationAvailable);
+  }
+  return headingRotationAvailable;
+}
+
+function normalizedBearingDegrees(value){
+  let n=Number(value);
+  if(!Number.isFinite(n))return null;
+  n%=360;
+  if(n<0)n+=360;
+  return n;
+}
+
+function routeHeadingAtProgress(progress){
+  if(!Array.isArray(routeCoords) || routeCoords.length<2)return null;
+
+  const p=clamp(Number(progress||0),0,1);
+  const a=interpolateOnRoute(p);
+  const b=interpolateOnRoute(clamp(p+.004,0,1));
+
+  if(!Array.isArray(a)||!Array.isArray(b))return null;
+  if(hav(a,b)<1)return null;
+
+  return normalizedBearingDegrees(bearingDeg(a,b));
+}
+
+function navigationHeadingForState(progress,currentPoint,speedKmh=0){
+  let heading=null;
+
+  if(isRealGpsMode() && realGpsState?.firstFix){
+    if(Number.isFinite(Number(realGpsState.heading)) && Number(speedKmh)>=4){
+      heading=Number(realGpsState.heading);
+    }else if(
+      Array.isArray(realGpsState.previousPoint) &&
+      Array.isArray(currentPoint) &&
+      hav(realGpsState.previousPoint,currentPoint)>=2
+    ){
+      heading=bearingDeg(realGpsState.previousPoint,currentPoint);
+    }
+  }
+
+  if(!Number.isFinite(Number(heading))){
+    heading=routeHeadingAtProgress(progress);
+  }
+
+  heading=normalizedBearingDegrees(heading);
+
+  if(Number.isFinite(heading)){
+    lastNavigationHeading=heading;
+    return heading;
+  }
+
+  return lastNavigationHeading;
+}
+
+function stopAutomaticHeading({northUp=false}={}){
+  if(!detectHeadingRotationSupport())return;
+
+  try{map.setHeading(null)}catch(e){}
+  try{map.stopHeadingUp?.()}catch(e){}
+
+  if(northUp){
+    try{map.setBearing(0)}catch(e){}
+  }
+}
+
+function updateHeadingModeButton(){
+  const btn=$('driveHeadingBtn');
+  if(!btn)return;
+
+  btn.classList.toggle('active',headingUpEnabled);
+  btn.classList.toggle('north-up',!headingUpEnabled);
+  btn.title=headingUpEnabled
+    ?'جهت حرکت بالا — برای North-Up بزن'
+    :'North-Up — برای جهت حرکت بالا بزن';
+}
+
+function applyNavigationHeading(progress,currentPoint,speedKmh=0,{force=false}={}){
+  if(!document.body.classList.contains('driving-mode'))return;
+  if(!detectHeadingRotationSupport())return;
+
+  if(!headingUpEnabled){
+    stopAutomaticHeading({northUp:true});
+    return;
+  }
+
+  if((manualExploreLock || userManuallyMovedDrivingMap) && !force){
+    // Freeze current bearing while user explores.
+    try{map.setHeading(null)}catch(e){}
+    return;
+  }
+
+  const heading=navigationHeadingForState(progress,currentPoint,speedKmh);
+  if(!Number.isFinite(Number(heading)))return;
+
+  try{
+    map.setHeading(Number(heading),{
+      ease:force?.34:.20,
+      deadzone:force?.25:1.0
+    });
+  }catch(e){
+    // Rotation is enhancement-only; navigation must never fail because of it.
+  }
+}
+
+function setHeadingUpEnabled(enabled,{recenter=false}={}){
+  headingUpEnabled=!!enabled;
+  updateHeadingModeButton();
+
+  if(!detectHeadingRotationSupport())return;
+
+  if(!headingUpEnabled){
+    stopAutomaticHeading({northUp:true});
+    return;
+  }
+
+  if(recenter && document.body.classList.contains('driving-mode')){
+    resumeFollowAfterManualExplore();
+    recenterDrivingCamera();
+  }
+}
+
 function ensureMapExplorationEnabled(){
   try{map.dragging?.enable()}catch(e){}
   try{map.scrollWheelZoom?.enable()}catch(e){}
@@ -6142,8 +6339,10 @@ function pauseFollowForManualExplore(reason="manual"){
   userManuallyMovedDrivingMap=true;
   document.body.classList.add('map-manual-explore');
 
-  // Hard stop any current animation so the map won't "fight" the user.
-  try{ map.stop(); }catch(e){}
+  // Hard stop both camera movement and heading easing.
+  try{map.stop()}catch(e){}
+  try{map.setHeading?.(null)}catch(e){}
+  try{map.stopHeadingUp?.()}catch(e){}
 
   if(typeof syncRecenterUi==='function')syncRecenterUi();
 }
@@ -7405,8 +7604,13 @@ function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
   manualExploreLock=false;
+  headingUpEnabled=true;
+  lastNavigationHeading=null;
+  detectHeadingRotationSupport();
+  updateHeadingModeButton();
   ensureMapExplorationEnabled();
-  try{ map.stop(); }catch(e){}
+  try{map.stop()}catch(e){}
+  try{map.setBearing?.(0)}catch(e){}
   updateOfflineDrivingBanner();
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
@@ -7426,9 +7630,11 @@ function enterDrivingMode(){
   },80);
 }
 function exitDrivingMode(){
+  stopAutomaticHeading({northUp:true});
   document.body.classList.remove('driving-mode');
   document.body.classList.remove('map-manual-explore');
   manualExploreLock=false;
+  lastNavigationHeading=null;
   userManuallyMovedDrivingMap=false;
   $('offlineDriveBanner')?.classList.remove('show');
   $('speedAlertBanner')?.classList.remove('show');
@@ -9905,6 +10111,29 @@ $('driveReportSheet').onclick=e=>{if(e.target===$('driveReportSheet'))closeDrive
 document.querySelectorAll('[data-drive-report]').forEach(btn=>{
   btn.onclick=()=>registerLocalDriveReport(btn.dataset.driveReport);
 });
+$('driveHeadingBtn').onclick=()=>{
+  if(!detectHeadingRotationSupport()){
+    showMapStatus("چرخش نقشه در این مرورگر در دسترس نیست.");
+    return;
+  }
+
+  const next=!headingUpEnabled;
+
+  if(next){
+    headingUpEnabled=true;
+    updateHeadingModeButton();
+
+    if(document.body.classList.contains('driving-mode')){
+      resumeFollowAfterManualExplore();
+      recenterDrivingCamera();
+    }
+  }else{
+    headingUpEnabled=false;
+    updateHeadingModeButton();
+    stopAutomaticHeading({northUp:true});
+  }
+};
+
 $('driveVoiceBtn').onclick=()=>{
   if(!voiceGuidanceEnabled){
     voiceGuidanceEnabled=true;
@@ -10190,8 +10419,20 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   }
   function applyCarMarkerHeading(marker, heading){
     marker.__heading=normalizeHeading(heading);
+
+    let mapBearing=0;
+    try{
+      if(typeof map?.getBearing==="function"){
+        mapBearing=Number(map.getBearing()||0);
+      }
+    }catch(e){}
+
+    // With a rotated map, marker icons remain screen-upright.
+    // Compensate by adding map bearing to vehicle heading.
+    const visualHeading=normalizeHeading(marker.__heading+mapBearing);
+
     const rotor=marker.getElement()?.querySelector('.nav-car-rotor');
-    if(rotor)rotor.style.transform=`rotate(${marker.__heading}deg)`;
+    if(rotor)rotor.style.transform=`rotate(${visualHeading}deg)`;
   }
   function smoothEasing(t){
     return t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
@@ -10370,9 +10611,12 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     updateTurnApproachRail(progress);
 
     if((userManuallyMovedDrivingMap || manualExploreLock) && !force){
+      applyNavigationHeading(progress,currentPoint,speedKmh,{force:false});
       syncRecenterUi();
       return;
     }
+
+    applyNavigationHeading(progress,currentPoint,speedKmh,{force});
 
     const target=drivingCameraTarget(progress,speedKmh);
     smoothPanMap(target.center,target.zoom,{force});
@@ -10385,7 +10629,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     updateFollowBadge();
     syncRecenterUi();
     ensureMapExplorationEnabled();
-    try{ map.stop(); }catch(e){}
+    try{map.stop()}catch(e){}
+
+    if(headingUpEnabled){
+      try{map.setHeading?.(null)}catch(e){}
+    }
 
     let actualPoint=null;
     let progress=0;
@@ -10427,6 +10675,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     },280);
   }
   map.on('dragend zoomend',()=>syncRecenterUi());
+  map.on?.('rotate',()=>{
+    if(carMarker && Number.isFinite(Number(carMarker.__heading))){
+      applyCarMarkerHeading(carMarker,carMarker.__heading);
+    }
+  });
   map.on('movestart',()=>{
     if(document.body.classList.contains('driving-mode') && (userManuallyMovedDrivingMap || manualExploreLock)){
       syncRecenterUi();
