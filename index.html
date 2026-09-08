@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۳.۳ انتخاب مسیر جمع‌وجور</title>
+<title>POL | نسخه ۳.۴ تجربه رانندگی و Follow Camera</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1880,6 +1880,121 @@ body.driving-mode .map-route-choice-strip{display:none!important}
   .map-route-choice-strip{bottom:214px}
 }
 
+
+/* ===== v3.4 Driving experience / Follow Camera ===== */
+
+.drive-follow-badge{
+  display:none;
+  position:absolute;
+  z-index:1007;
+  left:50%;
+  top:118px;
+  transform:translateX(-50%);
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(8,15,25,.78);
+  border:1px solid rgba(148,163,184,.12);
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 20px rgba(2,8,23,.14);
+  color:#dbe7f4;
+  pointer-events:none;
+}
+body.driving-mode .drive-follow-badge{display:flex}
+.drive-follow-badge b{font-size:7px;font-weight:800}
+.drive-follow-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#22c55e;
+  box-shadow:0 0 0 4px rgba(34,197,94,.12);
+}
+.drive-follow-badge.manual .drive-follow-dot{
+  background:#f59e0b;
+  box-shadow:0 0 0 4px rgba(245,158,11,.12);
+}
+.drive-follow-badge.manual b{color:#fde68a}
+
+.turn-approach-rail{
+  width:100%;
+  height:3px;
+  margin-top:8px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(148,163,184,.16);
+}
+.turn-approach-fill{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#60a5fa,#2563eb);
+  transition:width .18s linear;
+}
+
+body.driving-mode #turnCard{
+  max-width:520px!important;
+  border-radius:22px!important;
+  padding:11px 13px!important;
+}
+body.driving-mode .turn-distance{
+  color:#93c5fd!important;
+  letter-spacing:-.2px;
+}
+body.driving-mode .turn-instruction{
+  font-weight:900!important;
+  color:#f8fafc!important;
+}
+body.driving-mode .turn-street{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:#b9c8d8!important;
+}
+
+body.driving-mode #currentSpeedGauge{
+  box-shadow:0 14px 34px rgba(2,8,23,.28)!important;
+}
+body.driving-mode #driveRecenterBtn{
+  position:relative;
+  transition:.18s ease;
+}
+body.driving-mode #driveRecenterBtn.is-needed{
+  transform:scale(1.08);
+  background:#2563eb!important;
+  color:#fff!important;
+}
+body.driving-mode #driveRecenterBtn.is-needed::after{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  border-radius:50%;
+  border:2px solid rgba(96,165,250,.28);
+  animation:recenterPulse 1.4s ease-out infinite;
+}
+@keyframes recenterPulse{
+  0%{transform:scale(.85);opacity:.85}
+  100%{transform:scale(1.28);opacity:0}
+}
+
+body.driving-mode .nav-bottom-strip{
+  backdrop-filter:blur(14px);
+  box-shadow:0 18px 44px rgba(2,8,23,.30)!important;
+}
+body.driving-mode .nav-bottom-main>div{min-width:0}
+body.driving-mode .nav-bottom-main b{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+@media(max-width:650px){
+  .drive-follow-badge{top:112px}
+  body.driving-mode #turnCard{
+    left:8px!important;
+    right:8px!important;
+    max-width:none!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2464,12 +2579,20 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <button id="mapDevBtn" class="map-dev-btn">آزمایشگاه</button>
               <button id="closeMapDevBtn" class="map-dev-close">×</button>
 
+              <div id="driveFollowBadge" class="drive-follow-badge">
+                <span class="drive-follow-dot"></span>
+                <b id="driveFollowText">در حال دنبال‌کردن مسیر</b>
+              </div>
+
               <div id="turnCard" class="turn-card">
                 <div id="turnArrow" class="turn-arrow">↑</div>
                 <div>
                   <div id="turnDistance" class="turn-distance">آماده حرکت</div>
                   <div id="turnInstruction" class="turn-instruction">مسیر را انتخاب کن</div>
                   <div id="turnStreet" class="turn-street">راهنمای پیچ‌به‌پیچ اینجا نمایش داده می‌شود</div>
+                  <div class="turn-approach-rail">
+                    <div id="turnApproachFill" class="turn-approach-fill"></div>
+                  </div>
                 </div>
               </div>
 
@@ -6586,8 +6709,11 @@ function enterDrivingMode(){
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
   userManuallyMovedDrivingMap=false;
+  followCameraLastUpdate=0;
+  followCameraLastProgress=0;
   driveReportEvents=[];
   setRouteSelectionMode(false);
+  setTimeout(()=>updateFollowBadge(),40);
   setTimeout(()=>{
     try{
       map.invalidateSize(true);
@@ -7444,7 +7570,7 @@ function step(){
   }
 
   drawChart();
-  t+=.25;if(t>=dur)finish()
+  t+=.10;if(t>=dur)finish()
 }
 function start(){
   if(!routeCoords.length){
@@ -7505,7 +7631,7 @@ function startCoreDrive(){
     timer=null;
   }else{
     $('scenario').disabled=false;
-    timer=setInterval(step,250);
+    timer=setInterval(step,100);
   }
 }
 function finish(){
@@ -8674,9 +8800,28 @@ map.on('click',e=>{
   hideMapSearchPanels();
 });
 map.on('moveend zoomend',()=>syncRouteAltLabelsSoon());
-map.on('dragstart zoomstart',()=>{
-  if(document.body.classList.contains('driving-mode'))userManuallyMovedDrivingMap=true;
+map.on('dragstart',()=>{
+  if(document.body.classList.contains('driving-mode')){
+    userManuallyMovedDrivingMap=true;
+    if(typeof syncRecenterUi==='function')syncRecenterUi();
+  }
 });
+
+// Only real user gestures pause Follow Mode.
+// Navigation's own zoom/pan must never turn Follow Mode off.
+const mapContainerEl=map.getContainer();
+mapContainerEl.addEventListener('wheel',()=>{
+  if(document.body.classList.contains('driving-mode')){
+    userManuallyMovedDrivingMap=true;
+    if(typeof syncRecenterUi==='function')syncRecenterUi();
+  }
+},{passive:true});
+mapContainerEl.addEventListener('touchstart',(e)=>{
+  if(!document.body.classList.contains('driving-mode'))return;
+  if(e.target.closest?.('button,.turn-card,.nav-bottom-strip,.drive-control-cluster,.drive-report-btn'))return;
+  userManuallyMovedDrivingMap=true;
+  if(typeof syncRecenterUi==='function')syncRecenterUi();
+},{passive:true});
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
@@ -8898,7 +9043,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const marker=this;
       const start=[current.lat,current.lng];
       const end=[target.lat,target.lng];
-      const duration=Math.max(160,Math.min(320,180+distance*4));
+      const duration=Math.max(90,Math.min(200,100+distance*2.4));
       const t0=performance.now();
       const startHeading=marker.__heading ?? bearingDeg(start,end) ?? 0;
       const endHeading=bearingDeg(start,end);
@@ -8933,48 +9078,126 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   }
   applyNoKeyMapStyle();
 
+
+  let followCameraLastUpdate=0;
+  let followCameraLastProgress=0;
+
+  function updateFollowBadge(){
+    const badge=$('driveFollowBadge');
+    const label=$('driveFollowText');
+    if(!badge||!label)return;
+
+    badge.classList.toggle('manual',!!userManuallyMovedDrivingMap);
+    label.textContent=userManuallyMovedDrivingMap
+      ?'نقشه آزاد است • برای دنبال‌کردن مسیر، مرکز را بزن'
+      :'در حال دنبال‌کردن مسیر';
+  }
+
+  function turnApproachProgress(progress){
+    const d=nextTurnDistanceAtProgress(progress);
+    if(!Number.isFinite(d))return 0;
+    return clamp(1-(d/600),0,1);
+  }
+
+  function updateTurnApproachRail(progress){
+    const fill=$('turnApproachFill');
+    if(fill)fill.style.width=`${Math.round(turnApproachProgress(progress)*100)}%`;
+  }
+
+  function smartDrivingZoom(progress,speedKmh=0){
+    const d=nextTurnDistanceAtProgress(progress);
+
+    if(d<=55)return 18;
+    if(d<=130)return 17;
+    if(d<=300)return 16;
+
+    if(speedKmh>=95)return 13.8;
+    if(speedKmh>=75)return 14.2;
+    if(speedKmh>=50)return 14.8;
+    return 15.3;
+  }
+
+  function smartLookAhead(progress,speedKmh){
+    const d=nextTurnDistanceAtProgress(progress);
+
+    let base=
+      speedKmh>=90?.080:
+      speedKmh>=70?.065:
+      speedKmh>=45?.050:.038;
+
+    if(d<350)base=Math.min(base,.030);
+    if(d<160)base=Math.min(base,.018);
+    if(d<70)base=Math.min(base,.010);
+
+    return interpolateOnRoute(clamp(progress+base,0,1));
+  }
+
   function drivingCameraTarget(progress,speedKmh){
-    const zoom=desiredDrivingZoom(progress,speedKmh);
-    const lookAhead=navigationLookAheadPoint(progress,zoom);
+    const zoom=smartDrivingZoom(progress,speedKmh);
+    const lookAhead=smartLookAhead(progress,speedKmh);
     return {center:L.latLng(lookAhead[0],lookAhead[1]),zoom};
   }
   function syncRecenterUi(){
     const btn=$('driveRecenterBtn');
-    if(!btn)return;
-    btn.classList.toggle('is-needed',!!userManuallyMovedDrivingMap && document.body.classList.contains('driving-mode'));
+    if(btn){
+      btn.classList.toggle('is-needed',!!userManuallyMovedDrivingMap && document.body.classList.contains('driving-mode'));
+    }
+    updateFollowBadge();
   }
   function smoothPanMap(target,zoom,{force=false}={}){
-    if(!map || !target)return;
+    if(!map||!target)return;
+
+    const now=performance.now();
     const current=map.getCenter();
     const dist=hav([current.lat,current.lng],[target.lat,target.lng]);
     const zoomGap=Math.abs(Number(map.getZoom()||0)-Number(zoom||0));
 
-    if(force || !Number.isFinite(dist) || dist>850 || zoomGap>1.25){
-      try{ map.flyTo(target,zoom,{animate:true,duration:.45,noMoveStart:true}); }catch(e){
-        try{ map.setView(target,zoom,{animate:true,duration:.28}); }catch(_e){}
-      }
-      return;
-    }
+    if(!force && now-followCameraLastUpdate<120 && dist<170 && zoomGap<.35)return;
+    followCameraLastUpdate=now;
 
-    try{ map.panTo(target,{animate:true,duration:.28,noMoveStart:true}); }catch(e){
-      try{ map.setView(target,zoom,{animate:true,duration:.22}); }catch(_e){}
-    }
-    if(zoomGap>.01){
-      try{ map.setZoom(zoom,{animate:true}); }catch(e){}
+    try{
+      if(force || !Number.isFinite(dist) || dist>1000){
+        map.flyTo(target,zoom,{
+          animate:true,
+          duration:force?.36:.48,
+          noMoveStart:true
+        });
+        return;
+      }
+
+      map.panTo(target,{
+        animate:true,
+        duration:.18,
+        noMoveStart:true
+      });
+
+      if(zoomGap>.65){
+        map.setZoom(zoom,{animate:true});
+      }
+    }catch(e){
+      try{map.setView(target,zoom,{animate:true,duration:.18})}catch(_e){}
     }
   }
   function updateDrivingCamera(progress,currentPoint,speedKmh=0,{force=false}={}){
     if(!document.body.classList.contains('driving-mode'))return;
-    if(userManuallyMovedDrivingMap && !force){
+
+    updateFollowBadge();
+    updateTurnApproachRail(progress);
+
+    if(userManuallyMovedDrivingMap&&!force){
       syncRecenterUi();
       return;
     }
+
     const target=drivingCameraTarget(progress,speedKmh);
     smoothPanMap(target.center,target.zoom,{force});
+    followCameraLastProgress=progress;
     syncRecenterUi();
   }
   function recenterDrivingCamera(){
     userManuallyMovedDrivingMap=false;
+    followCameraLastUpdate=0;
+    updateFollowBadge();
     syncRecenterUi();
     if(isRealGpsMode()&&realGpsState.firstFix){
       const point=realGpsState.matchedPoint||[realGpsState.lat,realGpsState.lng];
