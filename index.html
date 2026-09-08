@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۴ تجربه رانندگی و Follow Camera</title>
+<title>POL | نسخه ۳.۵ هوشمندی Turn-by-Turn و Lane Guidance</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1995,6 +1995,112 @@ body.driving-mode .nav-bottom-main b{
   }
 }
 
+
+/* ===== v3.5 Turn-by-turn / Lane / Arrival intelligence ===== */
+
+.next-turn-preview{
+  display:none;
+  margin-top:8px;
+  min-height:30px;
+  align-items:center;
+  gap:7px;
+  padding:5px 8px;
+  border-radius:11px;
+  background:rgba(148,163,184,.08);
+  border:1px solid rgba(148,163,184,.10);
+}
+.next-turn-preview.show{display:flex}
+.next-turn-preview>span{
+  flex:0 0 auto;
+  font-size:7px;
+  color:#8ea1b7;
+}
+.next-turn-preview>b{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:8px;
+  background:rgba(96,165,250,.13);
+  color:#93c5fd;
+  font-size:15px;
+}
+.next-turn-preview>strong{
+  min-width:0;
+  font-size:8px;
+  color:#d5dfeb;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.lane-guidance{
+  display:none;
+  margin-top:8px;
+  padding:7px 8px;
+  border-radius:12px;
+  background:rgba(2,8,23,.30);
+  border:1px solid rgba(96,165,250,.12);
+}
+.lane-guidance.show{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:8px;
+  align-items:center;
+}
+.lane-guidance-label{
+  font-size:7px;
+  color:#8295ab;
+  white-space:nowrap;
+}
+.lane-guidance-items{
+  display:flex;
+  justify-content:flex-start;
+  gap:4px;
+  direction:ltr;
+}
+.lane-pill{
+  width:31px;
+  height:31px;
+  border-radius:9px;
+  display:grid;
+  place-items:center;
+  background:rgba(148,163,184,.09);
+  border:1px solid rgba(148,163,184,.10);
+  color:#718096;
+  font-size:17px;
+  font-weight:900;
+}
+.lane-pill.valid{
+  background:#2563eb;
+  border-color:#3b82f6;
+  color:#fff;
+  box-shadow:0 7px 18px rgba(37,99,235,.20);
+}
+.lane-pill.invalid{
+  opacity:.45;
+}
+
+body.driving-mode .turn-card.turn-critical{
+  border-color:rgba(96,165,250,.38)!important;
+  box-shadow:0 22px 52px rgba(2,8,23,.38),0 0 0 2px rgba(37,99,235,.08)!important;
+}
+body.driving-mode .turn-card.turn-critical .turn-arrow{
+  transform:scale(1.03);
+}
+
+.arrival-banner{
+  border-radius:18px!important;
+  box-shadow:0 16px 42px rgba(2,8,23,.28)!important;
+  font-weight:900!important;
+}
+
+@media(max-width:650px){
+  .next-turn-preview{margin-top:6px}
+  .lane-pill{width:29px;height:29px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2593,6 +2699,17 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="turn-approach-rail">
                     <div id="turnApproachFill" class="turn-approach-fill"></div>
                   </div>
+
+                  <div id="nextTurnPreview" class="next-turn-preview">
+                    <span>بعدی</span>
+                    <b id="nextTurnArrow">↑</b>
+                    <strong id="nextTurnText">—</strong>
+                  </div>
+
+                  <div id="laneGuidance" class="lane-guidance">
+                    <span class="lane-guidance-label">لاین مناسب</span>
+                    <div id="laneGuidanceItems" class="lane-guidance-items"></div>
+                  </div>
                 </div>
               </div>
 
@@ -3187,6 +3304,8 @@ let realGpsState={
   matchedPoint:null,
   offRouteSince:null,
   lastRerouteAt:0,
+  arrivalSince:null,
+  arrived:false,
   track:[],
   traceBuffer:[],
   networkMatch:{
@@ -3839,6 +3958,97 @@ function maneuverText(step){
     arrow:maneuverArrow(mod,type)
   };
 }
+
+function laneArrowFromIndications(indications=[]){
+  const values=(Array.isArray(indications)?indications:[])
+    .map(v=>String(v||"").toLowerCase());
+
+  if(values.some(v=>v.includes("uturn")))return"↶";
+  if(values.some(v=>v==="left" || v.includes("sharp left")))return"←";
+  if(values.some(v=>v.includes("slight left")))return"↖";
+  if(values.some(v=>v==="right" || v.includes("sharp right")))return"→";
+  if(values.some(v=>v.includes("slight right")))return"↗";
+  if(values.some(v=>v.includes("straight")))return"↑";
+  return"•";
+}
+function extractStepLaneGuidance(step){
+  const intersections=Array.isArray(step?.intersections)?step.intersections:[];
+
+  // OSRM only: use lane data that actually exists in the routing response.
+  // Never invent lane guidance.
+  for(const intersection of intersections){
+    const lanes=Array.isArray(intersection?.lanes)?intersection.lanes:null;
+    if(!lanes?.length)continue;
+
+    return lanes.map(lane=>({
+      valid:lane?.valid===true,
+      indications:Array.isArray(lane?.indications)?lane.indications:[]
+    }));
+  }
+  return[];
+}
+function followingNavigationStep(index){
+  if(!navigationSteps.length)return null;
+
+  for(let i=index+1;i<navigationSteps.length;i++){
+    const step=navigationSteps[i];
+    if(!step)continue;
+    if(step.type==="depart")continue;
+    return{step,index:i};
+  }
+  return null;
+}
+function renderSecondTurn(next){
+  const box=$('nextTurnPreview');
+  if(!box)return;
+
+  const second=followingNavigationStep(next?.index??-1);
+  const shouldShow=
+    !!next &&
+    !!second &&
+    next.distance<=1800 &&
+    second.step.type!=="arrive";
+
+  box.classList.toggle('show',shouldShow);
+  if(!shouldShow)return;
+
+  $('nextTurnArrow').textContent=second.step.arrow||"↑";
+  $('nextTurnText').textContent=
+    `${second.step.action}${second.step.street?` • ${second.step.street}`:""}`;
+}
+function renderLaneGuidance(step,distance){
+  const box=$('laneGuidance');
+  const items=$('laneGuidanceItems');
+  if(!box||!items)return;
+
+  const lanes=Array.isArray(step?.lanes)?step.lanes:[];
+  const validCount=lanes.filter(l=>l.valid).length;
+
+  // Lane information is useful only close enough to the maneuver,
+  // and only if OSRM actually supplied valid lane metadata.
+  const shouldShow=
+    lanes.length>=2 &&
+    validCount>=1 &&
+    distance<=700;
+
+  box.classList.toggle('show',shouldShow);
+  if(!shouldShow){
+    items.innerHTML="";
+    return;
+  }
+
+  items.innerHTML=lanes.map(lane=>`
+    <span class="lane-pill ${lane.valid?'valid':'invalid'}">
+      ${laneArrowFromIndications(lane.indications)}
+    </span>
+  `).join("");
+}
+function updateTurnContextEmphasis(distance){
+  const card=$('turnCard');
+  if(!card)return;
+  card.classList.toggle('turn-critical',Number(distance)<=180);
+}
+
 function buildNavigationSteps(route){
   navigationSteps=[];
   const raw=(route?.legs||[]).flatMap(l=>l.steps||[]);
@@ -3858,6 +4068,7 @@ function buildNavigationSteps(route){
         action:info.action,
         street:info.street,
         arrow:info.arrow,
+        lanes:extractStepLaneGuidance(step),
         location:Array.isArray(loc)&&loc.length>=2
           ?[Number(loc[1]),Number(loc[0])]
           :null
@@ -3909,6 +4120,10 @@ function updateTurnByTurn(progress){
   if($('turnInstruction'))$('turnInstruction').textContent=progress>=.995?"به مقصد رسیدی":next.step.action;
   if($('turnStreet'))$('turnStreet').textContent=progress>=.995?navDestination.label:next.step.street;
 
+  renderSecondTurn(next);
+  renderLaneGuidance(next.step,next.distance);
+  updateTurnContextEmphasis(next.distance);
+
   if(progress<.995){
     const voiceText=`${distanceTextFa(next.distance)} دیگر، ${next.step.action}${next.step.street?`، ${next.step.street}`:""}`;
     speakGuidance(voiceText,next.index,next.distance);
@@ -3927,6 +4142,10 @@ function resetTurnByTurn(){
   if($('liveArrival'))$('liveArrival').textContent=routeDurationS?formatArrivalFa(routeDurationS):"--";
   if($('routeProgressFill'))$('routeProgressFill').style.width="0%";
   $('arrivalBanner')?.classList.remove('show');
+  $('nextTurnPreview')?.classList.remove('show');
+  $('laneGuidance')?.classList.remove('show');
+  if($('laneGuidanceItems'))$('laneGuidanceItems').innerHTML="";
+  $('turnCard')?.classList.remove('turn-critical');
   lastSpokenStepIndex=-1;
 }
 
@@ -6842,6 +7061,50 @@ function realGpsFailure(err){
   setRealGpsBadge("bad",msg);
   if($('readyRealGpsCheck'))setReadyCheck('readyRealGpsCheck','bad',msg);
 }
+
+function realGpsArrivalReferencePoint(){
+  const snap=routingEndpointState?.destinationSnap?.point;
+  if(Array.isArray(snap)&&snap.length>=2){
+    return[Number(snap[0]),Number(snap[1])];
+  }
+  return[Number(navDestination.lat),Number(navDestination.lng)];
+}
+function realGpsArrivalThreshold(accuracy){
+  // Tight enough to avoid false arrival on parallel streets,
+  // but tolerant of normal phone GPS noise.
+  return Math.max(38,Math.min(65,Number(accuracy||999)*1.6));
+}
+function evaluateRealGpsArrival(rawPoint,accuracy){
+  if(!realGpsState.active || realGpsState.arrived)return false;
+
+  const ref=realGpsArrivalReferencePoint();
+  const physicalDistance=hav(rawPoint,ref);
+  const threshold=realGpsArrivalThreshold(accuracy);
+
+  const physicallyNear=
+    Number.isFinite(physicalDistance) &&
+    physicalDistance<=threshold &&
+    Number(accuracy)<=40;
+
+  const routeNearEnd=Number(realGpsState.routeProgress||0)>=.965;
+
+  if(physicallyNear&&routeNearEnd){
+    if(realGpsState.arrivalSince==null){
+      realGpsState.arrivalSince=Date.now();
+    }
+
+    const sustained=Date.now()-realGpsState.arrivalSince>=2200;
+    if(sustained){
+      realGpsState.arrived=true;
+      return true;
+    }
+  }else{
+    realGpsState.arrivalSince=null;
+  }
+
+  return false;
+}
+
 async function processRealGps(position){
   if(!realGpsState.active||!isRealGpsMode())return;
 
@@ -6916,6 +7179,20 @@ async function processRealGps(position){
   updateDrivingCamera(realGpsState.routeProgress,displayPoint,Number(speed||0));
   updateTurnByTurn(realGpsState.routeProgress);
 
+  // Arrival in real GPS mode requires BOTH route progress and actual
+  // physical proximity to the destination access point.
+  if(evaluateRealGpsArrival(rawPoint,accuracy)){
+    $('arrivalBanner')?.classList.add('show');
+    if($('turnDistance'))$('turnDistance').textContent="رسیدی";
+    if($('turnInstruction'))$('turnInstruction').textContent="به مقصد رسیدی";
+    if($('turnStreet'))$('turnStreet').textContent=navDestination.label||"مقصد";
+    if(voiceGuidanceEnabled)coachVoice("به مقصد رسیدید.");
+    setTimeout(()=>{
+      if(realGpsState.arrived && realGpsState.active)finish();
+    },900);
+    return;
+  }
+
   // Only current speed is authoritative in this prototype.
   if($('driveCurrentSpeed'))$('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
   if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
@@ -6985,6 +7262,8 @@ function startRealGps(){
   realGpsState.routeProgress=0;
   realGpsState.offRouteSince=null;
   realGpsState.lastRerouteAt=0;
+  realGpsState.arrivalSince=null;
+  realGpsState.arrived=false;
   realGpsState.track=[];
   realGpsState.previousPoint=null;
   realGpsState.previousTimestamp=null;
@@ -7049,6 +7328,8 @@ async function triggerRealGpsReroute(rawPoint){
     rerouteState.active=false;
     realGpsState.routeProgress=0;
     realGpsState.offRouteSince=null;
+    realGpsState.arrivalSince=null;
+    realGpsState.arrived=false;
     resetNetworkMapMatch();
     appendGpsTracePoint(snapped.point,Math.min(25,Number(realGpsState.accuracy||25)),Date.now());
 
