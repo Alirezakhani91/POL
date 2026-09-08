@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۷ اطمینان مبدأ</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۸ تجربه نقشه‌محور</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1038,6 +1038,179 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   background:#fff;left:8px;top:8px
 }
 
+
+/* ===== v2.8 Map-first UX ===== */
+body.map-first-mode #screen-trip .trip-desktop-grid{
+  display:block!important
+}
+body.map-first-mode #tripSetupPanel,
+body.map-first-mode #tripLiveMetrics,
+body.map-first-mode #tripAdvanced,
+body.map-first-mode .trip-desktop-side{
+  display:none!important
+}
+body.map-first-mode.setup-open #tripSetupPanel{
+  display:block!important;
+  position:fixed!important;
+  z-index:3600!important;
+  inset:72px 14px 84px 14px!important;
+  overflow:auto!important;
+  max-width:650px!important;
+  margin:auto!important;
+  background:#101923!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.55)!important
+}
+body.map-first-mode #tripMapCard{
+  margin:0!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+  padding:0!important
+}
+body.map-first-mode #tripMapCard .mobile-map-top{
+  display:none!important
+}
+body.map-first-mode:not(.driving-mode) #turnCard,
+body.map-first-mode:not(.driving-mode) .mapHUD,
+body.map-first-mode:not(.driving-mode) .nav-bottom-strip,
+body.map-first-mode:not(.driving-mode) #currentSpeedGauge,
+body.map-first-mode:not(.driving-mode) .drive-control-cluster,
+body.map-first-mode:not(.driving-mode) #safetyCoachPill{
+  display:none!important
+}
+body.map-first-mode #map{
+  height:calc(100vh - 150px)!important;
+  min-height:560px!important;
+  max-height:none!important;
+  border:0!important
+}
+
+.map-first-search-panel{
+  position:absolute;z-index:930;top:12px;left:12px;right:12px;
+  pointer-events:none
+}
+.map-first-search-row{
+  display:grid;grid-template-columns:42px 1fr 42px;gap:7px;
+  max-width:610px;margin:0 auto;pointer-events:auto
+}
+.map-first-search-row input{
+  width:100%;height:48px;border-radius:15px;border:1px solid #d6dde6;
+  background:rgba(255,255,255,.97);color:#111827;padding:0 14px;
+  font-family:inherit;font-size:13px;outline:none;
+  box-shadow:0 8px 26px rgba(0,0,0,.22)
+}
+.map-first-search-row input::placeholder{color:#667085}
+.map-origin-button,.map-search-button{
+  width:42px!important;height:48px!important;min-height:48px!important;padding:0!important;
+  border-radius:15px!important;background:rgba(255,255,255,.97)!important;color:#111827!important;
+  border:1px solid #d6dde6!important;box-shadow:0 8px 26px rgba(0,0,0,.22)!important;
+  font-size:18px!important
+}
+.map-origin-chip{
+  pointer-events:auto;width:auto!important;max-width:420px!important;min-height:38px!important;
+  margin:7px auto 0!important;padding:6px 10px!important;border-radius:12px!important;
+  display:flex!important;align-items:center!important;gap:7px!important;
+  background:rgba(15,25,36,.93)!important;border:1px solid #34475f!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.18)!important
+}
+.map-origin-chip small{display:block;font-size:7px;color:#8fa1b7;text-align:right}
+.map-origin-chip b{display:block;font-size:9px;color:#e7edf5;text-align:right;max-width:330px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-origin-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex:0 0 auto}
+.map-origin-dot.locating{background:#f59e0b;animation:mapPulse 1.2s infinite}
+.map-origin-dot.bad{background:#ef4444}
+@keyframes mapPulse{0%,100%{opacity:.45}50%{opacity:1}}
+
+.map-search-results{
+  pointer-events:auto;display:none;max-width:610px;max-height:310px;overflow:auto;
+  margin:7px auto 0;background:rgba(15,25,36,.98);border:1px solid #34475f;
+  border-radius:14px;padding:6px;box-shadow:0 16px 36px rgba(0,0,0,.30)
+}
+.map-search-results.open{display:grid;gap:5px}
+.map-search-results .search-result{
+  width:100%!important;text-align:right!important;background:#172332!important;
+  border:1px solid #2c3f55!important;border-radius:10px!important;padding:9px!important
+}
+.map-recent-wrap{
+  pointer-events:auto;display:none;max-width:610px;margin:7px auto 0;
+  background:rgba(15,25,36,.96);border:1px solid #34475f;border-radius:13px;padding:8px;
+  box-shadow:0 12px 28px rgba(0,0,0,.24)
+}
+.map-recent-wrap.open{display:block}
+.map-recent-wrap>small{font-size:8px;color:#9cadc0}
+.map-recent-list{display:flex;gap:6px;overflow:auto;margin-top:6px}
+.map-recent-chip{
+  width:auto!important;min-width:120px!important;max-width:210px!important;min-height:38px!important;
+  text-align:right!important;padding:6px 8px!important;border-radius:10px!important
+}
+.map-recent-chip b{display:block;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-recent-chip span{display:block;font-size:7px;color:#8495aa;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.map-route-sheet{
+  display:none;position:absolute;z-index:935;left:12px;right:12px;bottom:14px;
+  max-width:610px;margin:auto;padding:12px;border-radius:18px;
+  background:rgba(15,25,36,.96);border:1px solid #34475f;
+  box-shadow:0 18px 45px rgba(0,0,0,.34);backdrop-filter:blur(14px)
+}
+.map-route-sheet.show{display:block}
+.map-route-sheet-main{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.map-route-sheet-main small{display:block;font-size:8px;color:#60a5fa}
+.map-route-sheet-main b{display:block;font-size:12px;margin-top:2px;max-width:450px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-route-close{
+  width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;
+  border-radius:9px!important;font-size:17px!important
+}
+.map-route-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.map-route-metrics>div{background:#162333;border-radius:11px;padding:7px;text-align:center}
+.map-route-metrics b{display:block;font-size:11px}
+.map-route-metrics span{display:block;font-size:7px;color:#8fa0b5;margin-top:2px}
+.map-route-reason{
+  margin-top:7px;padding:7px 8px;border-radius:10px;background:#101b28;
+  color:#9eb0c3;font-size:8px;line-height:1.65
+}
+.map-route-actions{display:grid;grid-template-columns:.8fr .8fr 1.4fr;gap:6px;margin-top:8px}
+.map-route-actions button{min-height:42px!important}
+
+.map-status-toast{
+  display:none;position:absolute;z-index:950;left:50%;bottom:18px;transform:translateX(-50%);
+  max-width:min(90%,500px);padding:8px 11px;border-radius:999px;
+  background:rgba(15,25,36,.95);border:1px solid #3b4e65;color:#dbeafe;
+  font-size:8px;box-shadow:0 8px 24px rgba(0,0,0,.24);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis
+}
+.map-status-toast.show{display:block}
+.map-status-toast.bad{background:rgba(68,23,23,.96);border-color:#7d3030;color:#fecaca}
+
+.map-dev-btn{
+  display:block;position:absolute;z-index:932;right:12px;bottom:12px;
+  width:auto!important;min-height:32px!important;padding:4px 8px!important;
+  font-size:8px!important;border-radius:10px!important;opacity:.80
+}
+.map-dev-close{
+  display:none;position:fixed;z-index:3650;top:80px;right:22px;
+  width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;
+  border-radius:10px!important;font-size:18px!important
+}
+body.map-first-mode.setup-open .map-dev-close{display:block}
+
+body.driving-mode .map-first-search-panel,
+body.driving-mode .map-route-sheet,
+body.driving-mode .map-dev-btn,
+body.driving-mode .map-status-toast{
+  display:none!important
+}
+
+@media(max-width:650px){
+  body.map-first-mode #map{
+    height:calc(100vh - 122px)!important;
+    min-height:520px!important
+  }
+  body.map-first-mode #tripMapCard{
+    margin-left:-10px!important;margin-right:-10px!important;border-radius:0!important
+  }
+  .map-first-search-panel{top:9px;left:9px;right:9px}
+  .map-route-sheet{left:9px;right:9px;bottom:9px}
+  .map-route-sheet-main b{max-width:260px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1239,7 +1412,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
   <main>
     <!-- HOME -->
-    <section id="screen-home" class="app-screen active">
+    <section id="screen-home" class="app-screen">
       <div class="hero-safe">
         <div class="hero-eyebrow">امروز امن‌تر رانندگی کن</div>
         <div class="hero-title">مسیرت را انتخاب کن،<br>امتیاز ایمنی بگیر.</div>
@@ -1296,7 +1469,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     </section>
 
     <!-- TRIP -->
-    <section id="screen-trip" class="app-screen">
+    <section id="screen-trip" class="app-screen active">
       <div class="trip-desktop-grid">
         <div>
           <div id="tripSetupPanel" class="section-card" style="margin-top:0">
@@ -1504,6 +1677,58 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div class="live-chip"><span id="progress">۰%</span> • <span id="timeNow">۰ ثانیه</span></div>
             </div>
             <div style="position:relative">
+              <div id="mapFirstSearchPanel" class="map-first-search-panel">
+                <div class="map-first-search-row">
+                  <button id="mapOriginButton" class="map-origin-button" title="موقعیت فعلی">◎</button>
+                  <input id="mapDestinationSearch" type="search" autocomplete="off"
+                         placeholder="کجا می‌خوای بری؟">
+                  <button id="mapDestinationSearchBtn" class="map-search-button" title="جست‌وجو">⌕</button>
+                </div>
+
+                <button id="mapOriginChip" class="map-origin-chip">
+                  <span id="mapOriginDot" class="map-origin-dot locating"></span>
+                  <div>
+                    <small>مبدأ</small>
+                    <b id="mapOriginText">در حال پیدا کردن موقعیت شما...</b>
+                  </div>
+                </button>
+
+                <div id="mapSearchResults" class="map-search-results"></div>
+                <div id="mapRecentWrap" class="map-recent-wrap">
+                  <small>مقصدهای اخیر</small>
+                  <div id="mapRecentList" class="map-recent-list"></div>
+                </div>
+              </div>
+
+              <div id="mapRouteSheet" class="map-route-sheet">
+                <div class="map-route-sheet-main">
+                  <div>
+                    <small id="mapRouteKicker">مسیر آماده است</small>
+                    <b id="mapRouteDestination">--</b>
+                  </div>
+                  <button id="mapRouteCloseBtn" class="map-route-close">×</button>
+                </div>
+
+                <div class="map-route-metrics">
+                  <div><b id="mapRouteEta">--</b><span>زمان</span></div>
+                  <div><b id="mapRouteDistance">--</b><span>مسافت</span></div>
+                  <div><b id="mapRouteArrival">--</b><span>رسیدن</span></div>
+                </div>
+
+                <div id="mapRouteReason" class="map-route-reason">در حال بررسی Route...</div>
+
+                <div class="map-route-actions">
+                  <button id="mapRouteCompareBtn">مسیرها</button>
+                  <button id="mapRoutePreviewBtn">جزئیات</button>
+                  <button id="mapStartBtn" class="primary">شروع</button>
+                </div>
+              </div>
+
+              <div id="mapStatusToast" class="map-status-toast"></div>
+
+              <button id="mapDevBtn" class="map-dev-btn">تست</button>
+              <button id="closeMapDevBtn" class="map-dev-close">×</button>
+
               <div id="turnCard" class="turn-card">
                 <div id="turnArrow" class="turn-arrow">↑</div>
                 <div>
@@ -1812,8 +2037,8 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 </div>
 
 <nav class="bottom-nav" aria-label="ناوبری اصلی">
-  <button class="nav-btn active" data-screen="home"><span class="nav-icon">⌂</span><span>خانه</span></button>
-  <button class="nav-btn" data-screen="trip"><span class="nav-icon">➤</span><span>سفر</span></button>
+  <button class="nav-btn" data-screen="home"><span class="nav-icon">⌂</span><span>خانه</span></button>
+  <button class="nav-btn active" data-screen="trip"><span class="nav-icon">➤</span><span>سفر</span></button>
   <button class="nav-btn" data-screen="rewards"><span class="nav-icon">🎁</span><span>پاداش</span></button>
   <button class="nav-btn" data-screen="profile"><span class="nav-icon">●</span><span>پروفایل</span></button>
 </nav>
@@ -2627,6 +2852,8 @@ function showRouteFailure(message){
   if($('navEta'))$('navEta').textContent="--";
   if($('navArrival'))$('navArrival').textContent="--";
   if($('start'))$('start').disabled=true;
+  closeMapRouteSheet();
+  showMapStatus(message,"bad");
   const pill=$('routeIntegrityPill');
   if(pill){pill.className="route-integrity-pill bad";pill.textContent="Route نامعتبر";}
   $('status').textContent=message;
@@ -3213,6 +3440,7 @@ function updateRouteSummary(){
   if($('navEta'))$('navEta').textContent=formatDurationFa(route.duration);
   if($('navArrival'))$('navArrival').textContent=formatArrivalFa(route.duration);
   renderRouteOptionCards();
+  renderMapRouteSheet();
 }
 function selectRouteAlternative(index){
   if(!routeAlternatives[index])return;
@@ -3303,6 +3531,8 @@ function applyPresetSelection(load=true){
   renderPendingOrigin();
   renderPendingDestination();
 
+  syncMapOriginStatus("good",navOrigin.label);
+  if($('mapDestinationSearch'))$('mapDestinationSearch').value=navDestination.label;
   if(load)loadRoute();
 }
 
@@ -3380,7 +3610,7 @@ function renderPendingOrigin(){
   $('confirmOriginBtn').disabled=
     originConfirmed || state==="bad" || !state;
 }
-async function stageOrigin(origin,{source="search",accuracy=null}={}){
+async function stageOrigin(origin,{source="search",accuracy=null,autoConfirm=false}={}){
   originConfirmed=false;
 
   pendingOrigin={
@@ -3438,7 +3668,12 @@ async function stageOrigin(origin,{source="search",accuracy=null}={}){
   renderPendingOrigin();
 
   $('status').textContent=
-    access.state==="bad"?"اتصال خودرویی مبدأ تأیید نشد.":"مبدأ آماده بررسی و تأیید است.";
+    access.state==="bad"?"اتصال خودرویی مبدأ تأیید نشد.":"مبدأ آماده است.";
+
+  if(autoConfirm && access.state!=="bad"){
+    confirmPendingOrigin();
+    syncMapOriginStatus();
+  }
 }
 function confirmPendingOrigin(){
   if(!pendingOrigin || pendingOrigin.accessState==="bad")return;
@@ -3452,6 +3687,7 @@ function confirmPendingOrigin(){
   clearExistingRouteForDestinationChange();
   updateNavLabels();
   renderPendingOrigin();
+  syncMapOriginStatus("good",navOrigin.label||"موقعیت فعلی");
   $('status').textContent="مبدأ تأیید شد.";
 }
 async function searchOrigin(){
@@ -3515,7 +3751,7 @@ function chooseOrigin(index){
     lng:Number(x.lon),
     label:destinationLabelFromItem(x),
     address:destinationAddressFromItem(x)
-  },{source:"search"});
+  },{source:"search",autoConfirm:true});
 }
 window.chooseOrigin=chooseOrigin;
 
@@ -3539,14 +3775,14 @@ async function handleOriginMapPick(latlng){
 
   try{
     const origin=await reverseGeocodePoint(latlng.lat,latlng.lng);
-    await stageOrigin(origin,{source:"map"});
+    await stageOrigin(origin,{source:"map",autoConfirm:true});
   }catch(e){
     await stageOrigin({
       label:"نقطه شروع انتخاب‌شده",
       address:`${Number(latlng.lat).toFixed(5)}, ${Number(latlng.lng).toFixed(5)}`,
       lat:latlng.lat,
       lng:latlng.lng
-    },{source:"map"});
+    },{source:"map",autoConfirm:true});
   }
 }
 
@@ -3597,7 +3833,7 @@ function renderRecentDestinations(){
   box.querySelectorAll('[data-recent-dest]').forEach(btn=>{
     btn.onclick=()=>{
       const d=list[Number(btn.dataset.recentDest)];
-      if(d)stageDestination(d,{source:"recent"});
+      if(d)stageDestination(d,{source:"recent",autoRoute:true});
     };
   });
 }
@@ -3723,7 +3959,7 @@ function renderPendingDestination(){
   $('confirmDestinationBtn').disabled=
     destinationConfirmed || state==="bad" || !state;
 }
-async function stageDestination(dest,{source="search"}={}){
+async function stageDestination(dest,{source="search",autoRoute=false}={}){
   destinationConfirmed=false;
 
   pendingDestination={
@@ -3784,7 +4020,19 @@ async function stageDestination(dest,{source="search"}={}){
   $('status').textContent=
     access.state==="bad"
       ?"دسترسی خودرویی مقصد تأیید نشد."
-      :"مقصد روی نقشه آماده بررسی و تأیید است.";
+      :"مقصد آماده است.";
+
+  if(autoRoute && access.state!=="bad"){
+    confirmPendingDestination();
+    hideMapSearchPanels();
+    if(!originConfirmed){
+      const originOk=await autoLocateOriginMapFirst({silent:false});
+      if(!originOk)return;
+    }
+    await loadRoute();
+  }else if(access.state==="bad"){
+    showMapStatus("این نقطه دسترسی خودرویی مطمئن ندارد؛ نقطه دیگری روی نقشه انتخاب کن.","bad");
+  }
 }
 function clearExistingRouteForDestinationChange(){
   routeAlternatives=[];
@@ -3802,6 +4050,7 @@ function clearExistingRouteForDestinationChange(){
   $('routeSummary').classList.remove('show');
   $('tripInfo').style.display="none";
   $('start').disabled=true;
+  closeMapRouteSheet();
 }
 function confirmPendingDestination(){
   if(!pendingDestination || pendingDestination.accessState==="bad")return;
@@ -3817,7 +4066,9 @@ function confirmPendingDestination(){
   updateNavLabels();
   renderPendingDestination();
 
-  $('status').textContent="مقصد تأیید شد • حالا «دریافت مسیر» را بزن.";
+  $('status').textContent="مقصد تأیید شد.";
+  if($('mapDestinationSearch'))$('mapDestinationSearch').value=navDestination.label||"";
+  renderMapRecentDestinations();
 }
 function beginDestinationPick(){
   destinationPickMode=true;
@@ -3839,7 +4090,7 @@ async function handleDestinationMapPick(latlng){
 
   try{
     const dest=await reverseGeocodePoint(latlng.lat,latlng.lng);
-    await stageDestination(dest,{source:"map"});
+    await stageDestination(dest,{source:"map",autoRoute:true});
   }catch(e){
     console.warn("reverse geocode failed",e);
     await stageDestination({
@@ -3847,8 +4098,160 @@ async function handleDestinationMapPick(latlng){
       address:`${Number(latlng.lat).toFixed(5)}, ${Number(latlng.lng).toFixed(5)}`,
       lat:latlng.lat,
       lng:latlng.lng
-    },{source:"map"});
+    },{source:"map",autoRoute:true});
   }
+}
+
+
+let mapStatusTimer=null;
+
+function showMapStatus(message,state=""){
+  const el=$('mapStatusToast');
+  if(!el)return;
+  el.textContent=message;
+  el.className=`map-status-toast show ${state||""}`.trim();
+  clearTimeout(mapStatusTimer);
+  mapStatusTimer=setTimeout(()=>el.classList.remove('show'),3800);
+}
+function syncMapOriginStatus(state=null,textValue=null){
+  const dot=$('mapOriginDot');
+  const label=$('mapOriginText');
+  if(!dot||!label)return;
+
+  dot.classList.remove('locating','bad');
+
+  if(state==="locating"){
+    dot.classList.add('locating');
+  }else if(state==="bad"){
+    dot.classList.add('bad');
+  }
+
+  if(textValue){
+    label.textContent=textValue;
+  }else if(originConfirmed){
+    label.textContent=navOrigin.label||"موقعیت فعلی";
+  }else{
+    dot.classList.add('bad');
+    label.textContent="برای انتخاب مبدأ لمس کن";
+  }
+}
+function hideMapSearchPanels(){
+  $('mapSearchResults')?.classList.remove('open');
+  $('mapRecentWrap')?.classList.remove('open');
+}
+function renderMapRecentDestinations(){
+  const box=$('mapRecentList');
+  const wrap=$('mapRecentWrap');
+  if(!box||!wrap)return;
+
+  const list=loadRecentDestinations();
+  if(!list.length){
+    wrap.classList.remove('open');
+    box.innerHTML="";
+    return;
+  }
+
+  box.innerHTML=list.map((d,i)=>`
+    <button class="map-recent-chip" data-map-recent="${i}">
+      <b>${escapeHtml(d.label||"مقصد")}</b>
+      <span>${escapeHtml(d.address||"")}</span>
+    </button>
+  `).join("");
+
+  box.querySelectorAll('[data-map-recent]').forEach(btn=>{
+    btn.onclick=()=>{
+      const d=list[Number(btn.dataset.mapRecent)];
+      if(d)stageDestination(d,{source:"recent",autoRoute:true});
+    };
+  });
+}
+async function searchDestinationMapFirst(){
+  const q=$('mapDestinationSearch').value.trim();
+
+  if(!q){
+    renderMapRecentDestinations();
+    if(loadRecentDestinations().length)$('mapRecentWrap')?.classList.add('open');
+    return;
+  }
+
+  $('destinationSearch').value=q;
+  hideMapSearchPanels();
+  showMapStatus("در حال جست‌وجوی مقصد...");
+
+  await searchDestination();
+
+  const source=$('destinationResults');
+  const target=$('mapSearchResults');
+  target.innerHTML=source.innerHTML;
+  target.classList.add('open');
+}
+function renderMapRouteSheet(){
+  const sheet=$('mapRouteSheet');
+  if(!sheet)return;
+
+  if(!routeAlternatives.length || !routeCoords.length){
+    sheet.classList.remove('show');
+    return;
+  }
+
+  const route=routeAlternatives[selectedRouteIndex];
+  if(!route){
+    sheet.classList.remove('show');
+    return;
+  }
+
+  const integrity=analyzeSelectedRoute();
+  const decision=routeDecisionExplanation(selectedRouteIndex);
+
+  $('mapRouteDestination').textContent=navDestination.label||"مقصد";
+  $('mapRouteEta').textContent=formatDurationFa(route.duration);
+  $('mapRouteDistance').textContent=formatKm(route.distance);
+  $('mapRouteArrival').textContent=formatArrivalFa(route.duration);
+
+  $('mapRouteKicker').textContent=
+    integrity.critical
+      ?"Route نیاز به اصلاح دارد"
+      :routeAlternatives.length>1
+        ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر`
+        :"مسیر آماده است";
+
+  $('mapRouteReason').textContent=
+    integrity.critical
+      ?"این Route برای Navigation تأیید نشده است. جزئیات را بررسی کن."
+      :decision.body+" ترافیک زنده هنوز در ETA لحاظ نمی‌شود.";
+
+  $('mapStartBtn').disabled=integrity.critical;
+  $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"شروع";
+
+  sheet.classList.add('show');
+  $('mapDevBtn').style.display='none';
+}
+function closeMapRouteSheet(){
+  $('mapRouteSheet')?.classList.remove('show');
+  if($('mapDevBtn'))$('mapDevBtn').style.display='';
+}
+function openMapFirstOriginPicker(){
+  beginOriginPick();
+  hideMapSearchPanels();
+  showMapStatus("روی نقشه محل شروع را انتخاب کن.");
+}
+async function bootstrapMapFirstExperience(){
+  document.body.classList.add('map-first-mode');
+
+  try{fixMapSize(true)}catch(e){}
+
+  renderMapRecentDestinations();
+  syncMapOriginStatus("locating","در حال پیدا کردن موقعیت شما...");
+
+  // Use current location automatically. If permission is denied, the map
+  // remains fully usable and the origin chip becomes the manual fallback.
+  await autoLocateOriginMapFirst({silent:true});
+
+  try{
+    if(originConfirmed){
+      map.setView([navOrigin.lat,navOrigin.lng],15,{animate:true});
+    }
+  }catch(e){}
 }
 
 async function searchDestination(){
@@ -3913,43 +4316,66 @@ function chooseDestination(index){
     lng:Number(x.lon),
     label:destinationLabelFromItem(x),
     address:destinationAddressFromItem(x)
-  },{source:"search"});
+  },{source:"search",autoRoute:true});
 }
 window.chooseDestination=chooseDestination;
 
-function useCurrentLocation(){
+async function autoLocateOriginMapFirst({silent=false}={}){
   if(!navigator.geolocation){
-    $('status').textContent="مرورگر شما دسترسی موقعیت مکانی ندارد.";
-    return;
+    if(!silent)showMapStatus("موقعیت خودکار در این مرورگر در دسترس نیست؛ مبدأ را روی نقشه انتخاب کن.","bad");
+    syncMapOriginStatus("bad","مبدأ را روی نقشه انتخاب کن");
+    return false;
   }
 
-  $('status').textContent="در حال دریافت موقعیت فعلی...";
+  syncMapOriginStatus("locating","در حال پیدا کردن موقعیت شما...");
+  if(!silent)$('status').textContent="در حال دریافت موقعیت فعلی...";
 
-  navigator.geolocation.getCurrentPosition(
-    async pos=>{
-      let label="موقعیت فعلی من";
-      let address="موقعیت دریافت‌شده از GPS";
-      try{
-        const r=await reverseGeocodePoint(pos.coords.latitude,pos.coords.longitude);
-        label=r.label||label;
-        address=r.address||address;
-      }catch(e){}
+  try{
+    const pos=await new Promise((resolve,reject)=>{
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {enableHighAccuracy:true,timeout:9000,maximumAge:15000}
+      );
+    });
 
-      await stageOrigin({
-        lat:pos.coords.latitude,
-        lng:pos.coords.longitude,
-        label,
-        address
-      },{
-        source:"gps",
-        accuracy:Number(pos.coords.accuracy||999)
-      });
-    },
-    err=>{
-      $('status').textContent="دسترسی موقعیت داده نشد؛ مبدأ تغییر نکرد.";
-    },
-    {enableHighAccuracy:true,timeout:9000,maximumAge:15000}
-  );
+    let label="موقعیت فعلی من";
+    let address="موقعیت دریافت‌شده از GPS";
+    try{
+      const r=await reverseGeocodePoint(pos.coords.latitude,pos.coords.longitude);
+      label=r.label||label;
+      address=r.address||address;
+    }catch(e){}
+
+    await stageOrigin({
+      lat:pos.coords.latitude,
+      lng:pos.coords.longitude,
+      label,
+      address
+    },{
+      source:"gps",
+      accuracy:Number(pos.coords.accuracy||999),
+      autoConfirm:true
+    });
+
+    if(originConfirmed){
+      syncMapOriginStatus("good",navOrigin.label||"موقعیت فعلی");
+      return true;
+    }
+
+    syncMapOriginStatus("bad","مبدأ نیاز به اصلاح دارد");
+    return false;
+
+  }catch(e){
+    if(!silent){
+      showMapStatus("موقعیت فعلی دریافت نشد؛ روی نقشه مبدأ را انتخاب کن.","bad");
+    }
+    syncMapOriginStatus("bad","برای انتخاب مبدأ لمس کن");
+    return false;
+  }
+}
+function useCurrentLocation(){
+  autoLocateOriginMapFirst({silent:false});
 }
 
 async function loadRoute(){
@@ -4714,6 +5140,7 @@ function enterDrivingMode(){
 function exitDrivingMode(){
   document.body.classList.remove('driving-mode');
   $('offlineDriveBanner')?.classList.remove('show');
+  if(routeAlternatives.length)renderMapRouteSheet();
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
   setTimeout(()=>{try{map.invalidateSize(true)}catch(e){}},80);
@@ -6594,6 +7021,36 @@ $('reset').onclick=()=>reset(true);
 $('csv').onclick=exportCSV;
 $('fitMap').onclick=()=>{fixMapSize(true)};
 $('routePreset').onchange=()=>applyPresetSelection(true);
+$('mapDestinationSearchBtn').onclick=searchDestinationMapFirst;
+$('mapDestinationSearch').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    searchDestinationMapFirst();
+  }
+});
+$('mapDestinationSearch').addEventListener('focus',()=>{
+  if(!$('mapDestinationSearch').value.trim()){
+    renderMapRecentDestinations();
+    if(loadRecentDestinations().length)$('mapRecentWrap')?.classList.add('open');
+  }
+});
+$('mapOriginButton').onclick=()=>autoLocateOriginMapFirst({silent:false});
+$('mapOriginChip').onclick=openMapFirstOriginPicker;
+
+$('mapRouteCompareBtn').onclick=openRouteComparison;
+$('mapRoutePreviewBtn').onclick=openRoutePreview;
+$('mapStartBtn').onclick=openTripReadiness;
+$('mapRouteCloseBtn').onclick=closeMapRouteSheet;
+
+$('mapDevBtn').onclick=()=>{
+  document.body.classList.add('setup-open');
+  setTimeout(()=>fixMapSize(false),80);
+};
+$('closeMapDevBtn').onclick=()=>{
+  document.body.classList.remove('setup-open');
+  setTimeout(()=>fixMapSize(true),80);
+};
+
 $('originSearchBtn').onclick=searchOrigin;
 $('originSearch').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();searchOrigin()}
@@ -6631,6 +7088,7 @@ $('cancelDestinationPickBtn').onclick=cancelDestinationPick;
 $('clearRecentDestinationsBtn').onclick=()=>{
   localStorage.removeItem(RECENT_DESTINATIONS_KEY);
   renderRecentDestinations();
+  renderMapRecentDestinations();
 };
 $('useMyLocation').onclick=useCurrentLocation;
 $('destinationSearch').addEventListener('keydown',e=>{
@@ -6738,6 +7196,8 @@ setTimeout(()=>fixMapSize(false),900);
 if($('originLabel'))$('originLabel').textContent="هنوز مبدأیی تأیید نشده";
 if($('originSub'))$('originSub').textContent="موقعیت فعلی، جست‌وجو یا انتخاب روی نقشه";
 if($('destinationSearch'))$('destinationSearch').value='';
+document.body.classList.add('map-first-mode');
+setTimeout(()=>bootstrapMapFirstExperience(),650);
 </script>
 
 <script>
@@ -6751,8 +7211,10 @@ if($('destinationSearch'))$('destinationSearch').value='';
     if(el) el.classList.add('active');
     window.scrollTo({top:0,behavior:'smooth'});
     if(name==='trip'){
+      document.body.classList.add('map-first-mode');
       setTimeout(()=>{
         try{ fixMapSize(true); }catch(e){}
+        if(!originConfirmed)autoLocateOriginMapFirst({silent:true});
       },80);
     }
     if(name==='rewards'){
