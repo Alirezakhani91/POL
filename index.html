@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۱ Real Driving Telemetry</title>
+<title>POL | نسخه ۴.۲ Mapped Speed Limit Layer</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2652,6 +2652,64 @@ body.driving-mode .live-eta-source{
   color:#bfdbfe;
 }
 
+
+/* ===== v4.2 Mapped Speed Limit Layer ===== */
+.speed-limit-stack{
+  display:grid;
+  justify-items:center;
+  gap:4px;
+}
+.speed-limit-source-badge{
+  padding:3px 6px;
+  border-radius:999px;
+  background:rgba(15,23,42,.88);
+  border:1px solid rgba(148,163,184,.16);
+  color:#9fb0c3;
+  font-size:6px;
+  line-height:1;
+  white-space:nowrap;
+  backdrop-filter:blur(8px);
+}
+.speed-limit-source-badge.good{
+  background:rgba(14,53,29,.92);
+  border-color:rgba(34,197,94,.28);
+  color:#bbf7d0;
+}
+.speed-limit-source-badge.warn{
+  background:rgba(60,44,10,.92);
+  border-color:rgba(245,158,11,.28);
+  color:#fde68a;
+}
+.speedSign.mapped-limit{
+  box-shadow:0 9px 24px rgba(15,23,42,.18);
+}
+.speedSign.mapped-limit-low{
+  border-color:#f59e0b!important;
+}
+.mapped-speed-debug-box{
+  border-color:rgba(244,63,94,.16)!important;
+}
+.mapped-speed-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.mapped-speed-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.mapped-speed-debug-box .eligibilityStatus.bad{
+  background:#441717;
+  border-color:#7d3030;
+  color:#fecaca;
+}
+body.real-gps-active #currentSpeedGauge.over{
+  background:rgba(86,20,20,.96)!important;
+  border-color:#ef4444!important;
+  color:#fff!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3266,7 +3324,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
 
               <div class="mapHUD">
-                <div class="speedSign" id="speedSign">--</div>
+                <div class="speed-limit-stack">
+                  <div class="speedSign" id="speedSign">--</div>
+                  <div id="speedLimitSourceBadge" class="speed-limit-source-badge">بدون داده</div>
+                </div>
               </div>
 
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
@@ -3373,9 +3434,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.1</span>
+              <span class="lab-version-chip">v4.2</span>
               <div>
-                <b>Real Driving Telemetry Foundation</b>
+                <b>Mapped Speed Limit Layer</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -3394,6 +3455,33 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox mapped-speed-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Mapped Speed Limit Layer</b>
+                  <div class="small">OSM maxspeed صریح • آزمایشی • بدون جریمه و Reward</div>
+                </div>
+                <div id="mappedSpeedStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="mappedSpeedLimit">--</b><span>حد ثبت‌شده km/h</span></div>
+                <div class="eligibilityCell"><b id="mappedSpeedConfidence">--</b><span>اطمینان Match</span></div>
+                <div class="eligibilityCell"><b id="mappedSpeedCoverage">--</b><span>پوشش سفر</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="mappedSpeedCompliance">--</b><span>Compliance Preview</span></div>
+                <div class="eligibilityCell"><b id="mappedSpeedWays">۰</b><span>Road Segment</span></div>
+                <div class="eligibilityCell"><b id="mappedSpeedEvents">۰</b><span>Overspeed Preview</span></div>
+              </div>
+
+              <div id="mappedSpeedRoad" class="reasonList">هنوز Route Speed Data بارگذاری نشده است.</div>
+              <div id="mappedSpeedSource" class="reasonList" style="margin-top:6px">
+                منبع Prototype: OpenStreetMap explicit maxspeed
+              </div>
             </div>
 
             <div class="eligibilityBox telemetry-debug-box">
@@ -3966,6 +4054,28 @@ let offRouteTestState={
   roadName:"",
   snapDistance:null,
   error:""
+};
+
+
+const MAPPED_SPEED_CACHE_KEY="pol_mapped_speed_cache_v1";
+const MAPPED_SPEED_CACHE_TTL=6*60*60*1000;
+
+let mappedSpeedState={
+  status:"idle",
+  loading:false,
+  requestSeq:0,
+  cacheKey:"",
+  segments:[],
+  grid:new Map(),
+  current:null,
+  lastError:"",
+  gpsSamples:0,
+  validLimitSamples:0,
+  complianceSamples:0,
+  compliantSamples:0,
+  overspeedEvents:[],
+  activeOverspeedSince:null,
+  lastOverspeedAlertAt:0
 };
 
 let realTelemetryState={
@@ -5850,9 +5960,17 @@ function selectRouteAlternative(index){
   $('distance').textContent=formatKm(routeDistanceM);
   $('segmentCount').textContent="۵";
   $('tripInfo').style.display="block";
-  $('limit').textContent=segmentMeta(0).limit;
-  $('speedSign').textContent=segmentMeta(0).limit;
+  if(isRealGpsMode()){
+    $('limit').textContent="--";
+    $('speedSign').textContent="--";
+    if($('speedLimitSourceBadge'))$('speedLimitSourceBadge').textContent="در حال دریافت";
+  }else{
+    $('limit').textContent=segmentMeta(0).limit;
+    $('speedSign').textContent=segmentMeta(0).limit;
+  }
   $('segment').textContent=segmentMeta(0).id;
+
+  prefetchMappedSpeedLimits({force:false});
   $('status').textContent=`مسیر انتخاب شد • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`;
   resetTurnByTurn();
   resetLiveEtaEngine();
@@ -6198,6 +6316,7 @@ function saveRecentDestination(dest){
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
   resetRealTelemetry();
+resetMappedSpeedTripStats();
 renderRecentDestinations();
 }
 function renderRecentDestinations(){
@@ -8755,6 +8874,720 @@ async function getRealGpsFix(){
   });
 }
 
+
+function resetMappedSpeedTripStats(){
+  mappedSpeedState.current=null;
+  mappedSpeedState.gpsSamples=0;
+  mappedSpeedState.validLimitSamples=0;
+  mappedSpeedState.complianceSamples=0;
+  mappedSpeedState.compliantSamples=0;
+  mappedSpeedState.overspeedEvents=[];
+  mappedSpeedState.activeOverspeedSince=null;
+  mappedSpeedState.lastOverspeedAlertAt=0;
+  renderMappedSpeedLimit(null);
+  renderMappedSpeedDiagnostics();
+}
+
+function parseOsmMaxspeed(value){
+  if(value==null)return null;
+
+  const raw=String(value).trim().toLowerCase();
+  if(!raw)return null;
+
+  // Values that are not numeric legal limits are intentionally ignored.
+  if(["none","signals","variable","walk","national","urban","rural"].includes(raw)){
+    return null;
+  }
+
+  const parts=raw.split(";")
+    .map(x=>x.trim())
+    .filter(Boolean);
+
+  const values=[];
+
+  for(const part of parts){
+    const m=part.match(/(\d+(?:\.\d+)?)/);
+    if(!m)continue;
+
+    let n=Number(m[1]);
+    if(!Number.isFinite(n)||n<=0)continue;
+
+    if(part.includes("mph"))n*=1.609344;
+
+    values.push(n);
+  }
+
+  if(!values.length)return null;
+
+  return{
+    kmh:Math.round(Math.min(...values)),
+    ambiguous:values.length>1,
+    raw
+  };
+}
+
+function mappedSpeedSourceConfidence(tags,parsed){
+  if(!parsed)return 0;
+
+  let confidence=82;
+
+  const source=String(tags?.["source:maxspeed"]||"").toLowerCase();
+  const type=String(tags?.["maxspeed:type"]||"").toLowerCase();
+
+  if(source.includes("sign")||source.includes("survey")||type.includes("sign")){
+    confidence=92;
+  }else if(source){
+    confidence=86;
+  }
+
+  // Conditional roads can have a different legal limit at another time/day.
+  if(tags?.["maxspeed:conditional"])confidence=Math.min(confidence,58);
+  if(parsed.ambiguous)confidence=Math.min(confidence,66);
+
+  return confidence;
+}
+
+function routeSpeedBBox(){
+  if(!routeCoords?.length)return null;
+
+  let south=Infinity,west=Infinity,north=-Infinity,east=-Infinity;
+
+  routeCoords.forEach(([lat,lng])=>{
+    south=Math.min(south,lat);
+    west=Math.min(west,lng);
+    north=Math.max(north,lat);
+    east=Math.max(east,lng);
+  });
+
+  const padLat=.0020;
+  const centerLat=(south+north)/2;
+  const lonScale=Math.max(.45,Math.cos(centerLat*Math.PI/180));
+  const padLon=.0020/lonScale;
+
+  south-=padLat;
+  north+=padLat;
+  west-=padLon;
+  east+=padLon;
+
+  return{south,west,north,east};
+}
+
+function mappedSpeedCacheKey(bbox){
+  if(!bbox)return"";
+  const r=v=>Number(v).toFixed(3);
+  return[r(bbox.south),r(bbox.west),r(bbox.north),r(bbox.east)].join("|");
+}
+
+function loadMappedSpeedCache(key){
+  try{
+    const all=JSON.parse(localStorage.getItem(MAPPED_SPEED_CACHE_KEY)||"{}");
+    const item=all?.[key];
+
+    if(!item)return null;
+    if(Date.now()-Number(item.savedAt||0)>MAPPED_SPEED_CACHE_TTL)return null;
+    if(!Array.isArray(item.elements))return null;
+
+    return item.elements;
+  }catch(e){
+    return null;
+  }
+}
+
+function saveMappedSpeedCache(key,elements){
+  try{
+    let all={};
+
+    try{
+      all=JSON.parse(localStorage.getItem(MAPPED_SPEED_CACHE_KEY)||"{}");
+    }catch(e){}
+
+    all[key]={
+      savedAt:Date.now(),
+      elements
+    };
+
+    // Keep only the newest few route areas.
+    const entries=Object.entries(all)
+      .sort((a,b)=>Number(b[1]?.savedAt||0)-Number(a[1]?.savedAt||0))
+      .slice(0,4);
+
+    localStorage.setItem(
+      MAPPED_SPEED_CACHE_KEY,
+      JSON.stringify(Object.fromEntries(entries))
+    );
+  }catch(e){}
+}
+
+function sampledCurrentRoute(maxPoints=65){
+  if(!routeCoords?.length)return[];
+  if(routeCoords.length<=maxPoints)return routeCoords;
+
+  const out=[];
+  for(let i=0;i<maxPoints;i++){
+    const idx=Math.round(i*(routeCoords.length-1)/(maxPoints-1));
+    out.push(routeCoords[idx]);
+  }
+  return out;
+}
+
+function distanceToRouteSamples(point,samples){
+  let best=Infinity;
+
+  for(const p of samples){
+    best=Math.min(best,hav(point,p));
+    if(best<20)break;
+  }
+
+  return best;
+}
+
+function speedGridCell(lat,lng){
+  const size=.002;
+  return`${Math.floor(Number(lat)/size)}:${Math.floor(Number(lng)/size)}`;
+}
+
+function buildMappedSpeedSegments(elements){
+  const routeSamples=sampledCurrentRoute();
+  const segments=[];
+
+  for(const way of elements||[]){
+    const tags=way?.tags||{};
+    const parsed=parseOsmMaxspeed(tags.maxspeed);
+    if(!parsed)continue;
+
+    const geometry=Array.isArray(way.geometry)?way.geometry:[];
+    if(geometry.length<2)continue;
+
+    const sourceConfidence=mappedSpeedSourceConfidence(tags,parsed);
+
+    for(let i=0;i<geometry.length-1;i++){
+      const a=[Number(geometry[i].lat),Number(geometry[i].lon)];
+      const b=[Number(geometry[i+1].lat),Number(geometry[i+1].lon)];
+
+      if(!a.every(Number.isFinite)||!b.every(Number.isFinite))continue;
+
+      const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+
+      // Keep only speed-tagged road pieces genuinely near this selected route.
+      if(distanceToRouteSamples(mid,routeSamples)>210)continue;
+
+      segments.push({
+        a,
+        b,
+        mid,
+        limit:parsed.kmh,
+        raw:parsed.raw,
+        sourceConfidence,
+        wayId:way.id,
+        name:tags.name||tags["name:fa"]||tags.ref||"",
+        highway:tags.highway||"",
+        oneway:String(tags.oneway||"").toLowerCase(),
+        source:tags["source:maxspeed"]||tags["maxspeed:type"]||"explicit maxspeed",
+        conditional:!!tags["maxspeed:conditional"]
+      });
+
+      if(segments.length>=3500)break;
+    }
+
+    if(segments.length>=3500)break;
+  }
+
+  const grid=new Map();
+
+  for(const segment of segments){
+    const key=speedGridCell(segment.mid[0],segment.mid[1]);
+
+    if(!grid.has(key))grid.set(key,[]);
+    grid.get(key).push(segment);
+  }
+
+  mappedSpeedState.segments=segments;
+  mappedSpeedState.grid=grid;
+  return segments;
+}
+
+function nearbyMappedSpeedSegments(point){
+  const size=.002;
+  const latCell=Math.floor(Number(point[0])/size);
+  const lngCell=Math.floor(Number(point[1])/size);
+
+  const out=[];
+
+  for(let di=-1;di<=1;di++){
+    for(let dj=-1;dj<=1;dj++){
+      const key=`${latCell+di}:${lngCell+dj}`;
+      const items=mappedSpeedState.grid.get(key);
+      if(items?.length)out.push(...items);
+    }
+  }
+
+  // In sparse data, fall back to all retained segments.
+  return out.length?out:mappedSpeedState.segments;
+}
+
+function mappedSpeedHeadingPenalty(segment,heading){
+  if(!Number.isFinite(Number(heading)))return 0;
+
+  const wayHeading=bearingDeg(segment.a,segment.b);
+  if(!Number.isFinite(Number(wayHeading)))return 0;
+
+  let delta=Math.abs((((Number(heading)-Number(wayHeading))+540)%360)-180);
+
+  // Bidirectional roads can be travelled in either direction.
+  if(segment.oneway!=="yes"&&segment.oneway!=="1"&&segment.oneway!=="true"){
+    delta=Math.min(delta,Math.abs(180-delta));
+  }
+
+  if(delta<=25)return 0;
+  if(delta<=55)return 4;
+  if(delta<=85)return 10;
+  return 22;
+}
+
+function matchMappedSpeedLimit(point,heading,temporalConfidence=0){
+  if(mappedSpeedState.status!=="ready" || !mappedSpeedState.segments.length){
+    return null;
+  }
+
+  const candidates=nearbyMappedSpeedSegments(point);
+  let best=null;
+
+  for(const segment of candidates){
+    const hit=pointToSegmentMeters(point,segment.a,segment.b);
+    if(!Number.isFinite(hit.distance)||hit.distance>75)continue;
+
+    const headingPenalty=mappedSpeedHeadingPenalty(segment,heading);
+    const score=hit.distance+headingPenalty;
+
+    if(!best||score<best.score){
+      best={
+        ...segment,
+        distance:hit.distance,
+        point:hit.point,
+        score,
+        headingPenalty
+      };
+    }
+  }
+
+  if(!best)return null;
+
+  let confidence=Number(best.sourceConfidence||0);
+
+  if(best.distance<=10)confidence+=5;
+  else if(best.distance<=25)confidence+=1;
+  else if(best.distance<=45)confidence-=7;
+  else confidence-=18;
+
+  if(best.headingPenalty>=20)confidence-=12;
+  else if(best.headingPenalty>=10)confidence-=6;
+
+  confidence=Math.min(
+    confidence,
+    Math.max(45,Number(temporalConfidence||0)+12)
+  );
+
+  confidence=clamp(Math.round(confidence),0,96);
+
+  return{
+    limit:best.limit,
+    confidence,
+    distance:best.distance,
+    road:best.name||best.highway||"Road Segment",
+    source:best.source,
+    wayId:best.wayId,
+    conditional:best.conditional,
+    raw:best.raw
+  };
+}
+
+async function fetchOverpassSpeedWays(bbox){
+  const query=
+    `[out:json][timeout:12];`+
+    `way["highway"]["maxspeed"](${bbox.south.toFixed(6)},${bbox.west.toFixed(6)},${bbox.north.toFixed(6)},${bbox.east.toFixed(6)});`+
+    `out tags geom;`;
+
+  const endpoints=[
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),14000);
+
+      const res=await fetch(
+        `${endpoint}?data=${encodeURIComponent(query)}`,
+        {
+          signal:controller.signal,
+          headers:{Accept:"application/json"}
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if(!res.ok){
+        throw new Error(`Overpass ${res.status}`);
+      }
+
+      const data=await res.json();
+
+      if(!Array.isArray(data?.elements)){
+        throw new Error("Speed data response invalid");
+      }
+
+      return data.elements;
+    }catch(e){
+      lastError=e;
+      // Never parallelize public Overpass fallback requests.
+    }
+  }
+
+  throw lastError||new Error("Speed data unavailable");
+}
+
+async function prefetchMappedSpeedLimits({force=false}={}){
+  if(!routeCoords?.length)return false;
+
+  const bbox=routeSpeedBBox();
+  if(!bbox)return false;
+
+  // Avoid a huge public Overpass request for very long routes.
+  const latSpan=bbox.north-bbox.south;
+  const lonSpan=bbox.east-bbox.west;
+
+  if(latSpan>.28||lonSpan>.32){
+    mappedSpeedState.status="skipped";
+    mappedSpeedState.lastError="Route area is too large for public Overpass prototype.";
+    mappedSpeedState.segments=[];
+    mappedSpeedState.grid=new Map();
+    renderMappedSpeedDiagnostics();
+    return false;
+  }
+
+  const key=mappedSpeedCacheKey(bbox);
+
+  if(!force && mappedSpeedState.status==="ready" && mappedSpeedState.cacheKey===key){
+    return true;
+  }
+
+  mappedSpeedState.cacheKey=key;
+  mappedSpeedState.status="loading";
+  mappedSpeedState.loading=true;
+  mappedSpeedState.lastError="";
+  renderMappedSpeedDiagnostics();
+
+  const cached=!force?loadMappedSpeedCache(key):null;
+
+  if(cached){
+    buildMappedSpeedSegments(cached);
+    mappedSpeedState.status="ready";
+    mappedSpeedState.loading=false;
+    renderMappedSpeedDiagnostics();
+    return true;
+  }
+
+  const seq=++mappedSpeedState.requestSeq;
+
+  try{
+    const elements=await fetchOverpassSpeedWays(bbox);
+
+    if(seq!==mappedSpeedState.requestSeq)return false;
+
+    saveMappedSpeedCache(key,elements);
+    buildMappedSpeedSegments(elements);
+
+    mappedSpeedState.status="ready";
+    mappedSpeedState.loading=false;
+    renderMappedSpeedDiagnostics();
+    return true;
+  }catch(e){
+    if(seq!==mappedSpeedState.requestSeq)return false;
+
+    mappedSpeedState.status="error";
+    mappedSpeedState.loading=false;
+    mappedSpeedState.lastError=String(e?.message||e);
+    mappedSpeedState.segments=[];
+    mappedSpeedState.grid=new Map();
+    renderMappedSpeedDiagnostics();
+    return false;
+  }
+}
+
+function mappedSpeedMaterialOverspeed(speed,limit){
+  const excess=Number(speed)-Number(limit);
+  const pct=Number(limit)>0?excess/Number(limit)*100:0;
+
+  return{
+    active:excess>5&&pct>8,
+    excess,
+    pct
+  };
+}
+
+function showMappedSpeedPreviewAlert(speed,limit){
+  const box=$('safetyCoachAlert');
+  if(!box)return;
+
+  const now=Date.now();
+  if(now-mappedSpeedState.lastOverspeedAlertAt<10000)return;
+  mappedSpeedState.lastOverspeedAlertAt=now;
+
+  box.className="safety-coach-alert show warning";
+  $('safetyCoachAlertIcon').textContent="↟";
+  $('safetyCoachAlertTitle').textContent="سرعت بالاتر از حد ثبت‌شده";
+  $('safetyCoachAlertText').textContent=
+    `${Math.round(speed).toLocaleString('fa-IR')} km/h • حد نقشه ${Math.round(limit).toLocaleString('fa-IR')}`;
+
+  clearTimeout(mappedSpeedState._alertTimer);
+  mappedSpeedState._alertTimer=setTimeout(
+    ()=>box.classList.remove('show'),
+    2300
+  );
+}
+
+function updateMappedSpeedPreview({
+  point,
+  heading,
+  speedKmh,
+  accuracy,
+  temporalConfidence,
+  timestamp
+}={}){
+  mappedSpeedState.gpsSamples+=1;
+
+  const match=matchMappedSpeedLimit(
+    point,
+    heading,
+    temporalConfidence
+  );
+
+  mappedSpeedState.current=match;
+
+  if(!match){
+    mappedSpeedState.activeOverspeedSince=null;
+    renderMappedSpeedLimit(null);
+    renderMappedSpeedDiagnostics();
+    return null;
+  }
+
+  const reliable=
+    match.confidence>=72 &&
+    Number(accuracy)<=38 &&
+    Number(temporalConfidence)>=58;
+
+  if(reliable){
+    mappedSpeedState.validLimitSamples+=1;
+    mappedSpeedState.complianceSamples+=1;
+
+    const over=mappedSpeedMaterialOverspeed(
+      speedKmh,
+      match.limit
+    );
+
+    if(!over.active){
+      mappedSpeedState.compliantSamples+=1;
+      mappedSpeedState.activeOverspeedSince=null;
+    }else{
+      if(mappedSpeedState.activeOverspeedSince==null){
+        mappedSpeedState.activeOverspeedSince=timestamp;
+      }
+
+      const sustained=
+        Number(timestamp)-Number(mappedSpeedState.activeOverspeedSince)>=2500;
+
+      if(sustained){
+        const last=mappedSpeedState.overspeedEvents.at(-1);
+
+        if(!last||Number(timestamp)-Number(last.at)>8000){
+          mappedSpeedState.overspeedEvents.push({
+            at:timestamp,
+            speed:Number(speedKmh),
+            limit:Number(match.limit),
+            excess:Number(over.excess),
+            confidence:Number(match.confidence),
+            road:match.road
+          });
+        }
+
+        showMappedSpeedPreviewAlert(
+          speedKmh,
+          match.limit
+        );
+      }
+    }
+  }else{
+    mappedSpeedState.activeOverspeedSince=null;
+  }
+
+  renderMappedSpeedLimit(match,{
+    speedKmh,
+    reliable
+  });
+  renderMappedSpeedDiagnostics();
+
+  return match;
+}
+
+function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
+  const sign=$('speedSign');
+  const badge=$('speedLimitSourceBadge');
+
+  if(!sign||!badge)return;
+
+  sign.classList.remove(
+    'mapped-limit',
+    'mapped-limit-low'
+  );
+  badge.classList.remove('good','warn');
+
+  if(!match||match.confidence<58){
+    sign.textContent="--";
+    badge.textContent=
+      mappedSpeedState.status==="loading"
+        ?"در حال دریافت"
+        :"بدون داده";
+    if($('limit'))$('limit').textContent="--";
+    if($('excess'))$('excess').textContent="۰";
+    $('currentSpeedGauge')?.classList.remove('over');
+    return;
+  }
+
+  sign.textContent=
+    Number(match.limit).toLocaleString('fa-IR');
+  sign.classList.add('mapped-limit');
+
+  if(match.confidence>=78){
+    badge.textContent="OSM • mapped";
+    badge.classList.add('good');
+  }else{
+    badge.textContent="OSM • کم‌اطمینان";
+    badge.classList.add('warn');
+    sign.classList.add('mapped-limit-low');
+  }
+
+  if($('limit')){
+    $('limit').textContent=
+      Number(match.limit).toLocaleString('fa-IR');
+  }
+
+  const over=mappedSpeedMaterialOverspeed(
+    speedKmh,
+    match.limit
+  );
+
+  if($('excess')){
+    $('excess').textContent=
+      Math.max(0,Math.round(over.excess)).toLocaleString('fa-IR');
+  }
+
+  $('currentSpeedGauge')?.classList.toggle(
+    'over',
+    reliable&&over.active
+  );
+}
+
+function mappedSpeedCompliancePreview(){
+  if(!mappedSpeedState.complianceSamples)return null;
+
+  return Math.round(
+    mappedSpeedState.compliantSamples/
+    mappedSpeedState.complianceSamples*100
+  );
+}
+
+function mappedSpeedCoveragePreview(){
+  if(!mappedSpeedState.gpsSamples)return null;
+
+  return Math.round(
+    mappedSpeedState.validLimitSamples/
+    mappedSpeedState.gpsSamples*100
+  );
+}
+
+function renderMappedSpeedDiagnostics(){
+  const status=$('mappedSpeedStatus');
+  const current=mappedSpeedState.current;
+  const coverage=mappedSpeedCoveragePreview();
+  const compliance=mappedSpeedCompliancePreview();
+
+  if($('mappedSpeedLimit')){
+    $('mappedSpeedLimit').textContent=current
+      ?Number(current.limit).toLocaleString('fa-IR')
+      :"--";
+  }
+
+  if($('mappedSpeedConfidence')){
+    $('mappedSpeedConfidence').textContent=current
+      ?`${Math.round(current.confidence).toLocaleString('fa-IR')}٪`
+      :"--";
+  }
+
+  if($('mappedSpeedCoverage')){
+    $('mappedSpeedCoverage').textContent=coverage==null
+      ?"—"
+      :`${coverage.toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('mappedSpeedCompliance')){
+    $('mappedSpeedCompliance').textContent=compliance==null
+      ?"—"
+      :`${compliance.toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('mappedSpeedWays')){
+    $('mappedSpeedWays').textContent=
+      Number(mappedSpeedState.segments.length||0).toLocaleString('fa-IR');
+  }
+
+  if($('mappedSpeedEvents')){
+    $('mappedSpeedEvents').textContent=
+      Number(mappedSpeedState.overspeedEvents.length||0).toLocaleString('fa-IR');
+  }
+
+  if($('mappedSpeedRoad')){
+    $('mappedSpeedRoad').textContent=current
+      ?`${current.road} • Match ${Math.round(current.distance).toLocaleString('fa-IR')}m`
+      :mappedSpeedState.status==="loading"
+        ?"در حال دریافت maxspeedهای صریح نزدیک Route..."
+        :mappedSpeedState.status==="error"
+          ?"Speed data فعلاً در دسترس نیست؛ هیچ حد سرعتی ساخته نمی‌شود."
+          :mappedSpeedState.status==="skipped"
+            ?"محدوده Route برای Overpass عمومی بیش از حد بزرگ است."
+            :"برای این بخش از Route حد سرعت صریح پیدا نشده است.";
+  }
+
+  if($('mappedSpeedSource')){
+    $('mappedSpeedSource').textContent=current
+      ?`منبع تگ: ${current.source} • OSM way ${current.wayId}${current.conditional?" • conditional":""}`
+      :"منبع Prototype: OpenStreetMap explicit maxspeed • Production source نیست.";
+  }
+
+  if(status){
+    status.classList.remove('good','warn','bad','review');
+
+    if(mappedSpeedState.status==="loading"){
+      status.classList.add('review');
+      status.textContent="در حال دریافت";
+    }else if(mappedSpeedState.status==="error"){
+      status.classList.add('bad');
+      status.textContent="ناموفق";
+    }else if(current?.confidence>=78){
+      status.classList.add('good');
+      status.textContent="Mapped";
+    }else if(mappedSpeedState.status==="ready"){
+      status.classList.add('warn');
+      status.textContent=current?"کم‌اطمینان":"بدون پوشش";
+    }else{
+      status.classList.add('review');
+      status.textContent="در انتظار";
+    }
+  }
+}
+
 function resetRealTelemetry(){
   stopDeviceMotionTelemetry();
   realTelemetryState={
@@ -9320,6 +10153,9 @@ function buildRealTelemetryResult(){
       return rank(b)-rank(a) || Number(b.peak||0)-Number(a.peak||0);
     })[0]||null;
 
+  const mappedCompliance=mappedSpeedCompliancePreview();
+  const mappedCoverage=mappedSpeedCoveragePreview();
+
   lastTripResult={
     navigationOnly:false,
     telemetryOnly:true,
@@ -9327,6 +10163,10 @@ function buildRealTelemetryResult(){
     score:behaviorScore,
     behaviorScore,
     speedScore:null,
+    mappedSpeedCompliance:mappedCompliance,
+    mappedSpeedCoverage:mappedCoverage,
+    mappedSpeedEventCount:mappedSpeedState.overspeedEvents.length,
+    mappedSpeedSource:"OpenStreetMap explicit maxspeed prototype",
     brakeScore:scores.brakeScore,
     accelScore:scores.accelScore,
     cornerScore:scores.cornerScore,
@@ -9353,7 +10193,7 @@ function buildRealTelemetryResult(){
     eligibilityConfidence:null,
     eligibilityReasons:[
       "Behavior telemetry is experimental.",
-      "Authoritative road speed limits are not connected yet.",
+      "OSM mapped maxspeed is connected only as a prototype; authoritative speed limits are not connected yet.",
       "Rewards remain paused."
     ]
   };
@@ -9547,13 +10387,23 @@ async function processRealGps(position){
     return;
   }
 
-  // Current speed is real. Speed limit remains hidden until an authoritative
-  // speed-limit source is connected.
+  // Current speed is real.
   if($('driveCurrentSpeed')){
     $('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
   }
-  if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
-  if($('speedSign'))$('speedSign').textContent="--";
+
+  // Prototype speed-limit layer:
+  // only explicit OSM maxspeed is displayed.
+  // It does NOT enter rewards/final Safety Score.
+  updateMappedSpeedPreview({
+    point:temporal.point||roadDecisionPoint,
+    heading,
+    speedKmh:speed,
+    accuracy,
+    temporalConfidence:Number(temporal.confidence||0),
+    timestamp:stamp
+  });
+
   $('speedAlertBanner')?.classList.remove('show');
 
   // Re-route only after sustained, high-confidence deviation.
@@ -9611,6 +10461,8 @@ function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
   resetRealTelemetry();
+  resetMappedSpeedTripStats();
+  prefetchMappedSpeedLimits({force:false});
   realTelemetryState.active=true;
   realTelemetryState.startedAt=Date.now();
   startDeviceMotionTelemetry();
@@ -9682,6 +10534,7 @@ async function triggerRealGpsReroute(rawPoint){
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
     resetLiveEtaEngine({reroute:true});
+    prefetchMappedSpeedLimits({force:true});
 
     rerouteState.count++;
     rerouteState.rerouted=true;
@@ -10168,6 +11021,7 @@ async function triggerReroute(pos,simProgress){
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
     resetLiveEtaEngine({reroute:true});
+    prefetchMappedSpeedLimits({force:true});
 
     tripJourneyDistanceM=Math.max(
       travelledBefore + routeDistanceM,
@@ -10388,6 +11242,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
+  resetMappedSpeedTripStats();
   pendingRealGpsFix=null;
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
   rerouteState.active=false;
@@ -11821,8 +12676,8 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
           : r.telemetryOnly
             ? (
               r.topRiskEvent
-                ? `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود. مهم‌ترین رویداد ثبت‌شده: ${r.topRiskEvent}. سرعت غیرمجاز هنوز در این امتیاز محاسبه نشده است.`
-                : `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود و رویداد شدید معتبری ثبت نشد. سرعت غیرمجاز هنوز در این امتیاز محاسبه نشده است.`
+                ? `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود. مهم‌ترین رویداد ثبت‌شده: ${r.topRiskEvent}. ${r.mappedSpeedCoverage!=null?`پوشش maxspeed نقشه ${Number(r.mappedSpeedCoverage).toLocaleString('fa-IR')}٪ و Compliance Preview ${Number(r.mappedSpeedCompliance??0).toLocaleString('fa-IR')}٪ بود. `:""}Speed هنوز وارد امتیاز نهایی نشده است.`
+                : `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود و رویداد شدید معتبری ثبت نشد. ${r.mappedSpeedCoverage!=null?`پوشش maxspeed نقشه ${Number(r.mappedSpeedCoverage).toLocaleString('fa-IR')}٪ بود. `:""}Speed هنوز وارد امتیاز نهایی نشده است.`
             )
           : r.topRiskEvent
             ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
@@ -11838,7 +12693,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
         document.getElementById('summaryComparison').innerHTML=r.navigationOnly
           ? `<b>وضعیت Navigation</b><span>این تست وارد پروفایل امتیازی راننده نمی‌شود.</span>`
           : r.telemetryOnly
-            ? `<b>محدوده این امتیاز</b><span>این Behavior Score فقط ترمز، شتاب و پیچ را پوشش می‌دهد. تا اتصال Speed Limit معتبر، Reward، SafeCoin، Streak و Mission عمداً متوقف هستند.</span>`
+            ? `<b>محدوده این امتیاز</b><span>این Behavior Score فقط ترمز، شتاب و پیچ را پوشش می‌دهد. maxspeed فعلی از OSM فقط Preview است و هنوز منبع قانونی/Production محسوب نمی‌شود؛ Reward، SafeCoin، Streak و Mission متوقف هستند.</span>`
             : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
       const sheet=document.getElementById('tripSummarySheet');
