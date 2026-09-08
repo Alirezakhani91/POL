@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۵ هوشمندی Turn-by-Turn و Lane Guidance</title>
+<title>POL | نسخه ۳.۶ Route Recovery و Re-route UX</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2101,6 +2101,98 @@ body.driving-mode .turn-card.turn-critical .turn-arrow{
   .lane-pill{width:29px;height:29px}
 }
 
+
+/* ===== v3.6 Route Recovery UX ===== */
+.reroute-banner{
+  display:none!important;
+  position:absolute!important;
+  z-index:1012!important;
+  top:118px!important;
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%) translateY(-4px);
+  width:auto!important;
+  max-width:min(84vw,460px)!important;
+  min-width:210px!important;
+  padding:8px 12px!important;
+  border-radius:999px!important;
+  background:rgba(12,22,33,.94)!important;
+  border:1px solid rgba(96,165,250,.20)!important;
+  color:#e2e8f0!important;
+  backdrop-filter:blur(12px)!important;
+  box-shadow:0 12px 30px rgba(2,8,23,.28)!important;
+  opacity:0;
+  transition:.18s ease!important;
+}
+.reroute-banner.show{
+  display:flex!important;
+  align-items:center;
+  gap:9px;
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+.reroute-banner::before{
+  content:"";
+  width:16px;
+  height:16px;
+  flex:0 0 auto;
+  border-radius:50%;
+  border:2px solid rgba(148,163,184,.30);
+  border-top-color:#60a5fa;
+  animation:rerouteSpin .8s linear infinite;
+}
+.reroute-banner.success::before{
+  animation:none;
+  border:0;
+  background:#22c55e;
+  box-shadow:0 0 0 4px rgba(34,197,94,.12);
+}
+.reroute-banner.error::before{
+  animation:none;
+  border:0;
+  background:#f59e0b;
+  box-shadow:0 0 0 4px rgba(245,158,11,.12);
+}
+@keyframes rerouteSpin{to{transform:rotate(360deg)}}
+.reroute-banner b{
+  display:block!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  color:#f8fafc!important;
+  white-space:nowrap;
+}
+.reroute-banner span{
+  display:block!important;
+  margin-top:2px!important;
+  font-size:7px!important;
+  line-height:1.35!important;
+  color:#9fb0c3!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:340px;
+}
+
+body.driving-mode .reroute-banner{
+  top:122px!important;
+}
+body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-alert{
+  top:170px!important;
+}
+
+.reroute-route-ghost{
+  filter:saturate(.65);
+}
+
+@media(max-width:650px){
+  .reroute-banner{
+    top:116px!important;
+    min-width:190px!important;
+    max-width:calc(100vw - 28px)!important;
+  }
+  .reroute-banner span{max-width:250px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3268,6 +3360,8 @@ let destinationSearchCache=[];
 let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
+let rerouteGhostLine=null;
+
 let rerouteState={
   active:false,
   offSince:null,
@@ -6927,6 +7021,7 @@ function enterDrivingMode(){
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
+  endRerouteVisual();
   userManuallyMovedDrivingMap=false;
   followCameraLastUpdate=0;
   followCameraLastProgress=0;
@@ -7281,13 +7376,14 @@ function startRealGps(){
 async function triggerRealGpsReroute(rawPoint){
   if(rerouteState.active||navigator.onLine===false)return;
   rerouteState.active=true;
-  showRerouteNotice("از مسیر خارج شدی","در حال تثبیت موقعیت روی خیابان...");
+  beginRerouteVisual();
+  showRerouteNotice("در حال اصلاح مسیر","تثبیت موقعیت روی خیابان...");
 
   try{
     const snapped=await snapToDrivableRoad(rawPoint,{maxSnapM:100,number:3});
     if(!snapped)throw new Error("موقعیت روی خیابان قابل رانندگی تثبیت نشد");
 
-    showRerouteNotice("موقعیت تثبیت شد","در حال محاسبه مسیر جدید...");
+    showRerouteNotice("موقعیت تثبیت شد","در حال پیدا کردن بهترین مسیر معتبر فعلی...");
 
     const destinationSnap=await snapRoutingEndpoint(
       [Number(navDestination.lat),Number(navDestination.lng)],
@@ -7336,26 +7432,45 @@ async function triggerRealGpsReroute(rawPoint){
     routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
     routeAltLayers=[];
     if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
-    routeLine=L.polyline(routeCoords,{color:'#2f6df6',weight:6,opacity:.97}).addTo(map);
+    routeLine=L.polyline(routeCoords,{
+      color:'#2563eb',
+      weight:8,
+      opacity:.98,
+      lineCap:'round',
+      lineJoin:'round'
+    }).addTo(map);
 
     renderRouteAlternatives();
     renderNavMarkers();
     renderEndpointAccessLines();
-    updateRouteSummary();
-    resetTurnByTurn();
+
+    if(!document.body.classList.contains('driving-mode')){
+      updateRouteSummary();
+    }else{
+      if($('navDistance'))$('navDistance').textContent=formatKm(routeDistanceM);
+      if($('navEta'))$('navEta').textContent=formatDurationFa(routeDurationS);
+      if($('navArrival'))$('navArrival').textContent=formatArrivalFa(routeDurationS);
+    }
+
+    endRerouteVisual();
+    syncNavigationAfterReroute();
 
     showRerouteNotice(
       "مسیر جدید آماده شد",
-      `${formatKm(routeDistanceM)} • حدود ${formatDurationFa(routeDurationS)}`,
-      true
+      `${formatDurationFa(routeDurationS)} • ${formatKm(routeDistanceM)}`,
+      true,
+      "success"
     );
     if(voiceGuidanceEnabled)coachVoice("مسیر جدید آماده شد.");
   }catch(e){
     rerouteState.active=false;
     realGpsState.offRouteSince=null;
+    endRerouteVisual();
     showRerouteNotice(
-      "مسیر جدید تأیید نشد",
-      `${String(e?.message||"خطای مسیریابی")}. مسیر فعلی حفظ می‌شود.`
+      "مسیر فعلی حفظ شد",
+      `${String(e?.message||"مسیر جدید پیدا نشد")}`,
+      false,
+      "error"
     );
   }
 }
@@ -7636,24 +7751,86 @@ function simulatedOffRoutePosition(base,p){
   // If no valid nearby drivable road can be found, do not fake an off-road point.
   return base;
 }
-function showRerouteNotice(title,message,success=false){
+function showRerouteNotice(title,message,success=false,state="loading"){
   const box=$('rerouteBanner');
   if(!box)return;
+
   $('rerouteTitle').textContent=title;
   $('rerouteText').textContent=message;
-  box.style.background=success?'rgba(12,43,26,.96)':'rgba(61,42,9,.96)';
-  box.style.borderColor=success?'#297044':'#8a6416';
+
+  box.classList.remove('success','error');
+  if(success || state==="success")box.classList.add('success');
+  else if(state==="error")box.classList.add('error');
+
   box.classList.add('show');
+
   if(rerouteState.noticeTimer)clearTimeout(rerouteState.noticeTimer);
-  rerouteState.noticeTimer=setTimeout(()=>box.classList.remove('show'),success?1800:3000);
+
+  const duration=
+    state==="loading"
+      ?5200
+      :state==="error"
+        ?3600
+        :2200;
+
+  rerouteState.noticeTimer=setTimeout(()=>{
+    if(!rerouteState.active)box.classList.remove('show');
+  },duration);
 }
+
+function beginRerouteVisual(){
+  if(rerouteGhostLine){
+    try{map.removeLayer(rerouteGhostLine)}catch(e){}
+    rerouteGhostLine=null;
+  }
+
+  if(routeLine && routeCoords.length){
+    try{
+      rerouteGhostLine=L.polyline(routeCoords,{
+        color:'#64748b',
+        weight:7,
+        opacity:.34,
+        dashArray:'10 11',
+        lineCap:'round',
+        lineJoin:'round',
+        className:'reroute-route-ghost'
+      }).addTo(map);
+      rerouteGhostLine.bringToBack?.();
+    }catch(e){}
+  }
+}
+
+function endRerouteVisual(){
+  if(rerouteGhostLine){
+    try{map.removeLayer(rerouteGhostLine)}catch(e){}
+    rerouteGhostLine=null;
+  }
+}
+
+function syncNavigationAfterReroute(){
+  resetTurnByTurn();
+
+  if(document.body.classList.contains('driving-mode')){
+    userManuallyMovedDrivingMap=false;
+    if(typeof recenterDrivingCamera==='function'){
+      setTimeout(()=>recenterDrivingCamera(),120);
+    }
+  }
+
+  try{
+    if(routeLine)routeLine.bringToFront();
+    if(carMarker)carMarker.setZIndexOffset?.(1200);
+  }catch(e){}
+}
+
 async function triggerReroute(pos,simProgress){
   if(rerouteState.active || rerouteState.rerouted)return;
   rerouteState.active=true;
   rerouteState.lastAt=t;
   rerouteState.count++;
+  beginRerouteVisual();
 
-  showRerouteNotice("از مسیر خارج شدی","در حال تثبیت موقعیت روی خیابان...");
+  showRerouteNotice("در حال اصلاح مسیر","تثبیت موقعیت روی خیابان...");
   $('turnArrow').textContent="↻";
   $('turnDistance').textContent="در حال بررسی";
   $('turnInstruction').textContent="محاسبه مسیر";
@@ -7661,6 +7838,7 @@ async function triggerReroute(pos,simProgress){
 
   if(navigator.onLine===false){
     rerouteState.active=false;
+    endRerouteVisual();
     showRerouteNotice(
       "اینترنت در دسترس نیست",
       "مسیر فعلی حفظ شد. محاسبه مجدد بعد از اتصال دوباره انجام می‌شود."
@@ -7774,8 +7952,9 @@ async function triggerReroute(pos,simProgress){
     console.warn("Navigation integrity rejected reroute:",e);
     rerouteState.active=false;
     rerouteState.offSince=null;
+    endRerouteVisual();
     showRerouteNotice(
-      "مسیر جدید تأیید نشد",
+      "مسیر فعلی حفظ شد",
       navigator.onLine===false
         ?"اتصال اینترنت قطع است؛ مسیر فعلی حفظ می‌شود."
         : `${String(e?.message||"مسیر معتبر پیدا نشد")}. مسیر فعلی حذف نمی‌شود.`
