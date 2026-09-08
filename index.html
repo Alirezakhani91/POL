@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۶ اطمینان مقصد</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۷ اطمینان مبدأ</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1025,6 +1025,19 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   .destination-confirm-actions{grid-template-columns:1fr}
 }
 
+
+/* ===== v2.7 Origin Confidence ===== */
+.origin-pick-banner{border-color:#2f7f6d}
+.origin-pin-marker{
+  position:relative;width:30px;height:30px;border-radius:50% 50% 50% 0;
+  background:#16a34a;transform:rotate(-45deg);border:3px solid #fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.3)
+}
+.origin-pin-marker:after{
+  content:"";position:absolute;width:8px;height:8px;border-radius:50%;
+  background:#fff;left:8px;top:8px
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1292,12 +1305,41 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <div class="nav-search-card">
               <div class="nav-field">
                 <div class="nav-field-label">مبدأ</div>
+
                 <div class="origin-pill">
                   <div>
-                    <strong id="originLabel">میدان ونک، تهران</strong>
-                    <small id="originSub">مبدأ نمونه — می‌توانی موقعیت فعلی را جایگزین کنی</small>
+                    <strong id="originLabel">هنوز مبدأیی تأیید نشده</strong>
+                    <small id="originSub">موقعیت فعلی، جست‌وجو یا انتخاب روی نقشه</small>
                   </div>
                   <button id="useMyLocation" class="nav-icon-btn" title="موقعیت فعلی">◎</button>
+                </div>
+
+                <div class="nav-input-row" style="margin-top:7px">
+                  <input id="originSearch" class="nav-input" type="search"
+                         placeholder="مثلاً میدان ونک، آزادی، هفت‌تیر...">
+                  <button id="originSearchBtn" class="nav-icon-btn" title="جست‌وجوی مبدأ">⌕</button>
+                </div>
+                <div id="originResults" class="search-results"></div>
+
+                <div id="originConfirmCard" class="destination-confirm-card">
+                  <div class="destination-confirm-head">
+                    <div>
+                      <small>مبدأ انتخاب‌شده</small>
+                      <b id="originConfirmTitle">هنوز مبدأیی تأیید نشده</b>
+                    </div>
+                    <span id="originConfidenceBadge" class="destination-confidence-badge checking">در انتظار انتخاب</span>
+                  </div>
+
+                  <div id="originConfirmAddress" class="destination-confirm-address">
+                    از موقعیت فعلی، جست‌وجو یا نقشه یک مبدأ انتخاب کن.
+                  </div>
+
+                  <div id="originAccessInfo" class="destination-access-info"></div>
+
+                  <div class="destination-confirm-actions">
+                    <button id="pickOriginOnMapBtn">انتخاب روی نقشه</button>
+                    <button id="confirmOriginBtn" class="primary" disabled>همین مبدأ</button>
+                  </div>
                 </div>
               </div>
 
@@ -1478,6 +1520,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
 
               
+              <div id="originPickBanner" class="destination-pick-banner origin-pick-banner">
+                <div>
+                  <b>نقطه مبدأ را روی نقشه انتخاب کن</b>
+                  <span>روی محل شروع سفر کلیک کن؛ آدرس و اتصال به شبکه خودرویی بررسی می‌شود.</span>
+                </div>
+                <button id="cancelOriginPickBtn">لغو</button>
+              </div>
+
               <div id="destinationPickBanner" class="destination-pick-banner">
                 <div>
                   <b>نقطه مقصد را روی نقشه انتخاب کن</b>
@@ -2065,6 +2115,12 @@ let pendingDestination=null;
 let destinationConfirmed=false;
 let destinationPickMode=false;
 let destinationPickMarker=null;
+
+let pendingOrigin=null;
+let originConfirmed=false;
+let originPickMode=false;
+let originPickMarker=null;
+let originSearchCache=[];
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -3202,9 +3258,32 @@ window.selectRouteAlternative=selectRouteAlternative;
 function applyPresetSelection(load=true){
   const preset=presets[$('routePreset').value];
   if(!preset)return;
-  navOrigin={lat:preset.points[0][0],lng:preset.points[0][1],label:preset.name.split(" تا ")[0]+"، تهران"};
+
+  navOrigin={
+    lat:preset.points[0][0],
+    lng:preset.points[0][1],
+    label:preset.name.split(" تا ")[0]+"، تهران"
+  };
+
   const last=preset.points[preset.points.length-1];
-  navDestination={lat:last[0],lng:last[1],label:preset.name.split(" تا ").slice(-1)[0]+"، تهران"};
+  navDestination={
+    lat:last[0],
+    lng:last[1],
+    label:preset.name.split(" تا ").slice(-1)[0]+"، تهران"
+  };
+
+  pendingOrigin={
+    label:navOrigin.label,
+    address:"مبدأ مسیر نمونه تهران",
+    lat:navOrigin.lat,
+    lng:navOrigin.lng,
+    source:"preset",
+    accessState:"good",
+    accessText:"مبدأ نمونه برای تست شبیه‌ساز انتخاب شده است.",
+    access:null
+  };
+  originConfirmed=true;
+
   pendingDestination={
     label:navDestination.label,
     address:"مسیر نمونه تهران",
@@ -3216,12 +3295,260 @@ function applyPresetSelection(load=true){
     access:null
   };
   destinationConfirmed=true;
+
+  if($('originSearch'))$('originSearch').value=navOrigin.label.replace("، تهران","");
   if($('destinationSearch'))$('destinationSearch').value=navDestination.label.replace("، تهران","");
+
   updateNavLabels();
+  renderPendingOrigin();
   renderPendingDestination();
+
   if(load)loadRoute();
 }
 
+
+
+async function analyzeOriginAccess(origin){
+  try{
+    const snap=await snapRoutingEndpoint(
+      [Number(origin.lat),Number(origin.lng)],
+      "origin"
+    );
+    if(!snap){
+      return{state:"bad",access:null,text:"برای این نقطه، اتصال مطمئن به شبکه قابل رانندگی پیدا نشد."};
+    }
+
+    const d=Math.round(Number(snap.accessDistance||0));
+    if(d<=35){
+      return{state:"good",access:snap,text:`اتصال مناسب به شبکه خودرویی • حدود ${d.toLocaleString('fa-IR')} متر`};
+    }
+    if(d<=100){
+      return{state:"warn",access:snap,text:`نقطه شروع حدود ${d.toLocaleString('fa-IR')} متر با نزدیک‌ترین مسیر قابل رانندگی فاصله دارد.`};
+    }
+    return{state:"warn",access:snap,text:`مبدأ حدود ${d.toLocaleString('fa-IR')} متر با شبکه خودرویی فاصله دارد؛ قبل از شروع محل را روی نقشه بررسی کن.`};
+  }catch(e){
+    return{state:"warn",access:null,text:"بررسی اتصال مبدأ موقتاً انجام نشد؛ قبل از Route گرفتن محل را روی نقشه بررسی کن."};
+  }
+}
+function renderPendingOrigin(){
+  const card=$('originConfirmCard');
+  if(!card)return;
+  card.classList.add('show');
+
+  if(!pendingOrigin){
+    $('originConfirmTitle').textContent="هنوز مبدأیی تأیید نشده";
+    $('originConfirmAddress').textContent="از موقعیت فعلی، جست‌وجو یا نقشه یک مبدأ انتخاب کن.";
+    $('originConfidenceBadge').className="destination-confidence-badge checking";
+    $('originConfidenceBadge').textContent="در انتظار انتخاب";
+    $('originAccessInfo').classList.remove('show');
+    $('confirmOriginBtn').disabled=true;
+    $('confirmOriginBtn').textContent="همین مبدأ";
+    return;
+  }
+
+  $('originConfirmTitle').textContent=pendingOrigin.label||"مبدأ";
+  $('originConfirmAddress').textContent=pendingOrigin.address||"";
+  $('confirmOriginBtn').textContent=originConfirmed?"مبدأ تأیید شد":"همین مبدأ";
+
+  const badge=$('originConfidenceBadge');
+  const state=pendingOrigin.accessState;
+
+  if(originConfirmed){
+    badge.className="destination-confidence-badge good";
+    badge.textContent="تأیید شد";
+  }else if(state==="good"){
+    badge.className="destination-confidence-badge good";
+    badge.textContent="اتصال مناسب";
+  }else if(state==="warn"){
+    badge.className="destination-confidence-badge warn";
+    badge.textContent="نیاز به توجه";
+  }else if(state==="bad"){
+    badge.className="destination-confidence-badge bad";
+    badge.textContent="اتصال نامطمئن";
+  }else{
+    badge.className="destination-confidence-badge checking";
+    badge.textContent="در حال بررسی";
+  }
+
+  if(pendingOrigin.accessText){
+    $('originAccessInfo').classList.add('show');
+    $('originAccessInfo').textContent=pendingOrigin.accessText;
+  }else{
+    $('originAccessInfo').classList.remove('show');
+  }
+
+  $('confirmOriginBtn').disabled=
+    originConfirmed || state==="bad" || !state;
+}
+async function stageOrigin(origin,{source="search",accuracy=null}={}){
+  originConfirmed=false;
+
+  pendingOrigin={
+    label:origin.label||"مبدأ",
+    address:origin.address||origin.label||"",
+    lat:Number(origin.lat),
+    lng:Number(origin.lng),
+    source,
+    accuracy:Number.isFinite(Number(accuracy))?Number(accuracy):null,
+    accessState:null,
+    accessText:"",
+    access:null
+  };
+
+  if($('originSearch') && source!=="gps")$('originSearch').value=pendingOrigin.label;
+  $('originResults')?.classList.remove('open');
+  renderPendingOrigin();
+
+  if(originPickMarker){
+    try{map.removeLayer(originPickMarker)}catch(e){}
+    originPickMarker=null;
+  }
+
+  const icon=L.divIcon({
+    className:"",
+    html:'<div class="origin-pin-marker"></div>',
+    iconSize:[30,30],
+    iconAnchor:[15,30]
+  });
+
+  originPickMarker=L.marker(
+    [pendingOrigin.lat,pendingOrigin.lng],
+    {icon,zIndexOffset:2050}
+  ).addTo(map);
+
+  try{
+    map.setView([pendingOrigin.lat,pendingOrigin.lng],Math.max(map.getZoom(),16),{animate:true});
+  }catch(e){}
+
+  $('status').textContent="در حال بررسی اتصال مبدأ به شبکه خودرویی...";
+  const access=await analyzeOriginAccess(pendingOrigin);
+
+  if(
+    !pendingOrigin ||
+    Math.abs(pendingOrigin.lat-Number(origin.lat))>.000001 ||
+    Math.abs(pendingOrigin.lng-Number(origin.lng))>.000001
+  )return;
+
+  pendingOrigin.accessState=access.state;
+  pendingOrigin.access=access.access;
+  const accuracyText=pendingOrigin.accuracy!=null
+    ?` • دقت GPS حدود ${Math.round(pendingOrigin.accuracy).toLocaleString('fa-IR')} متر`
+    :"";
+  pendingOrigin.accessText=access.text+accuracyText;
+  renderPendingOrigin();
+
+  $('status').textContent=
+    access.state==="bad"?"اتصال خودرویی مبدأ تأیید نشد.":"مبدأ آماده بررسی و تأیید است.";
+}
+function confirmPendingOrigin(){
+  if(!pendingOrigin || pendingOrigin.accessState==="bad")return;
+
+  navOrigin={
+    lat:Number(pendingOrigin.lat),
+    lng:Number(pendingOrigin.lng),
+    label:pendingOrigin.label||"مبدأ"
+  };
+  originConfirmed=true;
+  clearExistingRouteForDestinationChange();
+  updateNavLabels();
+  renderPendingOrigin();
+  $('status').textContent="مبدأ تأیید شد.";
+}
+async function searchOrigin(){
+  const input=$('originSearch');
+  const results=$('originResults');
+  const q=(input?.value||"").trim();
+
+  if(!q){
+    $('status').textContent="نام مبدأ را وارد کن.";
+    return;
+  }
+
+  $('status').textContent="در حال جست‌وجوی مبدأ...";
+  results.innerHTML='<div class="small" style="padding:10px">در حال جست‌وجو...</div>';
+  results.classList.add('open');
+
+  try{
+    const url=
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&countrycodes=ir`+
+      `&addressdetails=1&accept-language=fa&q=${encodeURIComponent(q)}`;
+
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error(`origin geocode ${res.status}`);
+
+    const data=await res.json();
+    originSearchCache=Array.isArray(data)?data:[];
+
+    if(!originSearchCache.length){
+      results.innerHTML='<div class="small" style="padding:10px">نتیجه‌ای در ایران پیدا نشد.</div>';
+      $('status').textContent="نتیجه‌ای برای مبدأ پیدا نشد.";
+      return;
+    }
+
+    results.innerHTML=originSearchCache.map((x,i)=>{
+      const label=destinationLabelFromItem(x);
+      const address=destinationAddressFromItem(x);
+      const meta=[x.type,x.category].filter(Boolean).join(" • ");
+      return `<button class="search-result destination-result-rich" onclick="chooseOrigin(${i})">
+        <div>
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(address)}</span>
+        </div>
+        <span class="destination-result-meta">${escapeHtml(meta)}</span>
+      </button>`;
+    }).join("");
+
+    $('status').textContent=
+      `${originSearchCache.length.toLocaleString('fa-IR')} نتیجه برای مبدأ پیدا شد.`;
+  }catch(e){
+    console.warn("origin search failed",e);
+    originSearchCache=[];
+    results.innerHTML='<div class="small" style="padding:10px">جست‌وجوی مبدأ فعلاً در دسترس نیست.</div>';
+    $('status').textContent="سرویس جست‌وجوی مبدأ پاسخ نداد.";
+  }
+}
+function chooseOrigin(index){
+  const x=originSearchCache[index];
+  if(!x)return;
+  stageOrigin({
+    lat:Number(x.lat),
+    lng:Number(x.lon),
+    label:destinationLabelFromItem(x),
+    address:destinationAddressFromItem(x)
+  },{source:"search"});
+}
+window.chooseOrigin=chooseOrigin;
+
+function beginOriginPick(){
+  originPickMode=true;
+  destinationPickMode=false;
+  $('destinationPickBanner')?.classList.remove('show');
+  $('originPickBanner')?.classList.add('show');
+  $('status').textContent="روی نقشه، نقطه شروع سفر را انتخاب کن.";
+}
+function cancelOriginPick(){
+  originPickMode=false;
+  $('originPickBanner')?.classList.remove('show');
+  $('status').textContent="انتخاب مبدأ روی نقشه لغو شد.";
+}
+async function handleOriginMapPick(latlng){
+  if(!originPickMode)return;
+  originPickMode=false;
+  $('originPickBanner')?.classList.remove('show');
+  $('status').textContent="در حال شناسایی نقطه مبدأ...";
+
+  try{
+    const origin=await reverseGeocodePoint(latlng.lat,latlng.lng);
+    await stageOrigin(origin,{source:"map"});
+  }catch(e){
+    await stageOrigin({
+      label:"نقطه شروع انتخاب‌شده",
+      address:`${Number(latlng.lat).toFixed(5)}, ${Number(latlng.lng).toFixed(5)}`,
+      lat:latlng.lat,
+      lng:latlng.lng
+    },{source:"map"});
+  }
+}
 
 function escapeHtml(value){
   return String(value||"")
@@ -3494,6 +3821,8 @@ function confirmPendingDestination(){
 }
 function beginDestinationPick(){
   destinationPickMode=true;
+  originPickMode=false;
+  $('originPickBanner')?.classList.remove('show');
   $('destinationPickBanner')?.classList.add('show');
   $('status').textContent="روی نقشه، نقطه دقیق مقصد را انتخاب کن.";
 }
@@ -3593,26 +3922,42 @@ function useCurrentLocation(){
     $('status').textContent="مرورگر شما دسترسی موقعیت مکانی ندارد.";
     return;
   }
+
   $('status').textContent="در حال دریافت موقعیت فعلی...";
+
   navigator.geolocation.getCurrentPosition(
-    pos=>{
-      navOrigin={
+    async pos=>{
+      let label="موقعیت فعلی من";
+      let address="موقعیت دریافت‌شده از GPS";
+      try{
+        const r=await reverseGeocodePoint(pos.coords.latitude,pos.coords.longitude);
+        label=r.label||label;
+        address=r.address||address;
+      }catch(e){}
+
+      await stageOrigin({
         lat:pos.coords.latitude,
         lng:pos.coords.longitude,
-        label:"موقعیت فعلی من"
-      };
-      updateNavLabels();
-      $('status').textContent=`موقعیت فعلی دریافت شد • دقت حدود ${Math.round(pos.coords.accuracy).toLocaleString('fa-IR')} متر`;
-      if(navDestination)loadRoute();
+        label,
+        address
+      },{
+        source:"gps",
+        accuracy:Number(pos.coords.accuracy||999)
+      });
     },
     err=>{
-      $('status').textContent="دسترسی موقعیت داده نشد؛ مبدأ نمونه تهران حفظ شد.";
+      $('status').textContent="دسترسی موقعیت داده نشد؛ مبدأ تغییر نکرد.";
     },
     {enableHighAccuracy:true,timeout:9000,maximumAge:15000}
   );
 }
 
 async function loadRoute(){
+  if(!originConfirmed){
+    $('status').textContent="ابتدا مبدأ را انتخاب و تأیید کن.";
+    renderPendingOrigin();
+    return;
+  }
   if(!destinationConfirmed){
     $('status').textContent="ابتدا مقصد را انتخاب و تأیید کن.";
     renderPendingDestination();
@@ -3651,6 +3996,14 @@ async function loadRoute(){
       originAccessM:originSnap.accessDistance,
       destinationAccessM:destinationSnap.accessDistance
     };
+
+    if(pendingOrigin && originConfirmed){
+      pendingOrigin.accessState=originSnap.accessDistance<=35?"good":"warn";
+      pendingOrigin.accessText=originSnap.accessDistance<=35
+        ?`شروع Route نزدیک مبدأ تأیید شد • حدود ${Math.round(originSnap.accessDistance).toLocaleString('fa-IR')} متر`
+        :`شروع Route حدود ${Math.round(originSnap.accessDistance).toLocaleString('fa-IR')} متر با مبدأ فاصله دارد.`;
+      renderPendingOrigin();
+    }
 
     if(pendingDestination && destinationConfirmed){
       pendingDestination.accessState=destinationSnap.accessDistance<=40?"good":"warn";
@@ -4172,18 +4525,21 @@ async function getLocationReadiness(){
 }
 async function updateTripReadiness(){
   const hasRoute=Array.isArray(routeCoords)&&routeCoords.length>1;
+  const originReady=originConfirmed;
   const destReady=destinationConfirmed;
   const integrity=hasRoute?analyzeSelectedRoute():{level:"bad",critical:true,checks:[]};
-  const navigationReady=destReady&&hasRoute&&!integrity.critical;
+  const navigationReady=originReady&&destReady&&hasRoute&&!integrity.critical;
   const online=navigator.onLine!==false;
   const loc=await getLocationReadiness();
 
   setReadyCheck(
     'readyRouteCheck',
     navigationReady?(integrity.level==="warn"?"warn":"good"):'bad',
-    !destReady
-      ?'مقصد هنوز تأیید نشده است.'
-      :!hasRoute
+    !originReady
+      ?'مبدأ هنوز تأیید نشده است.'
+      :!destReady
+        ?'مقصد هنوز تأیید نشده است.'
+        :!hasRoute
         ?'ابتدا مسیر را بارگذاری کن.'
         :integrity.critical
         ?'Route برای Navigation تأیید نشده؛ پیش‌نمایش مسیر را بررسی کن.'
@@ -4253,15 +4609,32 @@ async function startDrivingConfirmed(){
       const acc=Number(pendingRealGpsFix.coords.accuracy||999);
       const p=[pendingRealGpsFix.coords.latitude,pendingRealGpsFix.coords.longitude];
       const match=matchRealPointToRoute(p);
-      if(acc<=35){
+      const originGap=hav(p,[Number(navOrigin.lat),Number(navOrigin.lng)]);
+
+      if(originGap>250){
+        setReadyCheck(
+          'readyRealGpsCheck','bad',
+          `موقعیت واقعی حدود ${Math.round(originGap).toLocaleString('fa-IR')} متر با مبدأ تأییدشده فاصله دارد. مبدأ را روی موقعیت فعلی تنظیم کن.`
+        );
+        $('readyStartDrive').disabled=false;
+        $('readyStartDrive').textContent="مبدأ را اصلاح کن";
+        return;
+      }
+
+      if(originGap>100){
+        setReadyCheck(
+          'readyRealGpsCheck','warn',
+          `GPS آماده است، اما حدود ${Math.round(originGap).toLocaleString('fa-IR')} متر با مبدأ تأییدشده فاصله داری.`
+        );
+      }else if(acc<=35){
         setReadyCheck(
           'readyRealGpsCheck','good',
-          `GPS آماده است • دقت ${Math.round(acc).toLocaleString('fa-IR')} متر. Map Matching پس از دریافت چند نقطه حرکت فعال می‌شود.`
+          `GPS آماده است • دقت ${Math.round(acc).toLocaleString('fa-IR')} متر • شروع سفر با مبدأ تأییدشده همخوان است.`
         );
       }else{
         setReadyCheck(
           'readyRealGpsCheck','warn',
-          `GPS دریافت شد ولی دقت ${Math.round(acc).toLocaleString('fa-IR')} متر است؛ Re-route محافظه‌کارانه خواهد بود.`
+          `مبدأ همخوان است ولی دقت GPS ${Math.round(acc).toLocaleString('fa-IR')} متر است؛ Re-route محافظه‌کارانه خواهد بود.`
         );
       }
     }catch(e){
@@ -6221,6 +6594,25 @@ $('reset').onclick=()=>reset(true);
 $('csv').onclick=exportCSV;
 $('fitMap').onclick=()=>{fixMapSize(true)};
 $('routePreset').onchange=()=>applyPresetSelection(true);
+$('originSearchBtn').onclick=searchOrigin;
+$('originSearch').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();searchOrigin()}
+});
+$('originSearch').addEventListener('input',()=>{
+  if(originConfirmed && pendingOrigin){
+    const typed=$('originSearch').value.trim();
+    if(typed && typed!==pendingOrigin.label){
+      originConfirmed=false;
+      clearExistingRouteForDestinationChange();
+      if($('confirmOriginBtn'))$('confirmOriginBtn').textContent="همین مبدأ";
+      renderPendingOrigin();
+    }
+  }
+});
+$('confirmOriginBtn').onclick=confirmPendingOrigin;
+$('pickOriginOnMapBtn').onclick=beginOriginPick;
+$('cancelOriginPickBtn').onclick=cancelOriginPick;
+
 $('destinationSearchBtn').onclick=searchDestination;
 $('destinationSearch').addEventListener('input',()=>{
   if(destinationConfirmed && pendingDestination){
@@ -6275,9 +6667,14 @@ $('routeCompareSheet').onclick=(e)=>{
 };
 updateRoutingDataDisclosure();
 renderRecentDestinations();
+renderPendingOrigin();
 renderPendingDestination();
 
 map.on('click',e=>{
+  if(originPickMode){
+    handleOriginMapPick(e.latlng);
+    return;
+  }
   if(destinationPickMode)handleDestinationMapPick(e.latlng);
 });
 
@@ -6338,7 +6735,8 @@ setTimeout(()=>fixMapSize(false),150);
 renderProfile();
 setTimeout(()=>fixMapSize(false),300);
 setTimeout(()=>fixMapSize(false),900);
-updateNavLabels();
+if($('originLabel'))$('originLabel').textContent="هنوز مبدأیی تأیید نشده";
+if($('originSub'))$('originSub').textContent="موقعیت فعلی، جست‌وجو یا انتخاب روی نقشه";
 if($('destinationSearch'))$('destinationSearch').value='';
 </script>
 
