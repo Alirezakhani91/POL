@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰.۲ اصلاح وضعیت تست خروج</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۱ GPS واقعی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -677,6 +677,32 @@ body.driving-mode #rerouteBanner{
   margin-inline:auto;
 }
 
+
+/* ===== v2.1 Real GPS Navigation ===== */
+.real-gps-hint{
+  margin-top:6px;padding:8px 9px;border-radius:11px;background:#0d1724;
+  border:1px solid #284b72;color:#91a9c5;font-size:8px;line-height:1.7
+}
+.real-gps-badge{
+  display:none;position:absolute;z-index:984;left:10px;bottom:162px;
+  align-items:center;gap:7px;padding:7px 9px;border-radius:13px;
+  background:rgba(10,29,20,.94);border:1px solid #28543c;
+  backdrop-filter:blur(10px);box-shadow:0 8px 22px rgba(0,0,0,.22)
+}
+body.driving-mode.real-gps-active .real-gps-badge{display:flex}
+.real-gps-badge .gps-live-dot{
+  width:8px;height:8px;border-radius:50%;background:#22c55e;
+  box-shadow:0 0 0 4px rgba(34,197,94,.10)
+}
+.real-gps-badge.warn{background:rgba(58,43,10,.94);border-color:#735719}
+.real-gps-badge.warn .gps-live-dot{background:#f59e0b}
+.real-gps-badge.bad{background:rgba(75,20,20,.95);border-color:#8f3434}
+.real-gps-badge.bad .gps-live-dot{background:#ef4444}
+.real-gps-badge small{display:block;font-size:7px;color:#94a3b8}
+.real-gps-badge b{display:block;font-size:9px;color:#d1fae5;margin-top:1px}
+body.real-gps-active #safetyCoachPill{display:none!important}
+@media(max-width:430px){.real-gps-badge{left:7px;bottom:157px}}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -970,7 +996,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="route-summary-cell"><b id="navArrival">--</b><span>زمان رسیدن</span></div>
                 </div>
                 <div id="routeOptions" class="route-options"></div>
-                <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد، مسیر جایگزین معناداری پیدا نشد؛ بهترین مسیر موجود نمایش داده شده است.</div>
+                <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد، مسیر جایگزین معناداری پیدا نشد؛ مسیر پیشنهادی موجود نمایش داده شده است.</div>
               </div>
 
               <div class="nav-voice-row">
@@ -997,6 +1023,16 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                       <option value="azadiVanak">میدان آزادی تا میدان ونک</option>
                       <option value="haftTirVanak">میدان هفت‌تیر تا میدان ونک</option>
                     </select>
+                  </div>
+                  <div>
+                    <label>حالت مسیریابی</label>
+                    <select id="navigationMode">
+                      <option value="sim" selected>شبیه‌ساز — تست قابلیت‌ها</option>
+                      <option value="real">GPS واقعی — حرکت واقعی</option>
+                    </select>
+                    <div id="realGpsHint" class="real-gps-hint">
+                      برای تست قابلیت‌ها از شبیه‌ساز استفاده کن. GPS واقعی فقط داده واقعی گوشی را استفاده می‌کند.
+                    </div>
                   </div>
                   <div>
                     <label>نوع رانندگی برای تست</label>
@@ -1063,6 +1099,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
 
               
+              <div id="realGpsBadge" class="real-gps-badge">
+                <span class="gps-live-dot"></span>
+                <div>
+                  <small>GPS واقعی</small>
+                  <b id="realGpsBadgeText">در انتظار موقعیت</b>
+                </div>
+              </div>
+
               <div id="offlineDriveBanner" class="offline-drive-banner">
                 <b>اتصال اینترنت قطع است</b>
                 <span>مسیر فعلی ادامه دارد؛ جست‌وجوی مقصد و محاسبه مجدد ممکن است موقتاً در دسترس نباشد.</span>
@@ -1380,6 +1424,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
         <div class="ready-check-icon">🔊</div>
         <div><b>راهنمای صوتی</b><span>در حال بررسی...</span></div>
       </div>
+      <div id="readyRealGpsCheck" class="ready-check" style="display:none">
+        <div class="ready-check-icon">◉</div>
+        <div><b>GPS واقعی</b><span>در حال بررسی موقعیت...</span></div>
+      </div>
     </div>
 
     <div id="readyNotice" class="ready-notice">
@@ -1514,6 +1562,25 @@ let offRouteTestState={
   snapDistance:null,
   error:""
 };
+let realGpsState={
+  watchId:null,
+  active:false,
+  firstFix:false,
+  lat:null,lng:null,
+  accuracy:null,
+  speedKmh:0,
+  heading:null,
+  timestamp:null,
+  previousPoint:null,
+  previousTimestamp:null,
+  routeProgress:0,
+  distanceFromRoute:Infinity,
+  matchedPoint:null,
+  offRouteSince:null,
+  lastRerouteAt:0,
+  track:[]
+};
+let pendingRealGpsFix=null;
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -1884,7 +1951,7 @@ function renderRouteOptionCards(){
   if(!box)return;
   box.innerHTML=routeAlternatives.slice(0,3).map((r,i)=>{
     const only=routeAlternatives.length===1;
-    const label=only?"بهترین مسیر موجود":i===0?"پیشنهاد اول":i===1?"مسیر جایگزین":"مسیر دیگر";
+    const label=only?"مسیر پیشنهادی موجود":i===0?"پیشنهاد اول":i===1?"مسیر جایگزین":"مسیر دیگر";
     return `<button class="route-option ${i===selectedRouteIndex?'active':''}" onclick="selectRouteAlternative(${i})">
       <div><b>${label}</b><br><span>${formatKm(r.distance)} • ${only?'مسیر جایگزین مناسب پیدا نشد':i===0?'پیشنهاد سریع‌تر':'گزینه جایگزین'}</span></div>
       <span class="route-option-time">${formatDurationFa(r.duration)}</span>
@@ -2542,6 +2609,12 @@ async function updateTripReadiness(){
   setReadyCheck('readyLocationCheck',loc.state,loc.message);
   setReadyCheck('readyVoiceCheck',voiceGuidanceEnabled?'good':'warn',
     voiceGuidanceEnabled?'راهنمای صوتی روشن است.':'راهنمای صوتی خاموش است؛ مانع شروع سفر نیست.');
+  if($('readyRealGpsCheck')){
+    $('readyRealGpsCheck').style.display=isRealGpsMode()?'grid':'none';
+    if(isRealGpsMode()){
+      setReadyCheck('readyRealGpsCheck','warn','در شروع سفر، GPS دقیق گوشی بررسی می‌شود.');
+    }
+  }
 
   const routeLabel=(navOrigin?.label&&navDestination?.label)
     ? `${navOrigin.label} تا ${navDestination.label}`
@@ -2577,7 +2650,37 @@ async function startDrivingConfirmed(){
   const ok=await updateTripReadiness();
   if(!ok)return;
 
-  const isOffRouteTest=$('scenario')?.value==="offRoute";
+  const realMode=isRealGpsMode();
+  if(realMode){
+    $('readyStartDrive').disabled=true;
+    $('readyStartDrive').textContent="در حال دریافت GPS...";
+    try{
+      pendingRealGpsFix=await getRealGpsFix();
+      const acc=Number(pendingRealGpsFix.coords.accuracy||999);
+      const p=[pendingRealGpsFix.coords.latitude,pendingRealGpsFix.coords.longitude];
+      const match=matchRealPointToRoute(p);
+      if(acc<=35){
+        setReadyCheck(
+          'readyRealGpsCheck','good',
+          `GPS آماده است • دقت ${Math.round(acc).toLocaleString('fa-IR')} متر • فاصله از مسیر ${Math.round(match.distance).toLocaleString('fa-IR')} متر`
+        );
+      }else{
+        setReadyCheck(
+          'readyRealGpsCheck','warn',
+          `GPS دریافت شد ولی دقت ${Math.round(acc).toLocaleString('fa-IR')} متر است؛ Re-route محافظه‌کارانه خواهد بود.`
+        );
+      }
+    }catch(e){
+      setReadyCheck('readyRealGpsCheck','bad','GPS آماده نیست. اجازه Location و تنظیمات مرورگر را بررسی کن.');
+      $('readyStartDrive').disabled=false;
+      $('readyStartDrive').textContent="تلاش دوباره";
+      return;
+    }
+    $('readyStartDrive').disabled=false;
+    $('readyStartDrive').textContent="شروع رانندگی";
+  }
+
+  const isOffRouteTest=!realMode && $('scenario')?.value==="offRoute";
   if(isOffRouteTest){
     $('readyStartDrive').disabled=true;
     $('readyStartDrive').textContent="در حال آماده‌سازی تست...";
@@ -2665,6 +2768,279 @@ function toggleVoiceGuidance(){
   }
 }
 
+
+
+function isRealGpsMode(){
+  return $('navigationMode')?.value==="real";
+}
+function setRealGpsBadge(state,message){
+  const el=$('realGpsBadge');
+  if(!el)return;
+  el.classList.remove('warn','bad');
+  if(state==="warn")el.classList.add('warn');
+  if(state==="bad")el.classList.add('bad');
+  if($('realGpsBadgeText'))$('realGpsBadgeText').textContent=message;
+}
+function pointToSegmentMeters(p,a,b){
+  const lat0=p[0]*Math.PI/180;
+  const mx=111320*Math.cos(lat0),my=110540;
+  const px=p[1]*mx,py=p[0]*my;
+  const ax=a[1]*mx,ay=a[0]*my;
+  const bx=b[1]*mx,by=b[0]*my;
+  const dx=bx-ax,dy=by-ay;
+  const den=dx*dx+dy*dy;
+  let u=den?((px-ax)*dx+(py-ay)*dy)/den:0;
+  u=clamp(u,0,1);
+  const x=ax+u*dx,y=ay+u*dy;
+  return{distance:Math.hypot(px-x,py-y),point:[y/my,x/mx],u};
+}
+function matchRealPointToRoute(point){
+  if(!Array.isArray(routeCoords)||routeCoords.length<2){
+    return{distance:Infinity,point:null,progress:0,index:0};
+  }
+  const cum=[0];
+  for(let i=1;i<routeCoords.length;i++)cum[i]=cum[i-1]+hav(routeCoords[i-1],routeCoords[i]);
+  const total=Math.max(1,cum[cum.length-1]);
+
+  let best={distance:Infinity,point:null,progress:0,index:0};
+  for(let i=0;i<routeCoords.length-1;i++){
+    const r=pointToSegmentMeters(point,routeCoords[i],routeCoords[i+1]);
+    if(r.distance<best.distance){
+      const seg=Math.max(1,hav(routeCoords[i],routeCoords[i+1]));
+      best={
+        distance:r.distance,
+        point:r.point,
+        progress:clamp((cum[i]+seg*r.u)/total,0,1),
+        index:i
+      };
+    }
+  }
+  return best;
+}
+function gpsSpeedKmh(coords,point,stamp){
+  if(Number.isFinite(coords.speed)&&coords.speed>=0)return clamp(coords.speed*3.6,0,220);
+  if(realGpsState.previousPoint&&realGpsState.previousTimestamp){
+    const dt=(stamp-realGpsState.previousTimestamp)/1000;
+    if(dt>=.7){
+      return clamp(hav(realGpsState.previousPoint,point)/dt*3.6,0,220);
+    }
+  }
+  return realGpsState.speedKmh||0;
+}
+function gpsRouteConfidence(accuracy,distance){
+  let c=100;
+  if(accuracy>10)c-=8;
+  if(accuracy>20)c-=12;
+  if(accuracy>30)c-=20;
+  if(accuracy>50)c-=30;
+  if(distance>25)c-=8;
+  if(distance>50)c-=18;
+  if(distance>90)c-=30;
+  return clamp(Math.round(c),0,100);
+}
+async function getRealGpsFix(){
+  if(!navigator.geolocation)throw new Error("GPS در این مرورگر پشتیبانی نمی‌شود");
+  return await new Promise((resolve,reject)=>{
+    navigator.geolocation.getCurrentPosition(
+      resolve,reject,
+      {enableHighAccuracy:true,maximumAge:1000,timeout:10000}
+    );
+  });
+}
+function stopRealGps(){
+  realGpsState.active=false;
+  if(realGpsState.watchId!=null){
+    try{navigator.geolocation.clearWatch(realGpsState.watchId)}catch(e){}
+  }
+  realGpsState.watchId=null;
+  document.body.classList.remove('real-gps-active');
+}
+function realGpsFailure(err){
+  const msg=err?.code===1?"دسترسی Location داده نشده":
+            err?.code===2?"GPS در دسترس نیست":
+            err?.code===3?"دریافت GPS طول کشید":"خطای GPS";
+  setRealGpsBadge("bad",msg);
+  if($('readyRealGpsCheck'))setReadyCheck('readyRealGpsCheck','bad',msg);
+}
+async function processRealGps(position){
+  if(!realGpsState.active||!isRealGpsMode())return;
+
+  const c=position.coords;
+  const point=[Number(c.latitude),Number(c.longitude)];
+  const stamp=Number(position.timestamp||Date.now());
+  const accuracy=Number(c.accuracy||999);
+  const speed=gpsSpeedKmh(c,point,stamp);
+  const heading=Number.isFinite(c.heading)
+    ?Number(c.heading)
+    :(realGpsState.previousPoint?bearingDeg(realGpsState.previousPoint,point):null);
+
+  const match=matchRealPointToRoute(point);
+  const confidence=gpsRouteConfidence(accuracy,match.distance);
+
+  realGpsState.previousPoint=realGpsState.lat!=null?[realGpsState.lat,realGpsState.lng]:point;
+  realGpsState.previousTimestamp=realGpsState.timestamp||stamp;
+  realGpsState.lat=point[0];realGpsState.lng=point[1];
+  realGpsState.accuracy=accuracy;
+  realGpsState.speedKmh=speed;
+  realGpsState.heading=heading;
+  realGpsState.timestamp=stamp;
+  realGpsState.firstFix=true;
+  realGpsState.distanceFromRoute=match.distance;
+  realGpsState.matchedPoint=match.point;
+
+  // Small GPS jumps must not move trip progress backwards.
+  if(match.progress>=realGpsState.routeProgress-.02){
+    realGpsState.routeProgress=Math.max(realGpsState.routeProgress,match.progress);
+  }
+
+  const displayPoint=accuracy<=35?point:(match.point||point);
+  if(carMarker)carMarker.setLatLng(displayPoint);
+  realGpsState.track.push(displayPoint);
+  if(realGpsState.track.length>1500)realGpsState.track.shift();
+  if(trackLine)trackLine.setLatLngs(realGpsState.track);
+
+  try{map.panTo(displayPoint,{animate:true,duration:.25})}catch(e){}
+
+  // Turn-by-turn is based on REAL route progress.
+  updateTurnByTurn(realGpsState.routeProgress);
+
+  // Current GPS speed is real. Speed LIMIT is deliberately not shown here,
+  // because prototype segment limits are simulated and must never be presented
+  // as authoritative road data.
+  if($('driveCurrentSpeed'))$('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
+  if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
+  if($('speedSign'))$('speedSign').textContent="--";
+  $('speedAlertBanner')?.classList.remove('show');
+
+  const threshold=Math.max(55,accuracy*1.8);
+  const confidentlyOff=
+    accuracy<=30 &&
+    confidence>=70 &&
+    speed>=5 &&
+    match.distance>threshold;
+
+  if(confidentlyOff){
+    if(realGpsState.offRouteSince==null)realGpsState.offRouteSince=Date.now();
+    const sustained=Date.now()-realGpsState.offRouteSince>=4000;
+    const cooldown=Date.now()-realGpsState.lastRerouteAt>=15000;
+    if(sustained&&cooldown&&!rerouteState.active){
+      realGpsState.lastRerouteAt=Date.now();
+      await triggerRealGpsReroute(point);
+    }
+  }else{
+    realGpsState.offRouteSince=null;
+  }
+
+  if(accuracy<=20)setRealGpsBadge("good",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+  else if(accuracy<=35)setRealGpsBadge("warn",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+  else setRealGpsBadge("bad",`GPS ضعیف • ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+}
+function startRealGps(){
+  if(!navigator.geolocation){realGpsFailure({code:2});return false;}
+  stopRealGps();
+  realGpsState.active=true;
+  realGpsState.firstFix=false;
+  realGpsState.routeProgress=0;
+  realGpsState.offRouteSince=null;
+  realGpsState.lastRerouteAt=0;
+  realGpsState.track=[];
+  realGpsState.previousPoint=null;
+  realGpsState.previousTimestamp=null;
+  document.body.classList.add('real-gps-active');
+  setRealGpsBadge("warn","در انتظار موقعیت");
+
+  realGpsState.watchId=navigator.geolocation.watchPosition(
+    processRealGps,
+    realGpsFailure,
+    {enableHighAccuracy:true,maximumAge:1000,timeout:10000}
+  );
+  return true;
+}
+async function triggerRealGpsReroute(rawPoint){
+  if(rerouteState.active||navigator.onLine===false)return;
+  rerouteState.active=true;
+  showRerouteNotice("از مسیر خارج شدی","در حال تثبیت موقعیت روی خیابان...");
+
+  try{
+    const snapped=await snapToDrivableRoad(rawPoint,{maxSnapM:100,number:3});
+    if(!snapped)throw new Error("موقعیت روی خیابان قابل رانندگی تثبیت نشد");
+
+    showRerouteNotice("موقعیت تثبیت شد","در حال محاسبه مسیر جدید...");
+    const slon=Number(snapped.point[1]).toFixed(6);
+    const slat=Number(snapped.point[0]).toFixed(6);
+    const q=`${slon},${slat};${navDestination.lng},${navDestination.lat}`;
+    const url=`https://router.project-osrm.org/route/v1/driving/${q}?alternatives=true&overview=full&geometries=geojson&steps=true&continue_straight=true&radiuses=40;180`;
+    const data=await fetchJsonWithTimeout(url,9000);
+    const route=chooseBestValidatedRoute(data?.routes||[],snapped.point,navDestination);
+    if(!route)throw new Error("مسیر خودرویی معتبر پیدا نشد");
+
+    routeCoords=routeToCoords(route);
+    routeDistanceM=Number(route.distance||totalDistance(routeCoords));
+    routeDurationS=Number(route.duration||0);
+    routeAlternatives=(data.routes||[]).filter(r=>validateRouteCandidate(r,snapped.point,navDestination).ok);
+    selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
+    buildNavigationSteps(route);
+
+    rerouteState.count++;
+    rerouteState.rerouted=true;
+    rerouteState.active=false;
+    realGpsState.routeProgress=0;
+    realGpsState.offRouteSince=null;
+
+    routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
+    routeAltLayers=[];
+    if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
+    routeLine=L.polyline(routeCoords,{color:'#2f6df6',weight:6,opacity:.97}).addTo(map);
+
+    renderRouteAlternatives();
+    renderNavMarkers();
+    updateRouteSummary();
+    resetTurnByTurn();
+
+    showRerouteNotice(
+      "مسیر جدید آماده شد",
+      `${formatKm(routeDistanceM)} • حدود ${formatDurationFa(routeDurationS)}`,
+      true
+    );
+    if(voiceGuidanceEnabled)coachVoice("مسیر جدید آماده شد.");
+  }catch(e){
+    rerouteState.active=false;
+    realGpsState.offRouteSince=null;
+    showRerouteNotice(
+      "مسیر جدید تأیید نشد",
+      `${String(e?.message||"خطای مسیریابی")}. مسیر فعلی حفظ می‌شود.`
+    );
+  }
+}
+function buildRealGpsNavigationResult(){
+  lastTripResult={
+    navigationOnly:true,
+    navigationMode:"real-gps",
+    score:null,
+    speedScore:null,
+    brakeScore:null,
+    accelScore:null,
+    cornerScore:null,
+    tripConfidence:gpsRouteConfidence(
+      Number(realGpsState.accuracy||999),
+      Number(realGpsState.distanceFromRoute||999)
+    ),
+    speedCompliance:null,
+    maxExcess:null,
+    topRiskEvent:null,
+    routeKm:Number((Number(routeDistanceM||0)/1000).toFixed(1)),
+    originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
+    destinationLabel:(navDestination&&navDestination.label)||"مقصد",
+    plannedDurationMin:Math.max(1,Math.round(Number(routeDurationS||0)/60)),
+    rerouteCount:rerouteState.count||0,
+    gpsAccuracyM:Math.round(Number(realGpsState.accuracy||0)),
+    rewardEligibility:"REVIEW",
+    dataIntegrity:null,
+    fraudRisk:null,
+    eligibilityConfidence:null,
+    eligibilityReasons:["حالت GPS واقعی در نسخه وب فعلاً فقط Navigation را ارزیابی می‌کند."]
+  };
+}
 
 function bearingDeg(a,b){
   const p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180;
@@ -3141,7 +3517,7 @@ function startCoreDrive(){
   $('stop').disabled=false;
   enterDrivingMode();
 
-  if($('scenario')?.value==="offRoute" && offRouteTestState.ready){
+  if(!isRealGpsMode() && $('scenario')?.value==="offRoute" && offRouteTestState.ready){
     setTimeout(()=>{
       showRerouteNotice(
         "تست خروج از مسیر آماده است",
@@ -3151,24 +3527,38 @@ function startCoreDrive(){
     },500);
   }
 
-  timer=setInterval(step,250)
+  if(isRealGpsMode()){
+    $('scenario').disabled=true;
+    $('status').textContent="GPS واقعی فعال • در انتظار حرکت";
+    startRealGps();
+    timer=null;
+  }else{
+    $('scenario').disabled=false;
+    timer=setInterval(step,250);
+  }
 }
 function finish(){
+  const wasRealGps=realGpsState.active || isRealGpsMode();
   if(timer)clearInterval(timer);
   timer=null;
-  flush();
+  if(!wasRealGps)flush();
+  stopRealGps();
+  $('scenario').disabled=false;
   $('start').disabled=false;
   $('stop').disabled=true;
   $('csv').disabled=!rows.length;
-  $('status').textContent="به مقصد رسیدی.";
-  updateTurnByTurn(1);
-  buildScore();
+  $('status').textContent=wasRealGps?"سفر GPS واقعی پایان یافت.":"به مقصد رسیدی.";
+  if(!wasRealGps)updateTurnByTurn(1);
+  if(wasRealGps)buildRealGpsNavigationResult();
+  else buildScore();
   releaseScreenWakeLock();
   try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
   exitDrivingMode();
   setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),180);
 }
 function reset(full=true,keepRoute=false){
+  stopRealGps();
+  pendingRealGpsFix=null;
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
   rerouteState.active=false;
   rerouteState.offSince=null;
@@ -4135,6 +4525,16 @@ $('driveVoiceBtn').onclick=()=>{
 $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
 };
+$('navigationMode').onchange=()=>{
+  const real=isRealGpsMode();
+  $('scenario').disabled=real;
+  if(real)$('scenario').value="normal";
+  if($('realGpsHint')){
+    $('realGpsHint').textContent=real
+      ?"GPS واقعی فعال است. سناریوهای مصنوعی خاموش می‌شوند و فقط موقعیت واقعی گوشی استفاده می‌شود."
+      :"شبیه‌ساز فعال است. می‌توانی سناریوهای مختلف را بدون حرکت واقعی تست کنی.";
+  }
+};
 $('readyCancel').onclick=closeTripReadiness;
 $('readyStartDrive').onclick=startDrivingConfirmed;
 
@@ -4241,12 +4641,22 @@ setTimeout(loadRoute,1000);
       const r=lastTripResult;
       const p=loadProfile();
       const lr=p.lastReward||{};
-      document.getElementById('summaryScore').textContent=fa(r.score||0);
-      document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
-      document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
-      document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
+      if(r.navigationOnly){
+        document.getElementById('summaryScore').textContent='—';
+        document.getElementById('summaryCompliance').textContent='—';
+        document.getElementById('summaryXp').textContent='—';
+        document.getElementById('summaryCoins').textContent='—';
+      }else{
+        document.getElementById('summaryScore').textContent=fa(r.score||0);
+        document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
+        document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
+        document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
+      }
       const st=document.getElementById('summaryEligibility');
-      if(r.rewardEligibility==='ELIGIBLE'){
+      if(r.navigationOnly){
+        st.textContent='تست Navigation واقعی';
+        st.className='summary-status review';
+      }else if(r.rewardEligibility==='ELIGIBLE'){
         st.textContent='مجاز برای پاداش'; st.className='summary-status good';
       }else if(r.rewardEligibility==='REVIEW'){
         st.textContent='نیازمند بررسی'; st.className='summary-status review';
@@ -4254,16 +4664,20 @@ setTimeout(loadRoute,1000);
         st.textContent='غیرمجاز برای پاداش'; st.className='summary-status bad';
       }
       document.getElementById('summaryWhy').textContent=
-        r.topRiskEvent
-          ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
-          : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
+        r.navigationOnly
+          ? `این سفر با GPS واقعی اجرا شد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود و ${Number(r.rerouteCount||0).toLocaleString('fa-IR')} بار محاسبه مجدد مسیر انجام شد. امتیاز رفتاری عمداً محاسبه نشد چون Sensorهای واقعی رانندگی هنوز به نسخه وب متصل نیستند.`
+          : r.topRiskEvent
+            ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
+            : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
       if(document.getElementById('summaryCoach')){
-        document.getElementById('summaryCoach').innerHTML=
-          `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
+        document.getElementById('summaryCoach').innerHTML=r.navigationOnly
+          ? `<b>داده واقعی</b><span>در این مرحله فقط GPS و Navigation واقعی ثبت شده‌اند؛ هشدارهای رفتاری نیازمند Sensor معتبر هستند.</span>`
+          : `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
       }
       if(document.getElementById('summaryComparison')){
-        document.getElementById('summaryComparison').innerHTML=
-          `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
+        document.getElementById('summaryComparison').innerHTML=r.navigationOnly
+          ? `<b>وضعیت Navigation</b><span>این تست وارد پروفایل امتیازی راننده نمی‌شود؛ هدف آن فقط اعتبارسنجی GPS، مسیر و Re-route است.</span>`
+          : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
       const sheet=document.getElementById('tripSummarySheet');
       sheet.classList.add('open');
