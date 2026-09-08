@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۴ مقایسه مسیر</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۵ پیش‌نمایش و سلامت مسیر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -839,6 +839,111 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   .route-compare-foot button{width:100%!important}
 }
 
+
+/* ===== v2.5 Route Preview & Integrity ===== */
+.route-tools-actions{display:flex;gap:6px;flex-wrap:wrap}
+.route-compare-hint{font-size:8px;color:#7f91a8;margin-top:6px}
+
+.route-integrity-pill{
+  padding:5px 8px;border-radius:999px;font-size:8px;white-space:nowrap;
+  border:1px solid #42546c;background:#172334;color:#cbd5e1
+}
+.route-integrity-pill.good{background:#12351d;border-color:#28543c;color:#86efac}
+.route-integrity-pill.warn{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.route-integrity-pill.bad{background:#441717;border-color:#7d3030;color:#fecaca}
+
+.route-preview-sheet{
+  position:fixed;inset:0;z-index:3250;background:rgba(2,6,12,.74);
+  display:none;align-items:flex-end;justify-content:center;padding:12px;
+  backdrop-filter:blur(7px)
+}
+.route-preview-sheet.open{display:flex}
+.route-preview-card{
+  width:min(100%,600px);max-height:92vh;overflow:auto;background:#101923;
+  border:1px solid #30435c;border-radius:25px 25px 18px 18px;padding:15px;
+  box-shadow:0 -25px 65px rgba(0,0,0,.42)
+}
+.route-preview-top{
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start
+}
+.route-preview-top small{font-size:8px;color:#60a5fa}
+.route-preview-top h3{font-size:16px;margin:3px 0 0}
+.route-preview-top p{font-size:8px;color:#91a0b5;line-height:1.8;margin:5px 0 0}
+
+.route-integrity-summary{
+  display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:center;
+  margin-top:12px;padding:11px;border-radius:14px;background:#0f1b16;border:1px solid #28543c
+}
+.route-integrity-summary.warn{background:#19150c;border-color:#6a5019}
+.route-integrity-summary.bad{background:#1d1010;border-color:#743232}
+.route-integrity-icon{
+  width:40px;height:40px;border-radius:12px;background:#153a22;color:#86efac;
+  display:grid;place-items:center;font-size:20px;font-weight:900
+}
+.route-integrity-summary.warn .route-integrity-icon{background:#45340d;color:#fde68a}
+.route-integrity-summary.bad .route-integrity-icon{background:#4a1717;color:#fecaca}
+.route-integrity-summary b{display:block;font-size:11px}
+.route-integrity-summary span{display:block;font-size:8px;color:#9eb0c3;line-height:1.7;margin-top:3px}
+
+.route-integrity-checks{display:grid;gap:6px;margin-top:9px}
+.route-check-row{
+  display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;
+  padding:8px 9px;border-radius:11px;background:#111b27;border:1px solid #293b50
+}
+.route-check-state{
+  width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+  font-size:11px;background:#172638
+}
+.route-check-row.good .route-check-state{background:#153a22;color:#86efac}
+.route-check-row.warn .route-check-state{background:#45340d;color:#fde68a}
+.route-check-row.bad .route-check-state{background:#4a1717;color:#fecaca}
+.route-check-row b{font-size:9px}
+.route-check-row span{display:block;font-size:8px;color:#8799af;line-height:1.6;margin-top:2px}
+.route-check-level{font-size:7px!important;white-space:nowrap}
+
+.route-preview-section-head{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-top:14px;padding-bottom:7px;border-bottom:1px solid #26364a
+}
+.route-preview-section-head b{font-size:11px}
+.route-preview-section-head span{font-size:8px;color:#8da0b6}
+
+.route-preview-steps{display:grid;gap:6px;margin-top:8px}
+.route-preview-step{
+  display:grid;grid-template-columns:38px 1fr auto;gap:9px;align-items:center;
+  padding:9px;border-radius:12px;background:#111b27;border:1px solid #293c54
+}
+.route-preview-step:hover{border-color:#3c5f86}
+.route-preview-arrow{
+  width:36px;height:36px;border-radius:11px;background:#17273a;
+  display:grid;place-items:center;font-size:18px
+}
+.route-preview-step b{display:block;font-size:10px;line-height:1.6}
+.route-preview-step span{display:block;font-size:8px;color:#8ea0b6;line-height:1.6;margin-top:2px}
+.route-preview-map-btn{
+  width:auto!important;min-height:32px!important;padding:4px 7px!important;
+  font-size:8px!important
+}
+
+.route-preview-footer{
+  display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:12px;
+  padding-top:10px;border-top:1px solid #26364a
+}
+.route-preview-footer button{min-height:48px}
+
+.route-preview-marker{
+  width:26px;height:26px;border-radius:50%;background:#2563eb;border:3px solid #fff;
+  box-shadow:0 0 0 5px rgba(37,99,235,.18);display:grid;place-items:center;
+  color:white;font-size:11px;font-weight:900
+}
+
+@media(max-width:430px){
+  .route-tools-row{align-items:flex-start;flex-direction:column}
+  .route-tools-actions{width:100%}
+  .route-tools-actions button{flex:1}
+  .route-preview-footer{grid-template-columns:1fr}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1132,9 +1237,13 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="route-summary-cell"><b id="navArrival">--</b><span>زمان رسیدن</span></div>
                 </div>
                 <div class="route-tools-row">
-                <button id="openRouteCompareBtn" class="route-compare-btn">مقایسه مسیرها</button>
-                <span id="routeCompareHint">فقط مسیرهای معتبر نمایش داده می‌شوند</span>
+                <div class="route-tools-actions">
+                  <button id="openRouteCompareBtn" class="route-compare-btn">مقایسه مسیرها</button>
+                  <button id="openRoutePreviewBtn" class="route-compare-btn">پیش‌نمایش مسیر</button>
+                </div>
+                <span id="routeIntegrityPill" class="route-integrity-pill checking">در حال بررسی</span>
               </div>
+              <div id="routeCompareHint" class="route-compare-hint">فقط مسیرهای معتبر نمایش داده می‌شوند</div>
               <div id="routeOptions" class="route-options"></div>
                 <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد فقط یک مسیر معتبر و غیرتکراری پیدا شد.</div>
                 <div id="routeDecisionCard" class="route-decision-card">
@@ -1543,6 +1652,44 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
 
 
+
+<div id="routePreviewSheet" class="route-preview-sheet">
+  <div class="route-preview-card">
+    <div class="ready-handle"></div>
+
+    <div class="route-preview-top">
+      <div>
+        <small>پیش‌نمایش قبل از حرکت</small>
+        <h3>راهنمای کامل مسیر</h3>
+        <p id="routePreviewSub">مسیر انتخاب‌شده قبل از شروع Navigation بررسی می‌شود.</p>
+      </div>
+      <button id="closeRoutePreviewBtn" class="route-compare-close">×</button>
+    </div>
+
+    <div id="routeIntegritySummary" class="route-integrity-summary">
+      <div id="routeIntegrityIcon" class="route-integrity-icon">✓</div>
+      <div>
+        <b id="routeIntegrityTitle">در حال بررسی مسیر...</b>
+        <span id="routeIntegrityText">کیفیت Geometry و راهنمای پیچ‌به‌پیچ بررسی می‌شود.</span>
+      </div>
+    </div>
+
+    <div id="routeIntegrityChecks" class="route-integrity-checks"></div>
+
+    <div class="route-preview-section-head">
+      <b>راهنمای پیچ‌به‌پیچ</b>
+      <span id="routePreviewStepCount">--</span>
+    </div>
+
+    <div id="routePreviewSteps" class="route-preview-steps"></div>
+
+    <div class="route-preview-footer">
+      <button id="closeRoutePreviewBottomBtn">بستن</button>
+      <button id="previewStartBtn" class="primary">بررسی و شروع سفر</button>
+    </div>
+  </div>
+</div>
+
 <div id="routeCompareSheet" class="route-compare-sheet">
   <div class="route-compare-card">
     <div class="ready-handle"></div>
@@ -1792,6 +1939,8 @@ let routingEndpointState={
 };
 let originAccessLine=null;
 let destinationAccessLine=null;
+let routePreviewMarker=null;
+let routeIntegrityState={level:"checking",checks:[],critical:false};
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -2298,6 +2447,8 @@ function showRouteFailure(message){
   if($('navEta'))$('navEta').textContent="--";
   if($('navArrival'))$('navArrival').textContent="--";
   if($('start'))$('start').disabled=true;
+  const pill=$('routeIntegrityPill');
+  if(pill){pill.className="route-integrity-pill bad";pill.textContent="Route نامعتبر";}
   $('status').textContent=message;
 }
 function hideRouteFailure(){
@@ -2379,33 +2530,32 @@ function maneuverText(step){
 function buildNavigationSteps(route){
   navigationSteps=[];
   const raw=(route?.legs||[]).flatMap(l=>l.steps||[]);
+
   if(raw.length){
     let cumulative=0;
     raw.forEach((step,i)=>{
       const info=maneuverText(step);
-      const trigger=cumulative;
+      const loc=step?.maneuver?.location;
       navigationSteps.push({
         index:i,
-        atDistance:trigger,
+        atDistance:cumulative,
         stepDistance:Number(step.distance||0),
         duration:Number(step.duration||0),
         type:step.maneuver?.type||"",
         modifier:step.maneuver?.modifier||"",
         action:info.action,
         street:info.street,
-        arrow:info.arrow
+        arrow:info.arrow,
+        location:Array.isArray(loc)&&loc.length>=2
+          ?[Number(loc[1]),Number(loc[0])]
+          :null
       });
       cumulative+=Number(step.distance||0);
     });
-  }else{
-    // Fallback instructions when the public router returns no step detail.
-    navigationSteps=[
-      {index:0,atDistance:0,action:"حرکت را شروع کن",street:"مسیر انتخاب‌شده",arrow:"↑"},
-      {index:1,atDistance:routeDistanceM*.35,action:"مسیر را دنبال کن",street:"ادامه مسیر",arrow:"↑"},
-      {index:2,atDistance:routeDistanceM*.70,action:"به سمت مقصد ادامه بده",street:navDestination.label,arrow:"↑"},
-      {index:3,atDistance:Math.max(0,routeDistanceM-30),action:"به مقصد می‌رسی",street:navDestination.label,arrow:"●"}
-    ];
   }
+
+  // IMPORTANT: No synthetic Turn-by-Turn fallback.
+  // Missing route instructions are a navigation-integrity failure.
   lastSpokenStepIndex=-1;
 }
 function distanceTextFa(m){
@@ -2468,6 +2618,244 @@ function resetTurnByTurn(){
   lastSpokenStepIndex=-1;
 }
 
+
+
+function routeGeometryMaxGap(coords){
+  let max=0;
+  for(let i=1;i<(coords||[]).length;i++){
+    max=Math.max(max,hav(coords[i-1],coords[i]));
+  }
+  return max;
+}
+function analyzeSelectedRoute(){
+  const route=routeAlternatives[selectedRouteIndex];
+  const checks=[];
+
+  const add=(key,label,state,text)=>checks.push({key,label,state,text});
+
+  if(!route){
+    add("route","Route","bad","Route انتخاب‌شده وجود ندارد.");
+    return{level:"bad",critical:true,checks};
+  }
+
+  const coords=routeToCoords(route);
+  const steps=(route.legs||[]).flatMap(l=>l.steps||[]);
+  const distance=Number(route.distance||0);
+  const duration=Number(route.duration||0);
+
+  if(coords.length>=2 && distance>20 && duration>3){
+    add("geometry","هندسه مسیر","good",`${coords.length.toLocaleString('fa-IR')} نقطه Route معتبر است.`);
+  }else{
+    add("geometry","هندسه مسیر","bad","Geometry برای Navigation کافی نیست.");
+  }
+
+  if(steps.length>=2){
+    add("steps","راهنمای پیچ‌به‌پیچ","good",`${steps.length.toLocaleString('fa-IR')} مرحله از موتور مسیر دریافت شد.`);
+  }else{
+    add("steps","راهنمای پیچ‌به‌پیچ","bad","دستورهای Turn-by-Turn معتبر دریافت نشده‌اند.");
+  }
+
+  const stepDistance=steps.reduce((s,x)=>s+Number(x.distance||0),0);
+  const distDiff=distance>0?Math.abs(stepDistance-distance)/distance:1;
+  if(distDiff<=.10){
+    add("distance","تطابق مسافت","good","مسافت مراحل با طول Route همخوان است.");
+  }else if(distDiff<=.25){
+    add("distance","تطابق مسافت","warn",`اختلاف حدود ${Math.round(distDiff*100).toLocaleString('fa-IR')}٪ بین Route و مراحل دیده شد.`);
+  }else{
+    add("distance","تطابق مسافت","bad","اختلاف مسافت Route و Turn-by-Turn بیش از حد مجاز است.");
+  }
+
+  const stepDuration=steps.reduce((s,x)=>s+Number(x.duration||0),0);
+  const durDiff=duration>0?Math.abs(stepDuration-duration)/duration:1;
+  if(durDiff<=.15){
+    add("duration","تطابق زمان","good","زمان مراحل با ETA Route همخوان است.");
+  }else if(durDiff<=.35){
+    add("duration","تطابق زمان","warn",`اختلاف زمان حدود ${Math.round(durDiff*100).toLocaleString('fa-IR')}٪ است.`);
+  }else{
+    add("duration","تطابق زمان","bad","ETA و زمان مراحل هماهنگ نیستند.");
+  }
+
+  const missingLocations=steps.filter(s=>!Array.isArray(s?.maneuver?.location)).length;
+  const missingRatio=steps.length?missingLocations/steps.length:1;
+  if(missingRatio<=.08){
+    add("maneuvers","موقعیت مانورها","good","موقعیت مانورها برای نمایش روی نقشه موجود است.");
+  }else if(missingRatio<=.25){
+    add("maneuvers","موقعیت مانورها","warn",`${missingLocations.toLocaleString('fa-IR')} مانور مختصات دقیق ندارد.`);
+  }else{
+    add("maneuvers","موقعیت مانورها","bad","تعداد زیادی از مانورها موقعیت معتبر ندارند.");
+  }
+
+  const originAccess=Number(routingEndpointState.originAccessM||0);
+  const destinationAccess=Number(routingEndpointState.destinationAccessM||0);
+
+  if(originAccess<=50){
+    add("origin","دسترسی مبدأ","good","شروع Route نزدیک به مبدأ انتخاب‌شده است.");
+  }else{
+    add("origin","دسترسی مبدأ","warn",`شروع مسیر خودرویی حدود ${Math.round(originAccess).toLocaleString('fa-IR')} متر با مبدأ فاصله دارد.`);
+  }
+
+  if(destinationAccess<=60){
+    add("destination","دسترسی مقصد","good","پایان مسیر خودرویی نزدیک مقصد است.");
+  }else{
+    add("destination","دسترسی مقصد","warn",`Route خودرویی حدود ${Math.round(destinationAccess).toLocaleString('fa-IR')} متر قبل از نقطه دقیق مقصد پایان می‌یابد.`);
+  }
+
+  const stats=routeStepStats(route);
+  if(stats.uturns===0){
+    add("uturn","دوربرگردان","good","دوربرگردان در مسیر ثبت نشده است.");
+  }else{
+    add("uturn","دوربرگردان","warn",`${stats.uturns.toLocaleString('fa-IR')} دوربرگردان در Route وجود دارد.`);
+  }
+
+  const maxGap=routeGeometryMaxGap(coords);
+  if(maxGap<=900){
+    add("continuity","پیوستگی Geometry","good","پرش غیرعادی در هندسه Route دیده نشد.");
+  }else if(maxGap<=2500){
+    add("continuity","پیوستگی Geometry","warn",`بزرگ‌ترین فاصله بین نقاط Geometry حدود ${distanceTextFa(maxGap)} است.`);
+  }else{
+    add("continuity","پیوستگی Geometry","warn",`Geometry یک فاصله بزرگ حدود ${distanceTextFa(maxGap)} دارد؛ بهتر است روی نقشه بررسی شود.`);
+  }
+
+  const critical=checks.some(c=>c.state==="bad");
+  const hasWarning=checks.some(c=>c.state==="warn");
+  return{
+    level:critical?"bad":hasWarning?"warn":"good",
+    critical,
+    checks,
+    route,
+    stats
+  };
+}
+function integrityLabel(state){
+  if(state.level==="good")return"مسیر بررسی شد";
+  if(state.level==="warn")return"قابل شروع با هشدار";
+  if(state.level==="bad")return"Navigation ناقص";
+  return"در حال بررسی";
+}
+function renderRouteIntegrity(){
+  routeIntegrityState=analyzeSelectedRoute();
+
+  const pill=$('routeIntegrityPill');
+  if(pill){
+    pill.className=`route-integrity-pill ${routeIntegrityState.level}`;
+    pill.textContent=integrityLabel(routeIntegrityState);
+  }
+
+  const summary=$('routeIntegritySummary');
+  if(summary){
+    summary.className=`route-integrity-summary ${routeIntegrityState.level==="good"?"":routeIntegrityState.level}`;
+  }
+
+  const icon=$('routeIntegrityIcon');
+  const title=$('routeIntegrityTitle');
+  const desc=$('routeIntegrityText');
+
+  if(routeIntegrityState.level==="good"){
+    if(icon)icon.textContent="✓";
+    if(title)title.textContent="مسیر برای Navigation آماده است";
+    if(desc)desc.textContent="Geometry و Turn-by-Turn با داده Route همخوان هستند.";
+  }else if(routeIntegrityState.level==="warn"){
+    if(icon)icon.textContent="!";
+    if(title)title.textContent="مسیر قابل استفاده است، اما چند نکته دارد";
+    if(desc)desc.textContent="موارد زیر قبل از حرکت قابل بررسی هستند؛ هیچ مورد بحرانی دیده نشد.";
+  }else{
+    if(icon)icon.textContent="×";
+    if(title)title.textContent="این Route برای Navigation تأیید نشد";
+    if(desc)desc.textContent="حداقل یک ایراد بحرانی وجود دارد و شروع سفر باید متوقف شود.";
+  }
+
+  const checksBox=$('routeIntegrityChecks');
+  if(checksBox){
+    checksBox.innerHTML=routeIntegrityState.checks.map(c=>`
+      <div class="route-check-row ${c.state}">
+        <div class="route-check-state">${c.state==="good"?"✓":c.state==="warn"?"!":"×"}</div>
+        <div><b>${c.label}</b><span>${c.text}</span></div>
+        <span class="route-check-level">${c.state==="good"?"تأیید":c.state==="warn"?"توجه":"بحرانی"}</span>
+      </div>
+    `).join("");
+  }
+
+  return routeIntegrityState;
+}
+function showPreviewStepOnMap(index){
+  const step=navigationSteps[index];
+  if(!step?.location)return;
+
+  if(routePreviewMarker){
+    try{map.removeLayer(routePreviewMarker)}catch(e){}
+    routePreviewMarker=null;
+  }
+
+  const icon=L.divIcon({
+    className:"",
+    html:`<div class="route-preview-marker">${(index+1).toLocaleString('fa-IR')}</div>`,
+    iconSize:[26,26],
+    iconAnchor:[13,13]
+  });
+
+  routePreviewMarker=L.marker(step.location,{icon,zIndexOffset:1500}).addTo(map);
+  closeRoutePreview();
+
+  try{
+    map.setView(step.location,Math.max(map.getZoom(),16),{animate:true});
+  }catch(e){}
+
+  $('status').textContent=`مرحله ${(index+1).toLocaleString('fa-IR')} • ${step.action} • ${step.street}`;
+}
+function renderRoutePreview(){
+  const integrity=renderRouteIntegrity();
+
+  if($('routePreviewSub')){
+    $('routePreviewSub').textContent=routeAlternatives.length
+      ?`${navOrigin.label} تا ${navDestination.label} • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`
+      :"Route انتخاب نشده است.";
+  }
+
+  if($('routePreviewStepCount')){
+    $('routePreviewStepCount').textContent=navigationSteps.length
+      ?`${navigationSteps.length.toLocaleString('fa-IR')} مرحله`
+      :"بدون راهنمای معتبر";
+  }
+
+  const box=$('routePreviewSteps');
+  if(box){
+    if(!navigationSteps.length){
+      box.innerHTML='<div class="route-check-row bad"><div class="route-check-state">×</div><div><b>راهنمای مسیر موجود نیست</b><span>برای این Route دستور پیچ‌به‌پیچ معتبر دریافت نشده است.</span></div><span class="route-check-level">بحرانی</span></div>';
+    }else{
+      box.innerHTML=navigationSteps.map((s,i)=>`
+        <div class="route-preview-step">
+          <div class="route-preview-arrow">${s.arrow||"↑"}</div>
+          <div>
+            <b>${s.action}</b>
+            <span>${s.street} • ${distanceTextFa(s.stepDistance)}</span>
+          </div>
+          ${s.location
+            ?`<button class="route-preview-map-btn" data-preview-step="${i}">روی نقشه</button>`
+            :`<span class="route-check-level">بدون مختصات</span>`}
+        </div>
+      `).join("");
+
+      box.querySelectorAll('[data-preview-step]').forEach(btn=>{
+        btn.onclick=()=>showPreviewStepOnMap(Number(btn.dataset.previewStep));
+      });
+    }
+  }
+
+  if($('previewStartBtn')){
+    $('previewStartBtn').disabled=integrity.critical;
+    $('previewStartBtn').textContent=integrity.critical
+      ?"Route قابل شروع نیست"
+      :"بررسی و شروع سفر";
+  }
+}
+function openRoutePreview(){
+  if(!routeAlternatives.length)return;
+  renderRoutePreview();
+  $('routePreviewSheet')?.classList.add('open');
+}
+function closeRoutePreview(){
+  $('routePreviewSheet')?.classList.remove('open');
+}
 
 function routeComparisonData(route,index){
   const stats=routeStepStats(route);
@@ -2681,7 +3069,9 @@ function selectRouteAlternative(index){
   resetTurnByTurn();
   updateTurnByTurn(0);
   renderRouteDecision();
+  renderRouteIntegrity();
   if($('routeCompareSheet')?.classList.contains('open'))renderRouteComparisonSheet();
+  if($('routePreviewSheet')?.classList.contains('open'))renderRoutePreview();
 }
 window.selectRouteAlternative=selectRouteAlternative;
 
@@ -3321,11 +3711,22 @@ async function getLocationReadiness(){
 }
 async function updateTripReadiness(){
   const hasRoute=Array.isArray(routeCoords)&&routeCoords.length>1;
+  const integrity=hasRoute?analyzeSelectedRoute():{level:"bad",critical:true,checks:[]};
+  const navigationReady=hasRoute&&!integrity.critical;
   const online=navigator.onLine!==false;
   const loc=await getLocationReadiness();
 
-  setReadyCheck('readyRouteCheck',hasRoute?'good':'bad',
-    hasRoute?'مسیر آماده و قابل شروع است.':'ابتدا مسیر را بارگذاری کن.');
+  setReadyCheck(
+    'readyRouteCheck',
+    navigationReady?(integrity.level==="warn"?"warn":"good"):'bad',
+    !hasRoute
+      ?'ابتدا مسیر را بارگذاری کن.'
+      :integrity.critical
+        ?'Route برای Navigation تأیید نشده؛ پیش‌نمایش مسیر را بررسی کن.'
+        :integrity.level==="warn"
+          ?'Route قابل شروع است، اما چند نکته غیرحیاتی دارد.'
+          :'Geometry و راهنمای پیچ‌به‌پیچ تأیید شدند.'
+  );
   setReadyCheck('readyNetworkCheck',online?'good':'warn',
     online?'اتصال اینترنت برقرار است.':'آفلاین هستی؛ مسیر فعلی می‌تواند ادامه پیدا کند.');
   setReadyCheck('readyLocationCheck',loc.state,loc.message);
@@ -3354,16 +3755,16 @@ async function updateTripReadiness(){
 
   const overall=$('readyOverall');
   if(overall){
-    if(!hasRoute){
-      overall.textContent='ناقص';overall.className='ready-overall warn';
-    }else if(!online || loc.state==='warn' || !voiceGuidanceEnabled){
+    if(!navigationReady){
+      overall.textContent='متوقف';overall.className='ready-overall warn';
+    }else if(!online || loc.state==='warn' || !voiceGuidanceEnabled || integrity.level==="warn"){
       overall.textContent='قابل شروع';overall.className='ready-overall warn';
     }else{
       overall.textContent='آماده';overall.className='ready-overall good';
     }
   }
-  $('readyStartDrive').disabled=!hasRoute;
-  return hasRoute;
+  $('readyStartDrive').disabled=!navigationReady;
+  return navigationReady;
 }
 async function openTripReadiness(){
   pendingDriveStart=true;
@@ -3937,8 +4338,22 @@ function validateRouteCandidate(route,snappedStart,destination){
   if(distance>straight*7+2500)return{ok:false,reason:"طول مسیر نسبت به مقصد غیرعادی است"};
 
   const steps=(route.legs||[]).flatMap(l=>l.steps||[]);
+  if(steps.length<2)return{ok:false,reason:"Route راهنمای پیچ‌به‌پیچ کافی ندارد"};
+
   const forbidden=steps.some(s=>["walking","cycling"].includes(String(s.mode||"").toLowerCase()));
   if(forbidden)return{ok:false,reason:"حالت حرکت غیرخودرویی در مسیر دیده شد"};
+
+  const stepDistance=steps.reduce((s,x)=>s+Number(x.distance||0),0);
+  const stepDuration=steps.reduce((s,x)=>s+Number(x.duration||0),0);
+  const distRatio=distance>0?stepDistance/distance:0;
+  const durRatio=duration>0?stepDuration/duration:0;
+
+  if(distRatio<.72 || distRatio>1.28){
+    return{ok:false,reason:"فاصله Turn-by-Turn با طول Route همخوان نیست"};
+  }
+  if(durRatio<.60 || durRatio>1.40){
+    return{ok:false,reason:"زمان Turn-by-Turn با ETA مسیر همخوان نیست"};
+  }
 
   return{ok:true,reason:""};
 }
@@ -5361,6 +5776,16 @@ $('driveEndBtn').onclick=()=>{
 };
 $('retryRouteBtn').onclick=()=>loadRoute();
 $('openRouteCompareBtn').onclick=openRouteComparison;
+$('openRoutePreviewBtn').onclick=openRoutePreview;
+$('closeRoutePreviewBtn').onclick=closeRoutePreview;
+$('closeRoutePreviewBottomBtn').onclick=closeRoutePreview;
+$('previewStartBtn').onclick=()=>{
+  closeRoutePreview();
+  openTripReadiness();
+};
+$('routePreviewSheet').onclick=(e)=>{
+  if(e.target===$('routePreviewSheet'))closeRoutePreview();
+};
 $('closeRouteCompareBtn').onclick=closeRouteComparison;
 $('confirmRouteCompareBtn').onclick=closeRouteComparison;
 $('routeCompareSheet').onclick=(e)=>{
