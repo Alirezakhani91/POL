@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۲ جست‌وجوی زنده مقصد</title>
+<title>POL | نسخه ۳.۳ پولیش نویگیشن و گرافیک نقشه</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1645,6 +1645,122 @@ body.destination-area-pick #map{cursor:crosshair!important}
   background:#dbeafe;color:#1e3a8a;border-radius:4px;padding:0 2px
 }
 
+
+
+/* ===== v3.3 Navigation polish + map style ===== */
+#map{
+  background:#dbeafe;
+}
+.leaflet-tile-pane{filter:saturate(1.06) contrast(1.02) brightness(1.01)}
+.leaflet-control-zoom{
+  border:none!important;
+  box-shadow:0 10px 25px rgba(15,23,42,.14)!important;
+  border-radius:18px!important;
+  overflow:hidden;
+}
+.leaflet-control-zoom a{
+  width:42px!important;height:42px!important;line-height:42px!important;
+  background:rgba(255,255,255,.96)!important;color:#0f172a!important;
+  border:none!important;font-size:24px!important;font-weight:700!important;
+}
+.leaflet-control-zoom a:hover{background:#fff!important}
+.leaflet-bar a, .leaflet-bar a:hover{border-bottom:1px solid rgba(15,23,42,.08)!important}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{border-radius:16px!important}
+
+.nav-car-rotor{position:relative;width:28px;height:28px;transition:transform .12s linear;will-change:transform}
+.nav-car-marker{
+  position:absolute;inset:3px 3px 3px 3px;border-radius:50% 50% 50% 10px;
+  transform:rotate(45deg);
+  background:linear-gradient(180deg,#60a5fa 0%,#2563eb 55%,#1d4ed8 100%);
+  border:3px solid #fff;
+  box-shadow:0 10px 22px rgba(37,99,235,.28),0 0 0 5px rgba(96,165,250,.18);
+}
+.nav-car-marker:after{
+  content:"";position:absolute;left:7px;top:7px;width:7px;height:7px;border-radius:50%;background:#fff;
+}
+.nav-car-pulse{
+  position:absolute;inset:-3px;border-radius:50%;border:1px solid rgba(37,99,235,.22);
+}
+
+.map-route-sheet{
+  border-radius:24px!important;
+  background:linear-gradient(180deg,rgba(10,18,30,.96),rgba(12,20,34,.92))!important;
+  border:1px solid rgba(96,165,250,.18)!important;
+  box-shadow:0 25px 60px rgba(2,8,23,.42)!important;
+}
+.map-route-sheet-main b{font-size:15px!important;line-height:1.7!important;white-space:normal!important}
+.map-route-eta-block b{font-size:31px!important;letter-spacing:-.4px}
+.map-route-secondary b{font-size:13px!important}
+.map-route-reason{
+  margin-top:10px!important;padding:10px 12px!important;border-radius:14px!important;
+  background:rgba(15,23,42,.42)!important;border:1px solid rgba(148,163,184,.14)!important;
+  color:#d7e4f4!important;line-height:1.95!important;font-size:10px!important;
+}
+.map-route-actions button{font-weight:800!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+
+.route-alt-label{
+  padding:8px 11px!important;border-radius:999px!important;font-size:10px!important;
+  box-shadow:0 10px 24px rgba(15,23,42,.16)!important;
+}
+.route-alt-label.active{box-shadow:0 12px 28px rgba(37,99,235,.28)!important}
+
+.route-compare-card,.route-preview-card{
+  border-radius:28px 28px 20px 20px!important;
+  border:1px solid rgba(96,165,250,.14)!important;
+  box-shadow:0 -24px 80px rgba(2,8,23,.42)!important;
+}
+.route-compare-item,.route-preview-step,.route-check-row{
+  border-radius:16px!important;
+}
+.route-compare-item.selected{
+  box-shadow:0 0 0 1px rgba(96,165,250,.18), 0 14px 30px rgba(37,99,235,.08)!important;
+}
+.route-preview-arrow,.route-check-state,.route-integrity-icon{border-radius:14px!important}
+
+.turn-card{
+  background:linear-gradient(180deg,rgba(10,18,30,.96),rgba(10,18,30,.90))!important;
+  border:1px solid rgba(96,165,250,.22)!important;
+  box-shadow:0 18px 45px rgba(2,8,23,.34)!important;
+}
+.turn-arrow{
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#3b82f6 0%,#2563eb 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 20px rgba(37,99,235,.22)!important;
+}
+.turn-distance{font-size:18px!important}
+.turn-instruction{font-size:12px!important}
+.turn-street{font-size:10px!important;color:#b7c5d8!important}
+
+.nav-bottom-strip{
+  background:linear-gradient(180deg,rgba(9,17,27,.95),rgba(10,18,30,.90))!important;
+  border:1px solid rgba(96,165,250,.14)!important;
+  box-shadow:0 18px 45px rgba(2,8,23,.32)!important;
+  border-radius:18px!important;
+}
+.nav-bottom-main b{font-size:14px!important}
+.nav-bottom-main span{font-size:9px!important}
+
+.current-speed-gauge{
+  background:linear-gradient(180deg,rgba(8,15,25,.96),rgba(11,19,28,.92))!important;
+  border:1px solid rgba(96,165,250,.14)!important;
+  border-radius:22px!important;
+}
+.drive-circle-btn{
+  background:rgba(8,15,25,.92)!important;
+  border:1px solid rgba(96,165,250,.14)!important;
+  box-shadow:0 10px 25px rgba(2,8,23,.22)!important;
+}
+#driveRecenterBtn.is-needed{
+  border-color:#60a5fa!important;
+  box-shadow:0 0 0 4px rgba(96,165,250,.14),0 10px 25px rgba(2,8,23,.26)!important;
+}
+
+@media(max-width:430px){
+  .turn-card{left:8px!important;right:70px!important}
+  .nav-bottom-strip{left:76px!important;right:76px!important}
+  .map-route-sheet{left:8px!important;right:8px!important;bottom:8px!important}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2394,7 +2510,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div class="provider">
                 <b>زیرساخت نقشه و مسیریابی</b><br>
                 مسیریابی آزمایشی: سرویس عمومی OSRM<br>
-                نقشه پایه: OpenStreetMap<br>
+                نقشه پایه: Carto Voyager<br>
                 نسخه عملیاتی: اتصال به سرویس نقشه مناسب ایران
               </div>
             </details>
@@ -2971,8 +3087,8 @@ let driverProfile=loadProfile();
 
 const carIcon=L.divIcon({
   className:'',
-  html:'<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 0 0 5px rgba(37,99,235,.25)"></div>',
-  iconSize:[22,22],iconAnchor:[11,11]
+  html:'<div class="nav-car-rotor"><div class="nav-car-marker"></div><div class="nav-car-pulse"></div></div>',
+  iconSize:[28,28],iconAnchor:[14,14]
 });
 
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
@@ -3404,7 +3520,7 @@ function renderRouteAlternatives(){
   routeAltLayers=[];
   routeAlternatives.forEach((r,i)=>{
     if(i===selectedRouteIndex)return;
-    const layer=L.polyline(routeToCoords(r),{color:'#64748b',weight:7,opacity:.52}).addTo(map);
+    const layer=L.polyline(routeToCoords(r),{color:'#94a3b8',weight:7,opacity:.62,lineCap:'round',lineJoin:'round'}).addTo(map);
     layer.on('click',()=>{
       selectRouteAlternative(i);
       renderMapRouteSheet();
@@ -4055,11 +4171,13 @@ function selectRouteAlternative(index){
   if(routeLine)map.removeLayer(routeLine);
   if(trackLine)map.removeLayer(trackLine);
   speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
-  routeLine=L.polyline(routeCoords,{color:'#2f6df6',weight:6,opacity:.95}).addTo(map);
+  routeLine=L.polyline(routeCoords,{color:'#2563eb',weight:8,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(map);
+  try{routeLine.bringToFront()}catch(e){}
   trackLine=L.polyline([],{color:'#ffffff',weight:2,opacity:.65,dashArray:'5 6'}).addTo(map);
 
   if(carMarker)map.removeLayer(carMarker);
-  carMarker=L.marker(routeCoords[0],{icon:carIcon,zIndexOffset:1000}).addTo(map);
+  carMarker=L.marker(routeCoords[0],{icon:carIcon,zIndexOffset:1000,__smoothNavMarker:true}).addTo(map);
+  tagCarMarkerForSmoothMotion();
 
   renderRouteAlternatives();
   renderNavMarkers();
@@ -7033,8 +7151,9 @@ async function triggerReroute(pos,simProgress){
     routeAltLayers=[];
     if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
     routeLine=L.polyline(routeCoords,{
-      color:'#2f6df6',weight:6,opacity:.97
+      color:'#2563eb',weight:8,opacity:.98,lineCap:'round',lineJoin:'round'
     }).addTo(map);
+    try{routeLine.bringToFront()}catch(e){}
 
     renderRouteAlternatives();
     renderNavMarkers();
@@ -7134,7 +7253,7 @@ function step(){
   updateSafetyCoach(s,det);
   handleOffRoute(s,pos);
 
-  if(document.body.classList.contains('driving-mode') && Math.round(t*4)%4===0){
+  if(document.body.classList.contains('driving-mode')){
     updateDrivingCamera(navProgress,pos,Number(s.speed||0));
   }
 
@@ -8538,6 +8657,160 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       refreshAppShell();
     }catch(e){}
   }
+
+
+
+  /* ===== v3.3 Navigation polish + smooth follow camera ===== */
+  function tagCarMarkerForSmoothMotion(){
+    if(!carMarker)return;
+    carMarker.options.__smoothNavMarker=true;
+    applyCarMarkerHeading(carMarker, carMarker.__heading ?? 0);
+  }
+  function normalizeHeading(h){
+    let x=Number(h||0)%360;
+    if(x<0)x+=360;
+    return x;
+  }
+  function lerpHeading(a,b,t){
+    a=normalizeHeading(a); b=normalizeHeading(b);
+    let delta=((b-a+540)%360)-180;
+    return normalizeHeading(a + delta*t);
+  }
+  function applyCarMarkerHeading(marker, heading){
+    marker.__heading=normalizeHeading(heading);
+    const rotor=marker.getElement()?.querySelector('.nav-car-rotor');
+    if(rotor)rotor.style.transform=`rotate(${marker.__heading}deg)`;
+  }
+  function smoothEasing(t){
+    return t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+  }
+  if(!L.Marker.prototype.__polSmoothSetLatLng){
+    const originalSetLatLng=L.Marker.prototype.setLatLng;
+    L.Marker.prototype.__polSmoothSetLatLng=true;
+    L.Marker.prototype.setLatLng=function(latlng){
+      if(!this.options?.__smoothNavMarker){
+        return originalSetLatLng.call(this,latlng);
+      }
+
+      const target=L.latLng(latlng);
+      const current=this.getLatLng ? this.getLatLng() : null;
+      if(!current || !target){
+        return originalSetLatLng.call(this,target);
+      }
+
+      const distance=hav([current.lat,current.lng],[target.lat,target.lng]);
+      const allowSmooth=(document.body.classList.contains('driving-mode') || !!timer || isRealGpsMode());
+      if(!allowSmooth || !Number.isFinite(distance) || distance<1 || distance>500){
+        this.__smoothGoal=[target.lat,target.lng];
+        const result=originalSetLatLng.call(this,target);
+        const instantHeading=bearingDeg([current.lat,current.lng],[target.lat,target.lng]);
+        if(Number.isFinite(instantHeading))applyCarMarkerHeading(this,instantHeading);
+        return result;
+      }
+
+      cancelAnimationFrame(this.__smoothMoveRaf);
+      const marker=this;
+      const start=[current.lat,current.lng];
+      const end=[target.lat,target.lng];
+      const duration=Math.max(160,Math.min(320,180+distance*4));
+      const t0=performance.now();
+      const startHeading=marker.__heading ?? bearingDeg(start,end) ?? 0;
+      const endHeading=bearingDeg(start,end);
+
+      function frame(now){
+        const p=Math.min(1,(now-t0)/duration);
+        const e=smoothEasing(p);
+        const lat=start[0]+(end[0]-start[0])*e;
+        const lng=start[1]+(end[1]-start[1])*e;
+        originalSetLatLng.call(marker,[lat,lng]);
+        if(Number.isFinite(endHeading))applyCarMarkerHeading(marker,lerpHeading(startHeading,endHeading,e));
+        if(p<1){
+          marker.__smoothMoveRaf=requestAnimationFrame(frame);
+        }
+      }
+      this.__smoothGoal=end;
+      this.__smoothMoveRaf=requestAnimationFrame(frame);
+      return this;
+    };
+  }
+
+  let premiumTiles=null;
+  function applyPremiumMapStyle(){
+    try{
+      premiumTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+        maxZoom:20,
+        subdomains:'abcd',
+        attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+      });
+      try{ map.removeLayer(baseTiles); }catch(e){}
+      premiumTiles.addTo(map);
+      premiumTiles.on('load',()=>fixMapSize(false));
+      premiumTiles.on('tileerror',()=>{
+        try{
+          if(!map.hasLayer(baseTiles))baseTiles.addTo(map);
+        }catch(e){}
+      });
+    }catch(e){
+      console.warn('premium basemap failed',e);
+    }
+  }
+  applyPremiumMapStyle();
+
+  function drivingCameraTarget(progress,speedKmh){
+    const zoom=desiredDrivingZoom(progress,speedKmh);
+    const lookAhead=navigationLookAheadPoint(progress,zoom);
+    return {center:L.latLng(lookAhead[0],lookAhead[1]),zoom};
+  }
+  function syncRecenterUi(){
+    const btn=$('driveRecenterBtn');
+    if(!btn)return;
+    btn.classList.toggle('is-needed',!!userManuallyMovedDrivingMap && document.body.classList.contains('driving-mode'));
+  }
+  function smoothPanMap(target,zoom,{force=false}={}){
+    if(!map || !target)return;
+    const current=map.getCenter();
+    const dist=hav([current.lat,current.lng],[target.lat,target.lng]);
+    const zoomGap=Math.abs(Number(map.getZoom()||0)-Number(zoom||0));
+
+    if(force || !Number.isFinite(dist) || dist>850 || zoomGap>1.25){
+      try{ map.flyTo(target,zoom,{animate:true,duration:.45,noMoveStart:true}); }catch(e){
+        try{ map.setView(target,zoom,{animate:true,duration:.28}); }catch(_e){}
+      }
+      return;
+    }
+
+    try{ map.panTo(target,{animate:true,duration:.28,noMoveStart:true}); }catch(e){
+      try{ map.setView(target,zoom,{animate:true,duration:.22}); }catch(_e){}
+    }
+    if(zoomGap>.01){
+      try{ map.setZoom(zoom,{animate:true}); }catch(e){}
+    }
+  }
+  function updateDrivingCamera(progress,currentPoint,speedKmh=0,{force=false}={}){
+    if(!document.body.classList.contains('driving-mode'))return;
+    if(userManuallyMovedDrivingMap && !force){
+      syncRecenterUi();
+      return;
+    }
+    const target=drivingCameraTarget(progress,speedKmh);
+    smoothPanMap(target.center,target.zoom,{force});
+    syncRecenterUi();
+  }
+  function recenterDrivingCamera(){
+    userManuallyMovedDrivingMap=false;
+    syncRecenterUi();
+    if(isRealGpsMode()&&realGpsState.firstFix){
+      const point=realGpsState.matchedPoint||[realGpsState.lat,realGpsState.lng];
+      updateDrivingCamera(Number(realGpsState.routeProgress||0),point,Number(realGpsState.speedKmh||0),{force:true});
+      return;
+    }
+    const dur=Math.max(1,Number($('duration')?.value||1));
+    const simP=clamp(Number(t||0)/dur,0,1);
+    updateDrivingCamera(currentNavigationProgress(simP),currentRoutePosition(simP),Number($('speed')?.textContent||0),{force:true});
+  }
+  map.on('dragend zoomend',()=>syncRecenterUi());
+  if(document.body.classList.contains('driving-mode'))syncRecenterUi();
+
 
   window.addEventListener('drivinglab:trip-finished',()=>{
     // Score/profile/reward calculation is complete at this point.
