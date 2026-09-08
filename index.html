@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۰ بنیاد تجربه مسیریابی</title>
+<title>POL | نسخه ۳.۱ جست‌وجوی محدوده و خلاصه مسیر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1582,6 +1582,53 @@ body.driving-mode #safetyCoachPill{display:none!important}
   .drive-report-grid{grid-template-columns:repeat(2,1fr)}
 }
 
+
+/* ===== v3.1 Area Search + Route Street Summary ===== */
+.nav-sheet-result.area-result{
+  grid-template-columns:38px 1fr auto!important;
+}
+.nav-sheet-result.area-result .nav-sheet-result-icon{
+  background:#e0f2fe;color:#0369a1;font-size:16px
+}
+.nav-sheet-result.area-result .area-result-action{
+  display:block!important;
+  padding:4px 7px;border-radius:999px;background:#e8eef6;
+  color:#475569!important;font-size:7px!important;white-space:nowrap
+}
+.search-area-hint{
+  padding:9px 10px;margin:6px 0 2px;border-radius:12px;
+  background:#eff6ff;color:#1e3a5f;font-size:8px;line-height:1.7
+}
+.search-area-hint b{font-size:9px}
+
+.search-area-label{
+  background:#fff;border-radius:999px;padding:5px 9px;color:#111827;
+  font-size:9px;font-weight:800;white-space:nowrap;
+  box-shadow:0 6px 20px rgba(0,0,0,.22);border:1px solid #dbe4ef
+}
+
+body.destination-area-pick #map{cursor:crosshair!important}
+
+.route-street-summary{
+  margin-top:7px;padding:8px 9px;border-radius:11px;
+  background:#0d1723;border:1px solid #273a51;
+  color:#c4d0de;font-size:8px;line-height:1.8
+}
+.route-street-summary b{
+  color:#e8eef6;font-size:9px
+}
+.route-compare-item .route-street-summary{
+  background:#172434;border:0;color:#aebed0
+}
+.route-compare-item.selected .route-street-summary{
+  background:#132c4f
+}
+.map-route-reason.route-road-summary{
+  max-height:none!important;
+  padding:8px 2px!important;
+  color:#c5d1df!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2053,7 +2100,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <span class="nav-launcher-icon">⌕</span>
                   <span class="nav-launcher-copy">
                     <b>کجا می‌خوای بری؟</b>
-                    <small>جست‌وجوی مقصد یا انتخاب روی نقشه</small>
+                    <small>اول محله یا خیابان را پیدا کن</small>
                   </span>
                 </button>
               </div>
@@ -2065,7 +2112,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="nav-sheet-search-row">
                     <button id="navSearchBackBtn" class="nav-sheet-back">‹</button>
                     <input id="navSheetSearchInput" type="search" autocomplete="off"
-                           placeholder="نام مکان یا آدرس">
+                           placeholder="نام محله، خیابان یا محدوده">
                     <button id="navSheetSearchBtn" class="nav-sheet-search-btn">⌕</button>
                   </div>
 
@@ -2080,7 +2127,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="nav-quick-actions">
                     <button id="navPickOnMapAction">
                       <span>⌖</span>
-                      <div><b>انتخاب روی نقشه</b><small>نقطه دقیق مقصد</small></div>
+                      <div><b>انتخاب مستقیم روی نقشه</b><small>بدون جست‌وجوی محدوده</small></div>
                     </button>
                     <button id="navRecentAction">
                       <span>↺</span>
@@ -3728,6 +3775,88 @@ function closeRoutePreview(){
   $('routePreviewSheet')?.classList.remove('open');
 }
 
+
+function normalizeStreetName(name){
+  return String(name||"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function routeStreetGroups(route){
+  const steps=(route?.legs||[]).flatMap(l=>l.steps||[]);
+  const groups=[];
+
+  steps.forEach((step,index)=>{
+    const name=normalizeStreetName(step?.name);
+    if(!name)return;
+
+    const distance=Number(step?.distance||0);
+    const last=groups.at(-1);
+
+    if(last && last.name===name){
+      last.distance+=distance;
+      last.lastIndex=index;
+    }else{
+      groups.push({
+        name,
+        distance,
+        firstIndex:index,
+        lastIndex:index
+      });
+    }
+  });
+
+  return groups;
+}
+function meaningfulRouteStreets(route,maxCount=4){
+  const groups=routeStreetGroups(route);
+  if(!groups.length)return[];
+
+  // Remove tiny named fragments when enough real roads exist.
+  const substantial=groups.filter(g=>g.distance>=120);
+  const pool=substantial.length>=2?substantial:groups;
+
+  if(pool.length<=maxCount)return pool.map(g=>g.name);
+
+  // Always try to preserve the first and last named roads.
+  const chosen=[pool[0],pool[pool.length-1]];
+  const middle=pool.slice(1,-1)
+    .sort((a,b)=>b.distance-a.distance)
+    .slice(0,Math.max(0,maxCount-2));
+
+  chosen.push(...middle);
+  chosen.sort((a,b)=>a.firstIndex-b.firstIndex);
+
+  const names=[];
+  chosen.forEach(g=>{
+    if(!names.includes(g.name))names.push(g.name);
+  });
+
+  return names.slice(0,maxCount);
+}
+function routeStreetSummary(route,index,{compact=false}={}){
+  const n=(index+1).toLocaleString('fa-IR');
+  const names=meaningfulRouteStreets(route,compact?3:4);
+  const destination=navDestination?.label||"مقصد";
+
+  if(!names.length){
+    return `مسیر ${n}: نام خیابان‌های اصلی این مسیر در داده نقشه کامل نیست؛ مسیر روی نقشه نمایش داده شده است.`;
+  }
+
+  if(names.length===1){
+    return `مسیر ${n}: از ${names[0]} تا ${destination}`;
+  }
+
+  if(names.length===2){
+    return `مسیر ${n}: از ${names[0]}، سپس ${names[1]} تا ${destination}`;
+  }
+
+  const first=names[0];
+  const last=names[names.length-1];
+  const middle=names.slice(1,-1);
+
+  return `مسیر ${n}: از ${first}، سپس ${middle.join("، ")} و ${last} تا ${destination}`;
+}
+
 function routeComparisonData(route,index){
   const stats=routeStepStats(route);
   const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
@@ -3741,6 +3870,7 @@ function routeComparisonData(route,index){
     distance:Number(route.distance||0),
     etaDelta:Math.max(0,Math.round((Number(route.duration||0)-fastest)/60)),
     distDelta:Math.max(0,Number(route.distance||0)-shortest),
+    streetSummary:routeStreetSummary(route,index),
     recommended:index===0
   };
 }
@@ -3787,7 +3917,7 @@ function renderRouteDecision(){
   if($('routeDecisionBadge'))$('routeDecisionBadge').textContent=d.badge;
   if($('routeDecisionText')){
     $('routeDecisionText').textContent=
-      d.body+" ترافیک لحظه‌ای هنوز در این نسخه لحاظ نمی‌شود.";
+      routeStreetSummary(routeAlternatives[selectedRouteIndex],selectedRouteIndex)+" "+d.body;
   }
   if($('routeDecisionMetrics')){
     $('routeDecisionMetrics').innerHTML=`
@@ -3807,7 +3937,7 @@ function renderRouteComparisonSheet(){
   if(!box)return;
 
   if(!routeAlternatives.length){
-    box.innerHTML='<div class="small">مسیر معتبری برای مقایسه وجود ندارد.</div>';
+    box.innerHTML='<div class="small">مسیر دیگری برای مقایسه وجود ندارد.</div>';
     return;
   }
 
@@ -3815,38 +3945,28 @@ function renderRouteComparisonSheet(){
 
   box.innerHTML=routeAlternatives.map((route,index)=>{
     const d=routeComparisonData(route,index);
-    const option=classifyRouteOption(route,index);
     const extraTime=Math.max(0,Math.round((d.duration-fastest)/60));
-
-    let reason;
-    if(d.recommended){
-      reason="در داده فعلی، این گزینه کمترین ETA را بین مسیرهای معتبر دارد.";
-      if(d.stats.uturns===0)reason+=" دوربرگردان غیرضروری هم ندارد.";
-    }else{
-      const parts=[];
-      if(extraTime<=2)parts.push("اختلاف زمانی کمی با مسیر پیشنهادی دارد");
-      if(d.distDelta<250)parts.push("مسافت آن نزدیک به کوتاه‌ترین گزینه است");
-      if(d.stats.uturns===0)parts.push("دوربرگردان ندارد");
-      reason=parts.length?parts.join(" • "):"مسیر خودرویی معتبر و قابل انتخاب";
-    }
+    const routeNo=(index+1).toLocaleString('fa-IR');
 
     return `<div class="route-compare-item ${index===selectedRouteIndex?'selected':''}" data-route-compare-index="${index}">
       <div class="route-compare-item-top">
         <div class="route-compare-item-title">
-          <b>${option.title}</b>
-          <span>${option.badge}${extraTime>0?` • ${extraTime.toLocaleString('fa-IR')} دقیقه بیشتر`:""}</span>
+          <b>مسیر ${routeNo}${index===0?" • پیشنهادی":""}</b>
+          <span>${extraTime>0?`${extraTime.toLocaleString('fa-IR')} دقیقه بیشتر`:"کمترین زمان در داده فعلی"}</span>
         </div>
         <div class="route-compare-radio"></div>
       </div>
 
+      <div class="route-street-summary">
+        <b>${escapeHtml(d.streetSummary)}</b>
+      </div>
+
       <div class="route-compare-grid">
-        <div><b>${formatDurationFa(d.duration)}</b><span>ETA</span></div>
+        <div><b>${formatDurationFa(d.duration)}</b><span>زمان</span></div>
         <div><b>${formatKm(d.distance)}</b><span>مسافت</span></div>
         <div><b>${d.stats.turns.toLocaleString('fa-IR')}</b><span>مانور</span></div>
         <div><b>${d.stats.uturns.toLocaleString('fa-IR')}</b><span>دوربرگردان</span></div>
       </div>
-
-      <div class="route-compare-reason ${d.recommended?'recommended':''}">${reason}</div>
     </div>`;
   }).join("");
 
@@ -4543,19 +4663,27 @@ function confirmPendingDestination(){
 function beginDestinationPick(){
   destinationPickMode=true;
   originPickMode=false;
+  clearSearchArea();
+  document.body.classList.add('destination-area-pick');
   $('originPickBanner')?.classList.remove('show');
   $('destinationPickBanner')?.classList.add('show');
   $('status').textContent="روی نقشه، نقطه دقیق مقصد را انتخاب کن.";
 }
 function cancelDestinationPick(){
   destinationPickMode=false;
+  clearSearchArea();
   $('destinationPickBanner')?.classList.remove('show');
   $('status').textContent="انتخاب مقصد روی نقشه لغو شد.";
 }
 async function handleDestinationMapPick(latlng){
   if(!destinationPickMode)return;
   destinationPickMode=false;
+  document.body.classList.remove('destination-area-pick');
   $('destinationPickBanner')?.classList.remove('show');
+  if(searchAreaLayer){
+    try{map.removeLayer(searchAreaLayer)}catch(e){}
+    searchAreaLayer=null;
+  }
   $('status').textContent="در حال شناسایی نقطه انتخاب‌شده...";
 
   try{
@@ -4579,6 +4707,8 @@ let mapStatusTimer=null;
 let navSearchSheetOpen=false;
 let userManuallyMovedDrivingMap=false;
 let driveReportEvents=[];
+let searchAreaLayer=null;
+let lastSearchArea=null;
 
 function openNavSearchSheet({showRecent=true}={}){
   navSearchSheetOpen=true;
@@ -4625,8 +4755,167 @@ function renderNavSheetRecents(){
     };
   });
 }
+
+function normalizeFaSearch(value){
+  return String(value||"")
+    .replace(/ي/g,"ی")
+    .replace(/ى/g,"ی")
+    .replace(/ك/g,"ک")
+    .replace(/\u200c/g," ")
+    .replace(/[،,؛;]/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function localSearchViewbox(){
+  let lat=null,lng=null;
+
+  if(originConfirmed){
+    lat=Number(navOrigin.lat);
+    lng=Number(navOrigin.lng);
+  }else{
+    try{
+      const c=map.getCenter();
+      lat=Number(c.lat);lng=Number(c.lng);
+    }catch(e){}
+  }
+
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return "";
+
+  // Wide enough to bias toward the user's city/region without hard-bounding.
+  const latSpan=.32;
+  const lngSpan=.40;
+  const west=lng-lngSpan;
+  const east=lng+lngSpan;
+  const north=lat+latSpan;
+  const south=lat-latSpan;
+
+  return `${west.toFixed(5)},${north.toFixed(5)},${east.toFixed(5)},${south.toFixed(5)}`;
+}
+function searchResultPriority(item,q){
+  const query=normalizeFaSearch(q).toLowerCase();
+  const label=normalizeFaSearch(destinationLabelFromItem(item)).toLowerCase();
+  const address=normalizeFaSearch(destinationAddressFromItem(item)).toLowerCase();
+  const type=String(item?.type||"").toLowerCase();
+  const category=String(item?.category||"").toLowerCase();
+
+  let score=0;
+
+  if(label===query)score+=90;
+  else if(label.startsWith(query))score+=65;
+  else if(label.includes(query))score+=48;
+  else if(address.includes(query))score+=30;
+
+  const areaTypes=[
+    "neighbourhood","suburb","quarter","residential","city_district",
+    "road","street","pedestrian","living_street","unclassified",
+    "town","village","city"
+  ];
+  if(areaTypes.includes(type))score+=30;
+
+  if(category==="highway")score+=24;
+  if(category==="place")score+=22;
+
+  const importance=Number(item?.importance||0);
+  score+=Math.min(20,importance*25);
+
+  return score;
+}
+function resultAreaKind(item){
+  const type=String(item?.type||"").toLowerCase();
+  const category=String(item?.category||"").toLowerCase();
+
+  if(["neighbourhood","suburb","quarter","residential","city_district"].includes(type)){
+    return "محله / محدوده";
+  }
+  if(category==="highway" || ["road","street","pedestrian","living_street","unclassified"].includes(type)){
+    return "خیابان / مسیر";
+  }
+  if(["city","town","village"].includes(type)){
+    return "شهر / محدوده";
+  }
+  return "محدوده / مکان";
+}
+function clearSearchArea(){
+  if(searchAreaLayer){
+    try{map.removeLayer(searchAreaLayer)}catch(e){}
+    searchAreaLayer=null;
+  }
+  lastSearchArea=null;
+  document.body.classList.remove('destination-area-pick');
+}
+function focusSearchArea(item){
+  closeNavSearchSheet();
+  clearExistingRouteForDestinationChange();
+  clearSearchArea();
+
+  destinationConfirmed=false;
+  pendingDestination=null;
+
+  const lat=Number(item.lat);
+  const lng=Number(item.lon);
+  const label=destinationLabelFromItem(item);
+
+  const bb=Array.isArray(item.boundingbox)?item.boundingbox.map(Number):null;
+  const hasBounds=bb?.length===4 && bb.every(Number.isFinite);
+
+  if(hasBounds){
+    const south=bb[0],north=bb[1],west=bb[2],east=bb[3];
+    const latSize=Math.abs(north-south);
+    const lngSize=Math.abs(east-west);
+
+    // Very large administrative areas are useful for centering,
+    // but a huge rectangle would clutter the map.
+    if(latSize<=.18 && lngSize<=.22){
+      searchAreaLayer=L.rectangle(
+        [[south,west],[north,east]],
+        {
+          color:'#2563eb',
+          weight:2,
+          opacity:.70,
+          fillColor:'#60a5fa',
+          fillOpacity:.08,
+          dashArray:'7 7'
+        }
+      ).addTo(map);
+    }
+
+    try{
+      map.fitBounds([[south,west],[north,east]],{
+        padding:[55,55],
+        maxZoom:17,
+        animate:true
+      });
+    }catch(e){
+      map.setView([lat,lng],15,{animate:true});
+    }
+  }else{
+    const kind=resultAreaKind(item);
+    const zoom=kind.includes("خیابان")?16:15;
+    map.setView([lat,lng],zoom,{animate:true});
+  }
+
+  lastSearchArea={lat,lng,label,item};
+
+  destinationPickMode=true;
+  originPickMode=false;
+  document.body.classList.add('destination-area-pick');
+  $('originPickBanner')?.classList.remove('show');
+
+  const banner=$('destinationPickBanner');
+  if(banner){
+    banner.classList.add('show');
+    const title=banner.querySelector('b');
+    const desc=banner.querySelector('span');
+    if(title)title.textContent=`${label} پیدا شد`;
+    if(desc)desc.textContent="حالا روی نقطه دقیق مقصد در همین محدوده کلیک کن.";
+  }
+
+  showMapStatus(`${label} روی نقشه پیدا شد • نقطه دقیق مقصد را انتخاب کن.`);
+}
+
 async function searchDestinationV3(){
-  const q=($('navSheetSearchInput')?.value||"").trim();
+  const rawQ=($('navSheetSearchInput')?.value||"").trim();
+  const q=normalizeFaSearch(rawQ);
   const box=$('navSheetResults');
 
   if(!q){
@@ -4636,48 +4925,90 @@ async function searchDestinationV3(){
   }
 
   $('navSheetRecentSection').style.display="none";
-  box.innerHTML='<div style="padding:12px 3px;color:#64748b;font-size:9px">در حال جست‌وجو...</div>';
+  box.innerHTML=
+    '<div style="padding:12px 3px;color:#64748b;font-size:9px">در حال پیدا کردن محله یا خیابان...</div>';
 
   try{
+    const viewbox=localSearchViewbox();
+    const viewboxArg=viewbox?`&viewbox=${encodeURIComponent(viewbox)}&bounded=0`:"";
+
     const url=
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&countrycodes=ir`+
-      `&addressdetails=1&accept-language=fa&q=${encodeURIComponent(q)}`;
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=15&countrycodes=ir`+
+      `&addressdetails=1&namedetails=1&dedupe=1&accept-language=fa,en`+
+      viewboxArg+
+      `&q=${encodeURIComponent(q)}`;
 
     const res=await fetch(url,{headers:{'Accept':'application/json'}});
     if(!res.ok)throw new Error(`search ${res.status}`);
 
-    const results=await res.json();
+    let results=await res.json();
+    results=Array.isArray(results)?results:[];
 
-    if(!Array.isArray(results)||!results.length){
-      box.innerHTML='<div style="padding:12px 3px;color:#64748b;font-size:9px">نتیجه‌ای در ایران پیدا نشد.</div>';
+    // Fallback for queries like "محله جردن" / "خیابان ولیعصر":
+    // try the core name only if the first request found nothing.
+    if(!results.length){
+      const simplified=q
+        .replace(/^(محله|خیابان|بلوار|بزرگراه|کوچه|میدان)\s+/,"")
+        .trim();
+
+      if(simplified && simplified!==q){
+        const fallbackUrl=
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=15&countrycodes=ir`+
+          `&addressdetails=1&namedetails=1&dedupe=1&accept-language=fa,en`+
+          viewboxArg+
+          `&q=${encodeURIComponent(simplified)}`;
+
+        const r2=await fetch(fallbackUrl,{headers:{'Accept':'application/json'}});
+        if(r2.ok){
+          const d2=await r2.json();
+          if(Array.isArray(d2))results=d2;
+        }
+      }
+    }
+
+    if(!results.length){
+      box.innerHTML=
+        '<div style="padding:12px 3px;color:#64748b;font-size:9px;line-height:1.8">'+
+        'نتیجه مناسبی پیدا نشد. نام محله یا خیابان را همراه با شهر وارد کن؛ مثلاً «جردن تهران» یا «خیابان ولیعصر تهران».'+
+        '</div>';
       return;
     }
 
-    box.innerHTML=results.map((x,i)=>`
-      <button class="nav-sheet-result" data-v3-result="${i}">
-        <span class="nav-sheet-result-icon">⌖</span>
-        <div>
-          <b>${escapeHtml(destinationLabelFromItem(x))}</b>
-          <span>${escapeHtml(destinationAddressFromItem(x))}</span>
-        </div>
-        <span class="nav-sheet-result-meta">${escapeHtml([x.type,x.category].filter(Boolean).join(" • "))}</span>
-      </button>
-    `).join("");
+    results=results
+      .map(x=>({item:x,score:searchResultPriority(x,q)}))
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,10)
+      .map(x=>x.item);
 
-    box.querySelectorAll('[data-v3-result]').forEach(btn=>{
+    box.innerHTML=
+      `<div class="search-area-hint">
+        <b>اول محدوده را پیدا کن</b><br>
+        یکی از نتایج را بزن؛ نقشه روی آن خیابان یا محله می‌رود. بعد نقطه دقیق مقصد را روی نقشه انتخاب کن.
+      </div>`+
+      results.map((x,i)=>`
+        <button class="nav-sheet-result area-result" data-v31-area="${i}">
+          <span class="nav-sheet-result-icon">⌖</span>
+          <div>
+            <b>${escapeHtml(destinationLabelFromItem(x))}</b>
+            <span>${escapeHtml(destinationAddressFromItem(x))}</span>
+          </div>
+          <span class="area-result-action">${escapeHtml(resultAreaKind(x))}</span>
+        </button>
+      `).join("");
+
+    box.querySelectorAll('[data-v31-area]').forEach(btn=>{
       btn.onclick=()=>{
-        const x=results[Number(btn.dataset.v3Result)];
-        if(!x)return;
-        closeNavSearchSheet();
-        stageDestination({
-          lat:Number(x.lat),lng:Number(x.lon),
-          label:destinationLabelFromItem(x),
-          address:destinationAddressFromItem(x)
-        },{source:"search",autoRoute:true});
+        const x=results[Number(btn.dataset.v31Area)];
+        if(x)focusSearchArea(x);
       };
     });
+
   }catch(e){
-    box.innerHTML='<div style="padding:12px 3px;color:#b91c1c;font-size:9px">جست‌وجوی مقصد فعلاً در دسترس نیست.</div>';
+    console.warn("area search failed",e);
+    box.innerHTML=
+      '<div style="padding:12px 3px;color:#b91c1c;font-size:9px">'+
+      'جست‌وجوی محدوده فعلاً در دسترس نیست.'+
+      '</div>';
   }
 }
 function setRouteSelectionMode(active){
@@ -4855,7 +5186,7 @@ function renderRouteAltLabels(){
     el.className=`route-alt-label ${index===selectedRouteIndex?'active':''}`;
     el.style.left=`${pt.x}px`;
     el.style.top=`${pt.y}px`;
-    el.textContent=formatDurationFa(route.duration);
+    el.textContent=`${(index+1).toLocaleString('fa-IR')} • ${formatDurationFa(route.duration)}`;
     el.onclick=(ev)=>{
       ev.stopPropagation();
       selectRouteAlternative(index);
@@ -4896,15 +5227,14 @@ function renderMapRouteSheet(){
     integrity.critical
       ?"مسیر نیاز به بررسی دارد"
       :routeAlternatives.length>1
-        ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر`
-        :"مسیر آماده است";
+        ?`مسیر ${(selectedRouteIndex+1).toLocaleString('fa-IR')} از ${routeAlternatives.length.toLocaleString('fa-IR')}`
+        :"مسیر ۱";
 
+  $('mapRouteReason').classList.add('route-road-summary');
   $('mapRouteReason').textContent=
     integrity.critical
       ?"این مسیر نیاز به بررسی دارد."
-      :selectedRouteIndex===0
-        ?"مسیر پیشنهادی بر اساس زمان فعلی این موتور مسیریابی."
-        :"مسیر جایگزین انتخاب‌شده.";
+      :routeStreetSummary(route,selectedRouteIndex,{compact:true});
 
   $('mapStartBtn').disabled=integrity.critical;
   $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"بزن بریم";
