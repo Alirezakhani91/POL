@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۷.۱ Free Map + Route Label Fix</title>
+<title>POL | نسخه ۳.۷.۲ Manual Explore Strict</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2347,6 +2347,68 @@ body.driving-mode .drive-control-cluster{
   }
 }
 
+
+/* ===== v3.7.2 Strict manual map exploration during navigation ===== */
+body.driving-mode #map,
+body.driving-mode #map .leaflet-container,
+body.driving-mode #map .leaflet-pane,
+body.driving-mode #map .leaflet-map-pane,
+body.driving-mode #map .leaflet-control-container,
+body.driving-mode #map .leaflet-control,
+body.driving-mode #map .leaflet-top,
+body.driving-mode #map .leaflet-bottom{
+  pointer-events:auto!important;
+}
+
+body.driving-mode #map .leaflet-control-container{
+  z-index:1001!important;
+}
+body.driving-mode #map .leaflet-top{
+  z-index:1002!important;
+}
+body.driving-mode #map .leaflet-control-zoom{
+  margin-top:18px!important;
+  margin-left:12px!important;
+  box-shadow:0 10px 28px rgba(15,23,42,.18)!important;
+  border-radius:16px!important;
+  overflow:hidden!important;
+}
+body.driving-mode #map .leaflet-control-zoom a{
+  width:44px!important;
+  height:44px!important;
+  line-height:44px!important;
+  font-size:28px!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#0f172a!important;
+  border:0!important;
+}
+body.driving-mode #map .leaflet-control-zoom a:hover{
+  background:#f8fafc!important;
+}
+body.driving-mode #map .leaflet-control-zoom-in{
+  border-bottom:1px solid #e5e7eb!important;
+}
+
+/* when user explores, make this mode visually explicit */
+body.driving-mode.map-manual-explore #map{
+  cursor:grab!important;
+}
+body.driving-mode.map-manual-explore .drive-follow-badge b::after{
+  content:" • آزاد";
+  color:#fbbf24;
+}
+
+/* keep bottom strip interactive but not oversized */
+body.driving-mode .nav-bottom-strip{
+  pointer-events:auto!important;
+}
+
+/* recenter button should always be tappable */
+body.driving-mode #driveRecenterBtn{
+  pointer-events:auto!important;
+  z-index:1003!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3519,6 +3581,8 @@ const mapResizeObserver = new ResizeObserver(() => fixMapSize(false));
 mapResizeObserver.observe(document.getElementById('map'));
 
 let routeCoords=[],routeLine=null,trackLine=null,carMarker=null,eventMarkers=[],speedLayers=[];
+let manualExploreLock=false;
+
 let timer=null,t=0,rows=[],events=[],routeDistanceM=0;
 
 // v1.3 Navigation state
@@ -6067,16 +6131,30 @@ function fitSelectedRouteForExploration({animate=true}={}){
   syncRouteAltLabelsSoon();
 }
 function markDrivingMapManualExplore(){
+  pauseFollowForManualExplore("map-gesture");
+}
+
+
+function pauseFollowForManualExplore(reason="manual"){
   if(!document.body.classList.contains('driving-mode'))return;
 
+  manualExploreLock=true;
   userManuallyMovedDrivingMap=true;
   document.body.classList.add('map-manual-explore');
 
-  if(typeof syncRecenterUi==='function'){
-    syncRecenterUi();
-  }
+  // Hard stop any current animation so the map won't "fight" the user.
+  try{ map.stop(); }catch(e){}
+
+  if(typeof syncRecenterUi==='function')syncRecenterUi();
 }
 
+function resumeFollowAfterManualExplore(){
+  manualExploreLock=false;
+  userManuallyMovedDrivingMap=false;
+  document.body.classList.remove('map-manual-explore');
+
+  if(typeof syncRecenterUi==='function')syncRecenterUi();
+}
 function setRouteSelectionMode(active){
   document.body.classList.toggle('route-selection-mode',!!active);
 
@@ -7326,7 +7404,9 @@ function updateOfflineDrivingBanner(){
 function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
+  manualExploreLock=false;
   ensureMapExplorationEnabled();
+  try{ map.stop(); }catch(e){}
   updateOfflineDrivingBanner();
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
@@ -7348,6 +7428,7 @@ function enterDrivingMode(){
 function exitDrivingMode(){
   document.body.classList.remove('driving-mode');
   document.body.classList.remove('map-manual-explore');
+  manualExploreLock=false;
   userManuallyMovedDrivingMap=false;
   $('offlineDriveBanner')?.classList.remove('show');
   $('speedAlertBanner')?.classList.remove('show');
@@ -9869,35 +9950,57 @@ map.on('click',e=>{
 });
 map.on('moveend zoomend',()=>syncRouteAltLabelsSoon());
 map.on('dragstart',()=>{
-  markDrivingMapManualExplore();
+  pauseFollowForManualExplore("dragstart");
 });
 
-// Only real user interaction pauses Follow Mode.
+// Any genuine interaction with the map should immediately pause Follow.
+// This happens BEFORE the gesture fully starts, so the camera stops fighting the user.
 const mapContainerEl=map.getContainer();
 
-mapContainerEl.addEventListener('wheel',()=>{
-  markDrivingMapManualExplore();
+const shouldIgnoreManualEvent=(target)=>{
+  return !!target?.closest?.(
+    'button,.turn-card,.nav-bottom-strip,.drive-control-cluster,.drive-report-btn,.drive-circle-btn,.leaflet-control-container'
+  );
+};
+
+mapContainerEl.addEventListener('pointerdown',(e)=>{
+  if(!document.body.classList.contains('driving-mode'))return;
+  if(shouldIgnoreManualEvent(e.target))return;
+  pauseFollowForManualExplore("pointerdown");
+},{passive:true});
+
+mapContainerEl.addEventListener('mousedown',(e)=>{
+  if(!document.body.classList.contains('driving-mode'))return;
+  if(shouldIgnoreManualEvent(e.target))return;
+  pauseFollowForManualExplore("mousedown");
 },{passive:true});
 
 mapContainerEl.addEventListener('touchstart',(e)=>{
   if(!document.body.classList.contains('driving-mode'))return;
-  if(e.target.closest?.('button,.turn-card,.nav-bottom-strip,.drive-control-cluster,.drive-report-btn'))return;
-  markDrivingMapManualExplore();
+  if(shouldIgnoreManualEvent(e.target))return;
+  pauseFollowForManualExplore("touchstart");
+},{passive:true});
+
+mapContainerEl.addEventListener('wheel',()=>{
+  pauseFollowForManualExplore("wheel");
 },{passive:true});
 
 mapContainerEl.addEventListener('dblclick',()=>{
-  markDrivingMapManualExplore();
+  pauseFollowForManualExplore("dblclick");
 },{passive:true});
 
-// Leaflet +/- controls need explicit manual-follow handling.
+// Pause follow when using Leaflet +/- controls as well.
 setTimeout(()=>{
   const zoomIn=mapContainerEl.querySelector('.leaflet-control-zoom-in');
   const zoomOut=mapContainerEl.querySelector('.leaflet-control-zoom-out');
 
   [zoomIn,zoomOut].forEach(btn=>{
     btn?.addEventListener('click',()=>{
-      markDrivingMapManualExplore();
+      pauseFollowForManualExplore("zoom-control");
     });
+    btn?.addEventListener('touchstart',()=>{
+      pauseFollowForManualExplore("zoom-control-touch");
+    },{passive:true});
   });
 },0);
 
@@ -10217,7 +10320,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   }
   function syncRecenterUi(){
     const manual=
-      !!userManuallyMovedDrivingMap &&
+      (!!userManuallyMovedDrivingMap || !!manualExploreLock) &&
       document.body.classList.contains('driving-mode');
 
     const btn=$('driveRecenterBtn');
@@ -10266,7 +10369,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     updateFollowBadge();
     updateTurnApproachRail(progress);
 
-    if(userManuallyMovedDrivingMap&&!force){
+    if((userManuallyMovedDrivingMap || manualExploreLock) && !force){
       syncRecenterUi();
       return;
     }
@@ -10277,12 +10380,12 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     syncRecenterUi();
   }
   function recenterDrivingCamera(){
-    userManuallyMovedDrivingMap=false;
-    document.body.classList.remove('map-manual-explore');
+    resumeFollowAfterManualExplore();
     followCameraLastUpdate=0;
     updateFollowBadge();
     syncRecenterUi();
     ensureMapExplorationEnabled();
+    try{ map.stop(); }catch(e){}
 
     let actualPoint=null;
     let progress=0;
@@ -10324,6 +10427,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     },280);
   }
   map.on('dragend zoomend',()=>syncRecenterUi());
+  map.on('movestart',()=>{
+    if(document.body.classList.contains('driving-mode') && (userManuallyMovedDrivingMap || manualExploreLock)){
+      syncRecenterUi();
+    }
+  });
   if(document.body.classList.contains('driving-mode'))syncRecenterUi();
 
 
