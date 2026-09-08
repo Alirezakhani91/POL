@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰ یکپارچگی مسیریابی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰.۱ اصلاح تست خروج</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2588,9 +2588,22 @@ async function startDrivingConfirmed(){
     if(!offRouteTestState.ready){
       setReadyCheck(
         'readyRouteCheck','warn',
-        'برای تست خروج از مسیر، خیابان مجاور معتبر پیدا نشد؛ نقطه غیرواقعی ساخته نمی‌شود.'
+        `تست خروج آماده نشد: ${offRouteTestState.error||"خیابان مجاور معتبر پیدا نشد"}. نقطه غیرواقعی ساخته نمی‌شود.`
       );
+    }else{
+      setReadyCheck(
+        'readyRouteCheck','good',
+        `تست خروج آماده است: ${offRouteTestState.roadName} • فاصله از مسیر فعلی ${Math.round(offRouteTestState.awayFromCurrentRoute||0).toLocaleString('fa-IR')} متر`
+      );
+      // Let the user actually see confirmation before the sheet closes.
+      await new Promise(resolve=>setTimeout(resolve,650));
     }
+  }
+
+  if(isOffRouteTest && !offRouteTestState.ready){
+    $('readyStartDrive').disabled=false;
+    $('readyStartDrive').textContent="تلاش دوباره";
+    return;
   }
 
   closeTripReadiness();
@@ -2745,48 +2758,110 @@ function chooseBestValidatedRoute(routes,snappedStart,destination){
     });
   return valid[0]?.route||null;
 }
+
+function minDistanceToCurrentRoute(point){
+  if(!Array.isArray(routeCoords)||!routeCoords.length)return Infinity;
+  let best=Infinity;
+  // Sampling is enough for this test harness and keeps it lightweight.
+  const step=Math.max(1,Math.floor(routeCoords.length/180));
+  for(let i=0;i<routeCoords.length;i+=step){
+    best=Math.min(best,hav(point,routeCoords[i]));
+  }
+  best=Math.min(best,hav(point,routeCoords[routeCoords.length-1]));
+  return best;
+}
+
+async function findAdjacentDrivableTestPoint(base,heading){
+  // We intentionally limit requests. Public demo routing services should not
+  // be hammered with dozens of nearest queries.
+  const probes=[
+    {bearing:heading+90,distance:170},
+    {bearing:heading-90,distance:170},
+    {bearing:heading+70,distance:260},
+    {bearing:heading-70,distance:260}
+  ];
+
+  let best=null;
+
+  for(const probeDef of probes){
+    const probe=destinationPoint(
+      base,
+      (probeDef.bearing+360)%360,
+      probeDef.distance
+    );
+
+    try{
+      const snap=await snapToDrivableRoad(probe,{maxSnapM:115,number:3});
+      if(!snap)continue;
+
+      const separation=hav(base,snap.point);
+      const awayFromCurrentRoute=minDistanceToCurrentRoute(snap.point);
+
+      // The snapped location is guaranteed to be on OSRM's driving graph,
+      // but it must also be genuinely away from the active route.
+      if(separation<65 || separation>520)continue;
+      if(awayFromCurrentRoute<35)continue;
+
+      // Make sure this road can actually route to the final destination.
+      const lon=Number(snap.point[1]).toFixed(6);
+      const lat=Number(snap.point[0]).toFixed(6);
+      const testUrl=`https://router.project-osrm.org/route/v1/driving/${lon},${lat};${navDestination.lng},${navDestination.lat}?alternatives=false&overview=false&steps=false`;
+      const testData=await fetchJsonWithTimeout(testUrl,7500);
+      const testRoute=testData?.routes?.[0];
+      if(!testRoute || Number(testRoute.distance||0)<30)continue;
+
+      const candidate={
+        ...snap,
+        separation,
+        awayFromCurrentRoute,
+        routeToDestinationM:Number(testRoute.distance||0)
+      };
+
+      if(
+        !best ||
+        (candidate.name && !best.name) ||
+        candidate.awayFromCurrentRoute>best.awayFromCurrentRoute
+      ){
+        best=candidate;
+      }
+
+      // A named road clearly separated from the route is good enough.
+      if(best.name && best.awayFromCurrentRoute>=55)break;
+    }catch(e){
+      console.warn("Off-route test probe rejected:",e);
+    }
+  }
+
+  return best;
+}
+
 async function prepareOffRouteRoadTest(){
-  offRouteTestState={preparing:true,ready:false,point:null,roadName:"",snapDistance:null,error:""};
+  offRouteTestState={
+    preparing:true,ready:false,point:null,roadName:"",
+    snapDistance:null,error:""
+  };
   if($('scenario')?.value!=="offRoute")return;
 
   try{
-    if(navigator.onLine===false)throw new Error("offline");
+    if(navigator.onLine===false)throw new Error("اینترنت قطع است");
+
     const p=.34;
     const base=interpolateOnRoute(p);
     const heading=routeBearingNear(p);
-    const candidates=[];
-    const bearings=[heading+90,heading-90,heading+60,heading-60];
-    const distances=[90,130,180,230];
 
-    for(const d of distances){
-      for(const br of bearings){
-        const probe=destinationPoint(base,(br+360)%360,d);
-        try{
-          const snap=await snapToDrivableRoad(probe,{maxSnapM:55,number:3});
-          if(!snap)continue;
-          const separation=hav(base,snap.point);
-          if(separation<55 || separation>360)continue;
-          candidates.push({...snap,separation});
-        }catch(e){}
-      }
+    const best=await findAdjacentDrivableTestPoint(base,heading);
+    if(!best){
+      throw new Error("خیابان مجاور معتبر برای این مسیر پیدا نشد");
     }
-
-    candidates.sort((a,b)=>{
-      const namedA=a.name?1:0,namedB=b.name?1:0;
-      if(namedA!==namedB)return namedB-namedA;
-      // Prefer a nearby parallel/adjacent street, not a distant network edge.
-      return Math.abs(a.separation-140)-Math.abs(b.separation-140);
-    });
-
-    const best=candidates[0];
-    if(!best)throw new Error("no nearby drivable road found");
 
     offRouteTestState={
       preparing:false,
       ready:true,
       point:best.point,
-      roadName:best.name||"خیابان قابل رانندگی مجاور",
+      roadName:best.name||"خیابان مجاور قابل رانندگی",
       snapDistance:best.distance,
+      separation:best.separation,
+      awayFromCurrentRoute:best.awayFromCurrentRoute,
       error:""
     };
   }catch(e){
@@ -2812,7 +2887,7 @@ function currentRoutePosition(simProgress){
 
 function simulatedOffRoutePosition(base,p){
   if(rerouteState.rerouted)return base;
-  if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.30&&p<.43))return base;
+  if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.29&&p<.48))return base;
 
   // Never invent a raw point inside a park/building. The test point must have
   // already been snapped to OSRM's DRIVING network.
@@ -2963,7 +3038,7 @@ function handleOffRoute(s,pos){
   const confidentDeviation=!!s.offRoute && testHasValidRoad && s.gps<=35 && s.match>=70;
   if(confidentDeviation){
     if(rerouteState.offSince==null)rerouteState.offSince=t;
-    if(t-rerouteState.offSince>=1.25 && !rerouteState.active && t-rerouteState.lastAt>4){
+    if(t-rerouteState.offSince>=.75 && !rerouteState.active && t-rerouteState.lastAt>3){
       triggerReroute(pos,s.p);
     }
   }else{
@@ -3049,6 +3124,17 @@ function startCoreDrive(){
   $('start').disabled=true;
   $('stop').disabled=false;
   enterDrivingMode();
+
+  if($('scenario')?.value==="offRoute" && offRouteTestState.ready){
+    setTimeout(()=>{
+      showRerouteNotice(
+        "تست خروج از مسیر آماده است",
+        `${offRouteTestState.roadName} • نقطه انحراف روی شبکه قابل رانندگی تأیید شد`,
+        true
+      );
+    },500);
+  }
+
   timer=setInterval(step,250)
 }
 function finish(){
