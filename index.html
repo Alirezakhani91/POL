@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۸ تجربه نقشه‌محور</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۹ تجربه مسیریابی نقشه‌محور</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1211,6 +1211,208 @@ body.driving-mode .map-status-toast{
   .map-route-sheet-main b{max-width:260px}
 }
 
+
+/* ===== v2.9 Waze-like Map Experience ===== */
+body.map-first-mode{
+  background:#0b1118!important;
+}
+body.map-first-mode .app-topbar{
+  display:none!important;
+}
+body.map-first-mode .bottom-nav{
+  background:rgba(12,19,28,.94)!important;
+  backdrop-filter:blur(16px);
+  border-top:1px solid rgba(255,255,255,.08)!important
+}
+body.map-first-mode #screen-trip{
+  padding:0!important;
+}
+body.map-first-mode #screen-trip .screen-inner{
+  max-width:none!important;
+  padding:0!important;
+}
+body.map-first-mode #tripMapCard{
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+body.map-first-mode #map{
+  height:calc(100vh - 70px)!important;
+  min-height:620px!important;
+  border-radius:0!important;
+}
+
+.map-first-search-panel{
+  top:18px!important;
+  left:18px!important;
+  right:18px!important;
+}
+.map-first-search-row{
+  max-width:560px!important;
+  grid-template-columns:46px 1fr 46px!important;
+  gap:8px!important;
+}
+.map-first-search-row input{
+  height:54px!important;
+  border-radius:18px!important;
+  font-size:14px!important;
+  padding:0 16px!important;
+  border:0!important;
+  background:rgba(255,255,255,.98)!important;
+  box-shadow:0 8px 30px rgba(0,0,0,.22)!important
+}
+.map-origin-button,.map-search-button{
+  width:46px!important;height:54px!important;min-height:54px!important;
+  border-radius:18px!important;border:0!important;
+  background:rgba(255,255,255,.98)!important;
+  box-shadow:0 8px 30px rgba(0,0,0,.22)!important
+}
+.map-origin-chip{
+  max-width:330px!important;
+  margin-top:7px!important;
+  background:rgba(14,24,35,.88)!important;
+  border:0!important;
+  backdrop-filter:blur(14px)!important
+}
+.map-origin-chip small{display:none!important}
+.map-origin-chip b{font-size:8px!important}
+
+.floating-map-controls{
+  position:absolute;z-index:934;right:16px;top:160px;
+  display:grid;gap:8px
+}
+.floating-map-controls button{
+  width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;
+  border-radius:50%!important;background:rgba(255,255,255,.97)!important;
+  color:#111827!important;border:0!important;font-size:18px!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.22)!important
+}
+
+.map-route-sheet{
+  bottom:16px!important;
+  left:16px!important;
+  right:16px!important;
+  max-width:560px!important;
+  padding:13px!important;
+  border-radius:22px!important;
+  background:rgba(14,23,34,.97)!important;
+  border:0!important;
+  box-shadow:0 18px 45px rgba(0,0,0,.38)!important
+}
+.map-route-sheet-main small{
+  color:#8fa1b7!important;
+  font-size:8px!important
+}
+.map-route-sheet-main b{
+  font-size:14px!important
+}
+.map-route-metrics{
+  grid-template-columns:1.1fr 1fr 1fr!important;
+}
+.map-route-metrics>div{
+  background:#172536!important;
+  border-radius:12px!important
+}
+.map-route-metrics b{
+  font-size:13px!important
+}
+.map-route-reason{
+  background:transparent!important;
+  padding:5px 2px!important;
+  color:#93a5ba!important
+}
+.map-route-actions{
+  grid-template-columns:.8fr .8fr 1.5fr!important
+}
+.map-route-actions button{
+  min-height:46px!important;
+  border-radius:14px!important
+}
+#mapStartBtn{
+  font-size:13px!important;
+  font-weight:900!important
+}
+
+.route-alt-labels{
+  position:absolute;inset:0;z-index:920;pointer-events:none
+}
+.route-alt-label{
+  position:absolute;transform:translate(-50%,-50%);
+  background:#ffffff;color:#111827;border-radius:999px;padding:5px 8px;
+  font-size:8px;font-weight:900;box-shadow:0 5px 16px rgba(0,0,0,.25);
+  border:2px solid rgba(255,255,255,.8)
+}
+.route-alt-label.active{
+  background:#2563eb;color:#fff
+}
+
+.map-search-results{
+  max-width:560px!important;
+  border:0!important;
+  border-radius:16px!important;
+  background:rgba(14,23,34,.98)!important
+}
+.map-search-results .search-result{
+  border:0!important;
+  background:#182636!important
+}
+.map-recent-wrap{
+  max-width:560px!important;
+  border:0!important;
+  border-radius:16px!important;
+  background:rgba(14,23,34,.98)!important
+}
+
+body.map-first-mode:not(.setup-open) .trip-desktop-side,
+body.map-first-mode:not(.setup-open) #tripAdvanced,
+body.map-first-mode:not(.setup-open) #tripLiveMetrics{
+  display:none!important
+}
+
+/* Driving mode becomes extremely minimal */
+body.driving-mode .bottom-nav,
+body.driving-mode .floating-map-controls,
+body.driving-mode .map-first-search-panel{
+  display:none!important
+}
+body.driving-mode #map{
+  height:100vh!important
+}
+body.driving-mode #tripMapCard{
+  position:fixed!important;inset:0!important;z-index:2500!important
+}
+body.driving-mode #turnCard{
+  top:12px!important;left:12px!important;right:12px!important;
+  max-width:520px!important;margin:auto!important;
+  background:rgba(12,22,33,.96)!important;border:0!important;
+  border-radius:20px!important;box-shadow:0 10px 30px rgba(0,0,0,.30)!important
+}
+body.driving-mode .mapHUD{
+  bottom:16px!important;
+}
+body.driving-mode #currentSpeedGauge{
+  left:14px!important;bottom:18px!important
+}
+body.driving-mode .drive-control-cluster{
+  right:14px!important;bottom:18px!important
+}
+
+@media(max-width:650px){
+  body.map-first-mode #map{
+    height:calc(100vh - 62px)!important;
+    min-height:560px!important
+  }
+  .map-first-search-panel{
+    top:10px!important;left:10px!important;right:10px!important
+  }
+  .floating-map-controls{
+    right:10px;top:145px
+  }
+  .map-route-sheet{
+    left:10px!important;right:10px!important;bottom:10px!important
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1677,6 +1879,11 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div class="live-chip"><span id="progress">۰%</span> • <span id="timeNow">۰ ثانیه</span></div>
             </div>
             <div style="position:relative">
+              <div id="floatingMapControls" class="floating-map-controls">
+                <button id="mapCenterBtn" title="موقعیت من">◎</button>
+                <button id="mapSavedBtn" title="مقصدهای اخیر">★</button>
+              </div>
+
               <div id="mapFirstSearchPanel" class="map-first-search-panel">
                 <div class="map-first-search-row">
                   <button id="mapOriginButton" class="map-origin-button" title="موقعیت فعلی">◎</button>
@@ -1700,6 +1907,8 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 </div>
               </div>
 
+              <div id="routeAltLabels" class="route-alt-labels"></div>
+
               <div id="mapRouteSheet" class="map-route-sheet">
                 <div class="map-route-sheet-main">
                   <div>
@@ -1720,13 +1929,13 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="map-route-actions">
                   <button id="mapRouteCompareBtn">مسیرها</button>
                   <button id="mapRoutePreviewBtn">جزئیات</button>
-                  <button id="mapStartBtn" class="primary">شروع</button>
+                  <button id="mapStartBtn" class="primary">بزن بریم</button>
                 </div>
               </div>
 
               <div id="mapStatusToast" class="map-status-toast"></div>
 
-              <button id="mapDevBtn" class="map-dev-btn">تست</button>
+              <button id="mapDevBtn" class="map-dev-btn">آزمایشگاه</button>
               <button id="closeMapDevBtn" class="map-dev-close">×</button>
 
               <div id="turnCard" class="turn-card">
@@ -2842,6 +3051,7 @@ function showRouteFailure(message){
   routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
   routeAltLayers=[];
   clearAccessLines();
+  clearRouteAltLabels();
 
   $('routeOptions').innerHTML="";
   $('oneRouteNote')?.classList.remove('show');
@@ -3441,6 +3651,7 @@ function updateRouteSummary(){
   if($('navArrival'))$('navArrival').textContent=formatArrivalFa(route.duration);
   renderRouteOptionCards();
   renderMapRouteSheet();
+  syncRouteAltLabelsSoon();
 }
 function selectRouteAlternative(index){
   if(!routeAlternatives[index])return;
@@ -3478,6 +3689,7 @@ function selectRouteAlternative(index){
   updateTurnByTurn(0);
   renderRouteDecision();
   renderRouteIntegrity();
+  syncRouteAltLabelsSoon();
   if($('routeCompareSheet')?.classList.contains('open'))renderRouteComparisonSheet();
   if($('routePreviewSheet')?.classList.contains('open'))renderRoutePreview();
 }
@@ -4045,6 +4257,7 @@ function clearExistingRouteForDestinationChange(){
   routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
   routeAltLayers=[];
   clearAccessLines();
+  clearRouteAltLabels();
 
   $('routeOptions').innerHTML="";
   $('routeSummary').classList.remove('show');
@@ -4185,6 +4398,42 @@ async function searchDestinationMapFirst(){
   target.innerHTML=source.innerHTML;
   target.classList.add('open');
 }
+
+function clearRouteAltLabels(){
+  const box=$('routeAltLabels');
+  if(box)box.innerHTML="";
+}
+function routeMidpointLatLng(route){
+  const coords=routeToCoords(route);
+  if(!coords.length)return null;
+  const idx=Math.floor(coords.length*.52);
+  return coords[Math.min(coords.length-1,Math.max(0,idx))];
+}
+function renderRouteAltLabels(){
+  const box=$('routeAltLabels');
+  if(!box)return;
+  box.innerHTML="";
+
+  if(!routeAlternatives.length)return;
+
+  routeAlternatives.slice(0,3).forEach((route,index)=>{
+    const p=routeMidpointLatLng(route);
+    if(!p)return;
+
+    const pt=map.latLngToContainerPoint(p);
+    const el=document.createElement('div');
+    el.className=`route-alt-label ${index===selectedRouteIndex?'active':''}`;
+    el.style.left=`${pt.x}px`;
+    el.style.top=`${pt.y}px`;
+    el.textContent=formatDurationFa(route.duration);
+    box.appendChild(el);
+  });
+}
+function syncRouteAltLabelsSoon(){
+  clearTimeout(syncRouteAltLabelsSoon._t);
+  syncRouteAltLabelsSoon._t=setTimeout(renderRouteAltLabels,120);
+}
+
 function renderMapRouteSheet(){
   const sheet=$('mapRouteSheet');
   if(!sheet)return;
@@ -4218,10 +4467,10 @@ function renderMapRouteSheet(){
   $('mapRouteReason').textContent=
     integrity.critical
       ?"این Route برای Navigation تأیید نشده است. جزئیات را بررسی کن."
-      :decision.body+" ترافیک زنده هنوز در ETA لحاظ نمی‌شود.";
+      :decision.body+" ETA فعلی بدون ترافیک زنده.";
 
   $('mapStartBtn').disabled=integrity.critical;
-  $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"شروع";
+  $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"بزن بریم";
 
   sheet.classList.add('show');
   $('mapDevBtn').style.display='none';
@@ -4238,7 +4487,10 @@ function openMapFirstOriginPicker(){
 async function bootstrapMapFirstExperience(){
   document.body.classList.add('map-first-mode');
 
-  try{fixMapSize(true)}catch(e){}
+  try{
+    window.scrollTo(0,0);
+    fixMapSize(true);
+  }catch(e){}
 
   renderMapRecentDestinations();
   syncMapOriginStatus("locating","در حال پیدا کردن موقعیت شما...");
@@ -7021,6 +7273,22 @@ $('reset').onclick=()=>reset(true);
 $('csv').onclick=exportCSV;
 $('fitMap').onclick=()=>{fixMapSize(true)};
 $('routePreset').onchange=()=>applyPresetSelection(true);
+$('mapCenterBtn').onclick=()=>{
+  if(originConfirmed){
+    try{map.setView([navOrigin.lat,navOrigin.lng],16,{animate:true})}catch(e){}
+  }else{
+    autoLocateOriginMapFirst({silent:false});
+  }
+};
+$('mapSavedBtn').onclick=()=>{
+  renderMapRecentDestinations();
+  if(loadRecentDestinations().length){
+    $('mapRecentWrap')?.classList.toggle('open');
+  }else{
+    showMapStatus("هنوز مقصد اخیری ثبت نشده.");
+  }
+};
+
 $('mapDestinationSearchBtn').onclick=searchDestinationMapFirst;
 $('mapDestinationSearch').addEventListener('keydown',e=>{
   if(e.key==='Enter'){
@@ -7133,8 +7401,13 @@ map.on('click',e=>{
     handleOriginMapPick(e.latlng);
     return;
   }
-  if(destinationPickMode)handleDestinationMapPick(e.latlng);
+  if(destinationPickMode){
+    handleDestinationMapPick(e.latlng);
+    return;
+  }
+  hideMapSearchPanels();
 });
+map.on('moveend zoomend',()=>syncRouteAltLabelsSoon());
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
