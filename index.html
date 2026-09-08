@@ -1,0 +1,2574 @@
+<!doctype html>
+<html lang="fa-IR" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۴ راهنمای مسیر</title>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+:root{
+  --bg:#090d12;--panel:#121923;--panel2:#182231;--line:#27364a;--text:#f8fafc;
+  --muted:#94a3b8;--blue:#2563eb;--blue2:#60a5fa;--green:#22c55e;
+  --yellow:#f59e0b;--red:#ef4444;--red2:#991b1b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif}
+.wrap{max-width:1480px;margin:auto;padding:20px}
+.header{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;margin-bottom:14px}
+h1{margin:0;font-size:28px}.sub{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.8}
+.badges{display:flex;gap:7px;flex-wrap:wrap}.badge{padding:7px 11px;border-radius:999px;font-size:11px;background:#0d2346;color:#93c5fd;border:1px solid #1d4ed8}
+.layout{display:grid;grid-template-columns:345px 1fr;gap:15px}.layout>*,.grid2>*{min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:15px}
+label{display:block;color:var(--muted);font-size:11px;margin:11px 0 6px}
+select,input,button{width:100%;padding:10px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+button{cursor:pointer;font-weight:700}button.primary{background:var(--blue);border-color:var(--blue)}button.danger{background:#4a1515;border-color:#7f1d1d}
+button:disabled{opacity:.45;cursor:not-allowed}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.status{margin-top:11px;background:#0c131c;border-radius:10px;padding:10px;color:var(--muted);font-size:11px;line-height:1.7}
+.metrics{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;margin-bottom:11px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.metric .v{font-size:19px;font-weight:900}.metric .k{font-size:9px;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:13px}
+#map{width:100%;height:510px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#0d131b}
+.leaflet-container{font-family:Tahoma,Arial,sans-serif;direction:ltr!important;unicode-bidi:isolate}
+.leaflet-control-attribution{font-size:9px!important}
+.mapOverlay{position:relative}
+.mapHUD{position:absolute;z-index:999;top:12px;right:12px;display:flex;gap:8px;direction:ltr}
+.hudBox{background:#0b1119e8;border:1px solid var(--line);border-radius:11px;padding:8px 10px;color:#cbd5e1;font-size:10px;min-width:82px;text-align:center}
+.hudBox b{display:block;font-size:17px;color:#fff;margin-top:2px}
+.speedSign{width:58px;height:58px;border-radius:50%;background:#fff;color:#111;border:6px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900}
+.events{max-height:510px;overflow:auto}.event{padding:10px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.small{font-size:10px;color:var(--muted);line-height:1.8}
+.tag{font-size:9px;padding:4px 7px;border-radius:999px;white-space:nowrap}.tag.severe{background:#4b1717;color:#fecaca}.tag.critical{background:#5d1010;color:#fff}.tag.moderate{background:#3e2d0a;color:#fde68a}
+.timeline{margin-top:12px}.track{height:13px;position:relative;border:1px solid var(--line);background:#0d131b;border-radius:999px;margin-top:8px}
+.dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #fff}.dot.severe{background:var(--red)}.dot.critical{background:var(--red2)}.dot.moderate{background:var(--yellow)}
+.chart{height:205px;width:100%;background:#0d131b;border:1px solid var(--line);border-radius:13px}
+.scoreBox{display:none;margin-top:14px}.score{font-size:54px;font-weight:900;text-align:center}.scoreTitle{text-align:center;color:var(--muted);font-size:11px}
+.barrow{margin-top:9px}.barhead{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.bar{height:8px;background:#0c1118;border-radius:999px;overflow:hidden;margin-top:4px}.bar>div{height:100%;background:var(--blue)}
+.insight{margin-top:11px;padding:10px;border-radius:10px;background:#0d1726;border:1px solid #1e3a5f;color:#bfdbfe;font-size:11px;line-height:1.9}
+.infoBox{margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#0d131b}
+.infoGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cell{background:var(--panel2);padding:9px;border-radius:9px}.cell b{display:block;font-size:17px}.cell span{font-size:9px;color:var(--muted)}
+.provider{margin-top:12px;padding:10px;background:#0c151f;border:1px solid #1e3a5f;border-radius:11px;font-size:10px;color:#93c5fd;line-height:1.8}
+@media(max-width:1120px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:650px){.wrap{padding:10px}.metrics{grid-template-columns:repeat(2,1fr)}#map{height:430px}}
+
+.leaflet-container img.leaflet-tile{max-width:none!important;max-height:none!important}
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas{position:absolute;left:0;top:0}
+
+
+.contextPill{display:inline-block;margin-top:4px;padding:4px 7px;border-radius:999px;background:#16243a;color:#93c5fd;border:1px solid #27466f;font-size:9px}
+.whyBox{margin-top:12px;padding:11px;border-radius:12px;background:#101925;border:1px solid #2b3d55}
+.whyBox h4{margin:0 0 8px;font-size:12px}
+.riskHigh{color:#fca5a5}.riskMid{color:#fcd34d}.riskLow{color:#86efac}
+
+
+.learningGrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}
+.profileStats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:10px}
+.profileStat{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px;text-align:center}
+.profileStat b{display:block;font-size:20px}.profileStat span{font-size:9px;color:var(--muted)}
+.skillRow{margin-top:10px}.skillHead{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.missionCard{padding:13px;border-radius:13px;background:#0d1726;border:1px solid #1e3a5f;margin-top:10px}
+.missionTitle{font-size:15px;font-weight:900;color:#dbeafe}
+.missionDesc{font-size:11px;color:#bfdbfe;line-height:1.9;margin-top:5px}
+.missionProgress{height:10px;background:#0b1118;border-radius:999px;overflow:hidden;margin-top:10px}
+.missionProgress>div{height:100%;background:#2563eb}
+.missionMeta{display:flex;justify-content:space-between;gap:8px;margin-top:7px;color:#93c5fd;font-size:10px}
+.historyList{margin-top:10px;max-height:240px;overflow:auto}
+.hist{display:grid;grid-template-columns:72px 1fr 64px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.histScore{font-size:18px;font-weight:900}
+.histSub{font-size:9px;color:var(--muted)}
+.trendUp{color:#86efac}.trendDown{color:#fca5a5}.trendFlat{color:#fde68a}
+.profileActions{display:flex;gap:8px;margin-top:10px}
+.profileActions button{width:auto;padding:8px 10px;font-size:10px}
+@media(max-width:900px){.learningGrid{grid-template-columns:1fr}.profileStats{grid-template-columns:repeat(2,1fr)}}
+
+
+.calibrationCard{margin-top:10px;padding:11px;border-radius:12px;background:#16140b;border:1px solid #4d3b12}
+.calibrationTitle{font-size:12px;font-weight:900;color:#fde68a}
+.calibrationText{font-size:10px;color:#fcd34d;line-height:1.8;margin-top:4px}
+
+.gameGrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}
+.gameHero{display:grid;grid-template-columns:120px 1fr 150px;gap:12px;align-items:center}
+.levelOrb{width:108px;height:108px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d2346;border:2px solid #2563eb;box-shadow:0 0 0 7px rgba(37,99,235,.10)}
+.levelOrb b{font-size:32px}.levelOrb span{font-size:9px;color:#93c5fd}
+.walletBox{background:#171409;border:1px solid #4a3b12;border-radius:13px;padding:12px;text-align:center}
+.walletBox b{font-size:28px;color:#fde68a}.walletBox span{display:block;font-size:9px;color:#fcd34d;margin-top:3px}
+.xpTitle{font-size:15px;font-weight:900}.xpSub{font-size:10px;color:var(--muted);margin-top:4px}
+.xpBar{height:12px;background:#0b1118;border-radius:999px;overflow:hidden;margin-top:9px}.xpBar>div{height:100%;background:#2563eb}
+.rewardCard{margin-top:11px;padding:11px;border-radius:12px;background:#0d1726;border:1px solid #1e3a5f}
+.rewardLine{display:flex;justify-content:space-between;gap:10px;font-size:11px;margin-top:5px}
+.rewardPlus{color:#86efac;font-weight:900}
+.achievementGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.achievement{padding:10px;border-radius:11px;background:#0d131b;border:1px solid var(--line);opacity:.45}
+.achievement.unlocked{opacity:1;border-color:#365c8c;background:#0d1726}
+.achievement b{display:block;font-size:11px}.achievement span{font-size:9px;color:var(--muted);line-height:1.6}
+.achIcon{font-size:20px;margin-bottom:4px}
+.ledger{margin-top:10px;max-height:245px;overflow:auto}.ledgerRow{display:grid;grid-template-columns:70px 1fr 70px;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.ledgerAmt{font-weight:900;text-align:left}.coinAmt{color:#fde68a}.xpAmt{color:#93c5fd}
+.ruleBox{margin-top:10px;padding:10px;border-radius:11px;background:#10150d;border:1px solid #30431d;color:#bbf7d0;font-size:10px;line-height:1.8}
+@media(max-width:900px){.gameGrid{grid-template-columns:1fr}.gameHero{grid-template-columns:100px 1fr}.walletBox{grid-column:1/-1}.achievementGrid{grid-template-columns:1fr}}
+
+
+.eligibilityBox{margin-top:12px;padding:12px;border-radius:13px;border:1px solid var(--line);background:#0d131b}
+.eligibilityHead{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.eligibilityStatus{padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900}
+.eligibilityStatus.eligible{background:#12351d;color:#86efac;border:1px solid #1f6d35}
+.eligibilityStatus.review{background:#3c2c0b;color:#fde68a;border:1px solid #725315}
+.eligibilityStatus.blocked{background:#4a1717;color:#fecaca;border:1px solid #7f1d1d}
+.eligibilityGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.eligibilityCell{background:var(--panel2);border-radius:10px;padding:9px;text-align:center}
+.eligibilityCell b{display:block;font-size:18px}
+.eligibilityCell span{font-size:9px;color:var(--muted)}
+.reasonList{margin-top:9px;font-size:10px;color:var(--muted);line-height:1.9}
+.auditBadge{display:inline-block;padding:3px 6px;border-radius:999px;font-size:9px;background:#182231;color:#cbd5e1;margin-inline-start:5px}
+@media(max-width:700px){.eligibilityGrid{grid-template-columns:1fr}}
+
+
+.marketGrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}
+.marketHeader{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.marketWallet{padding:9px 12px;border-radius:11px;background:#171409;border:1px solid #4a3b12;color:#fde68a;font-weight:900}
+.marketFilters{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.marketFilters button{width:auto;padding:7px 10px;font-size:9px}
+.offerGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:11px}
+.offer{padding:12px;border-radius:13px;background:#0d131b;border:1px solid var(--line);display:flex;flex-direction:column;min-height:180px}
+.offerTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.offerIcon{font-size:25px}
+.offerCat{font-size:8px;color:#93c5fd;background:#0d2346;border:1px solid #1d4ed8;border-radius:999px;padding:4px 7px}
+.offer h4{margin:9px 0 4px;font-size:13px}
+.offer p{margin:0;color:var(--muted);font-size:9px;line-height:1.8;flex:1}
+.offerBottom{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:10px}
+.offerCost{font-weight:900;color:#fde68a}
+.offer button{width:auto;padding:7px 10px;font-size:9px}
+.offer button:disabled{opacity:.4}
+.voucher{margin-top:11px;padding:12px;border-radius:12px;background:#101a10;border:1px solid #30522e}
+.voucherCode{font-size:22px;font-weight:900;letter-spacing:2px;color:#86efac;direction:ltr;text-align:center;margin:8px 0}
+.voucherMeta{font-size:9px;color:#bbf7d0;line-height:1.8}
+.redeemHistory{max-height:280px;overflow:auto;margin-top:9px}
+.redeemRow{padding:10px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:72px 1fr 82px;gap:9px;align-items:center}
+.redeemCode{font-size:9px;color:#86efac;direction:ltr}
+.partnerNote{padding:10px;border-radius:11px;background:#0d1726;border:1px solid #1e3a5f;color:#bfdbfe;font-size:9px;line-height:1.8;margin-top:10px}
+.partnerBadge{display:inline-block;padding:4px 7px;border-radius:999px;background:#16243a;color:#93c5fd;border:1px solid #27466f;font-size:8px}
+.marketEmpty{color:var(--muted);font-size:10px;padding:12px 0}
+@media(max-width:900px){.marketGrid{grid-template-columns:1fr}.offerGrid{grid-template-columns:1fr}}
+
+
+/* ===== v1.1.1 FIXED / Mobile First / Vazirmatn ===== */
+html,body{
+  font-family:"Vazirmatn",Tahoma,Arial,sans-serif!important;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+select,input,button,.leaflet-container{
+  font-family:"Vazirmatn",Tahoma,Arial,sans-serif!important;
+}
+body{padding-bottom:env(safe-area-inset-bottom,0)}
+.wrap{max-width:680px;margin:auto;padding:10px}
+.header{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-bottom:12px}
+h1{font-size:24px;line-height:1.45}
+.sub{font-size:12px;line-height:1.9}
+.badges{gap:6px}
+.badge{font-size:10px;padding:6px 9px}
+.layout{display:flex;flex-direction:column;gap:12px}
+.layout>*,.grid2>*{min-width:0}
+.card{padding:12px;border-radius:16px}
+label{font-size:12px}
+select,input,button{min-height:48px;font-size:14px;border-radius:12px}
+button{font-weight:800}
+.row{grid-template-columns:1fr 1fr;gap:8px}
+.metrics{grid-template-columns:repeat(2,1fr);gap:8px}
+.metric{padding:9px}
+.metric .v{font-size:18px}
+.metric .k{font-size:10px;line-height:1.5}
+.grid2,.learningGrid,.gameGrid,.marketGrid{grid-template-columns:1fr!important;gap:12px}
+.profileStats{grid-template-columns:repeat(2,1fr)!important}
+.infoGrid,.eligibilityGrid{grid-template-columns:1fr!important}
+.offerGrid,.achievementGrid{grid-template-columns:1fr!important}
+.gameHero{grid-template-columns:1fr!important}
+.levelOrb{margin:auto;width:96px;height:96px}
+.walletBox{width:100%}
+#map{height:330px;border-radius:14px}
+.mapHUD{top:8px;right:8px;gap:6px}
+.hudBox{min-width:64px;padding:6px 8px;font-size:9px}
+.hudBox b{font-size:14px}
+.speedSign{width:48px;height:48px;border-width:5px;font-size:15px}
+.events,.historyList,.ledger,.redeemHistory{max-height:none}
+.chart{height:190px}
+.small,.status,.insight,.provider,.reasonList,.voucherMeta,.histSub,.ruleBox,.partnerNote{
+  font-size:11px;line-height:1.9
+}
+.marketHeader{flex-direction:column;align-items:stretch}
+.offerBottom{flex-direction:column;align-items:stretch}
+.offer button{width:100%;min-height:44px}
+.redeemRow{grid-template-columns:1fr}
+.profileActions{display:grid;grid-template-columns:1fr}
+.profileActions button{width:100%;min-height:44px}
+
+@media(min-width:760px){
+  .wrap{max-width:980px;padding:16px}
+  .metrics{grid-template-columns:repeat(4,1fr)}
+  .offerGrid,.achievementGrid{grid-template-columns:repeat(2,1fr)!important}
+  #map{height:410px}
+}
+@media(min-width:1180px){
+  .wrap{max-width:1480px;padding:20px}
+  .header{flex-direction:row;align-items:flex-start;justify-content:space-between}
+  .layout{display:grid;grid-template-columns:350px 1fr;gap:15px}
+  aside.card{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto}
+  .metrics{grid-template-columns:repeat(10,1fr)}
+  .grid2{grid-template-columns:1.35fr .65fr!important}
+  .learningGrid,.gameGrid,.marketGrid{grid-template-columns:1fr 1fr!important}
+  .profileStats{grid-template-columns:repeat(4,1fr)!important}
+  .infoGrid{grid-template-columns:1fr 1fr!important}
+  .eligibilityGrid{grid-template-columns:repeat(3,1fr)!important}
+  .gameHero{grid-template-columns:120px 1fr 150px!important}
+  .marketHeader{flex-direction:row;align-items:center}
+  .offerBottom{flex-direction:row;align-items:center}
+  .redeemRow{grid-template-columns:72px 1fr 82px}
+  #map{height:510px}
+}
+
+
+/* ===== v1.3 Navigation UX ===== */
+.nav-search-card{
+  border:1px solid #29405f;background:#0d1722;border-radius:18px;padding:12px;margin-bottom:10px
+}
+.nav-field{position:relative;margin-top:8px}
+.nav-field:first-child{margin-top:0}
+.nav-field-label{font-size:9px;color:#7f91aa;margin-bottom:5px}
+.nav-input-row{display:grid;grid-template-columns:1fr auto;gap:7px}
+.nav-input{
+  min-height:50px!important;background:#152131!important;border:1px solid #2a3c54!important;
+  font-size:13px!important;padding-inline:12px!important
+}
+.nav-icon-btn{
+  width:50px!important;min-width:50px!important;min-height:50px!important;padding:0!important;
+  background:#17263a!important;border:1px solid #315071!important;font-size:17px!important
+}
+.origin-pill{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  min-height:48px;background:#152131;border:1px solid #2a3c54;border-radius:12px;padding:9px 11px
+}
+.origin-pill strong{font-size:12px}
+.origin-pill small{display:block;color:#7f91aa;font-size:9px;margin-top:2px}
+.search-results{
+  display:none;margin-top:7px;border:1px solid #2b3e58;background:#0c141e;border-radius:13px;overflow:hidden
+}
+.search-results.open{display:block}
+.search-result{
+  width:100%!important;text-align:right!important;background:transparent!important;border:0!important;
+  border-bottom:1px solid #1d2b3d!important;border-radius:0!important;padding:10px 11px!important;min-height:auto!important
+}
+.search-result:last-child{border-bottom:0!important}
+.search-result b{display:block;font-size:11px}
+.search-result span{display:block;font-size:9px;color:#8fa0b6;margin-top:3px;line-height:1.6}
+.route-summary{
+  display:none;margin-top:10px;background:#101b27;border:1px solid #2c4668;border-radius:16px;padding:11px
+}
+.route-summary.show{display:block}
+.route-summary-top{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.route-summary-cell{background:#162334;border-radius:12px;padding:9px;text-align:center}
+.route-summary-cell b{display:block;font-size:16px}
+.route-summary-cell span{font-size:8px;color:#8fa0b6}
+.route-options{display:grid;gap:7px;margin-top:9px}
+.route-option{
+  width:100%!important;background:#111b27!important;border:1px solid #293a50!important;
+  border-radius:13px!important;display:grid!important;grid-template-columns:1fr auto!important;
+  align-items:center!important;text-align:right!important;gap:10px!important;padding:10px!important;min-height:62px!important
+}
+.route-option.active{border-color:#3b82f6!important;background:#102343!important;box-shadow:inset 0 0 0 1px rgba(59,130,246,.25)}
+.route-option b{font-size:11px}
+.route-option span{font-size:9px;color:#92a2b8}
+.route-option-time{font-size:15px!important;font-weight:900;color:#dbeafe!important;white-space:nowrap}
+.destination-map-label{
+  position:absolute;left:10px;bottom:10px;z-index:700;
+  background:rgba(8,14,21,.88);border:1px solid #2b405c;border-radius:12px;padding:7px 9px;
+  max-width:70%;font-size:9px;color:#b8c4d4;backdrop-filter:blur(7px)
+}
+.nav-mode-note{font-size:9px;color:#6f8198;line-height:1.7;margin-top:7px}
+.preset-fallback{margin-top:9px}
+.preset-fallback summary{font-size:10px;color:#8395ac;cursor:pointer}
+.preset-fallback .trip-setup{margin-top:8px}
+@media(min-width:760px){
+  .nav-search-card{padding:14px}
+  .nav-input-row{grid-template-columns:1fr 54px}
+  .route-options{grid-template-columns:repeat(3,1fr)}
+  .route-option{grid-template-columns:1fr!important;min-height:94px!important}
+  .route-option-time{margin-top:5px}
+}
+
+
+/* ===== v1.4 Turn-by-Turn Navigation ===== */
+.turn-card{
+  position:absolute;z-index:950;top:10px;left:10px;right:70px;
+  background:rgba(9,17,27,.94);border:1px solid #35557c;border-radius:17px;
+  padding:10px 11px;display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center;
+  box-shadow:0 12px 28px rgba(0,0,0,.28);backdrop-filter:blur(12px);
+}
+.turn-arrow{
+  width:46px;height:46px;border-radius:14px;background:#1d4ed8;display:grid;place-items:center;
+  font-size:27px;font-weight:900;color:white;direction:ltr
+}
+.turn-distance{font-size:17px;font-weight:900;line-height:1.2}
+.turn-instruction{font-size:11px;color:#dbeafe;font-weight:700;line-height:1.7;margin-top:2px}
+.turn-street{font-size:9px;color:#91a5be;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-bottom-strip{
+  position:absolute;z-index:950;left:9px;right:9px;bottom:9px;
+  background:rgba(9,17,27,.92);border:1px solid #2d4563;border-radius:15px;
+  padding:8px 10px;backdrop-filter:blur(10px)
+}
+.nav-bottom-main{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
+.nav-bottom-main b{display:block;font-size:13px}
+.nav-bottom-main span{display:block;font-size:8px;color:#91a0b5;margin-top:1px}
+.route-progress-rail{height:5px;background:#182535;border-radius:999px;overflow:hidden;margin-top:7px}
+.route-progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa);width:0%}
+.arrival-banner{
+  display:none;position:absolute;z-index:970;top:12px;left:12px;right:12px;
+  padding:13px;background:rgba(12,43,26,.95);border:1px solid #297044;border-radius:17px;
+  text-align:center;color:#bbf7d0;font-weight:900;backdrop-filter:blur(12px)
+}
+.arrival-banner.show{display:block}
+.nav-voice-row{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;
+  background:#111d29;border:1px solid #293f5b;border-radius:12px;padding:8px 10px
+}
+.nav-voice-row span{font-size:10px;color:#9fb0c5}
+.nav-voice-toggle{
+  width:auto!important;min-height:36px!important;padding:5px 10px!important;border-radius:999px!important;
+  font-size:9px!important
+}
+.one-route-note{
+  display:none;margin-top:7px;padding:8px 9px;border-radius:11px;background:#121a24;
+  border:1px solid #2a3a4d;color:#8fa0b5;font-size:9px;line-height:1.7
+}
+.one-route-note.show{display:block}
+@media(max-width:430px){
+  .turn-card{right:63px;left:7px;top:7px;grid-template-columns:42px 1fr;padding:8px}
+  .turn-arrow{width:40px;height:40px;font-size:23px;border-radius:12px}
+  .turn-distance{font-size:15px}.turn-instruction{font-size:10px}
+  .nav-bottom-strip{left:7px;right:7px;bottom:7px}
+  .nav-bottom-main b{font-size:12px}
+}
+
+</style>
+
+<style id="v12-mobile-app">
+:root{
+  --app-bg:#080d13;
+  --app-surface:#101923;
+  --app-surface-2:#172334;
+  --app-border:#26364a;
+  --app-blue:#2f6df6;
+  --app-green:#22c55e;
+  --app-gold:#f5c542;
+  --app-red:#ef4444;
+  --app-muted:#91a0b5;
+}
+body{background:var(--app-bg)!important;padding-bottom:84px!important}
+.app-shell{max-width:1180px;margin:0 auto;padding:10px 10px 96px}
+.app-topbar{
+  position:sticky;top:0;z-index:1200;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 2px 12px;
+  background:linear-gradient(180deg,rgba(8,13,19,.98),rgba(8,13,19,.92),rgba(8,13,19,0));
+  backdrop-filter:blur(12px);
+}
+.app-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.app-logo{
+  width:42px;height:42px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#1d4ed8,#2563eb);font-size:21px;
+  box-shadow:0 10px 26px rgba(37,99,235,.22)
+}
+.app-title{font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-subtitle{font-size:10px;color:var(--app-muted);margin-top:2px}
+.top-wallet{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  background:#171409;border:1px solid #4a3b12;color:#fde68a;
+  border-radius:999px;padding:7px 10px;font-size:11px;font-weight:800
+}
+.app-screen{display:none;animation:screenIn .18s ease}
+.app-screen.active{display:block}
+@keyframes screenIn{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.hero-safe{
+  position:relative;overflow:hidden;padding:18px;border:1px solid #23436b;
+  border-radius:22px;background:
+    radial-gradient(circle at 15% 15%,rgba(47,109,246,.22),transparent 34%),
+    linear-gradient(145deg,#111d2c,#0d1620);
+}
+.hero-safe:after{
+  content:"";position:absolute;width:190px;height:190px;border-radius:50%;
+  border:26px solid rgba(47,109,246,.08);left:-80px;bottom:-110px
+}
+.hero-eyebrow{font-size:11px;color:#93c5fd}
+.hero-title{font-size:25px;font-weight:900;line-height:1.55;margin-top:4px}
+.hero-copy{font-size:11px;color:#a8b5c7;line-height:1.9;margin-top:6px;max-width:520px}
+.hero-cta{
+  width:100%;min-height:56px;border:none;border-radius:16px;margin-top:15px;
+  background:linear-gradient(135deg,#2f6df6,#1d4ed8);color:white;
+  font-size:15px;font-weight:900;box-shadow:0 12px 30px rgba(37,99,235,.24)
+}
+.home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.home-stat{background:var(--app-surface);border:1px solid var(--app-border);border-radius:15px;padding:11px;text-align:center}
+.home-stat b{display:block;font-size:19px}.home-stat span{display:block;color:var(--app-muted);font-size:9px;margin-top:3px}
+
+.section-card{background:var(--app-surface);border:1px solid var(--app-border);border-radius:18px;padding:13px;margin-top:10px}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.section-head h3{margin:0;font-size:14px}
+.section-head small{font-size:9px;color:var(--app-muted)}
+.mission-compact{background:#0d1726;border:1px solid #1e3a5f;border-radius:15px;padding:12px}
+.mission-compact-title{font-weight:900;font-size:14px;color:#dbeafe}
+.mission-compact-desc{font-size:10px;color:#bfdbfe;line-height:1.8;margin-top:4px}
+.mission-progress{height:9px;background:#09111a;border-radius:999px;overflow:hidden;margin-top:10px}
+.mission-progress>div{height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa)}
+
+.trip-setup{display:grid;grid-template-columns:1fr;gap:8px}
+.trip-setup label{font-size:10px;margin:0 0 4px;color:var(--app-muted)}
+.trip-action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.trip-action-row button{min-height:50px}
+.mobile-map-card{padding:0!important;overflow:hidden}
+.mobile-map-top{padding:11px 12px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.live-chip{padding:6px 9px;border-radius:999px;background:#0d2346;border:1px solid #2552a0;color:#bfdbfe;font-size:9px}
+#map{height:54vh!important;min-height:330px;max-height:570px;border-radius:0!important;border-inline:none!important}
+.trip-live-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}
+.live-metric{background:var(--app-surface);border:1px solid var(--app-border);border-radius:13px;padding:9px;text-align:center}
+.live-metric b{display:block;font-size:17px}.live-metric span{font-size:8px;color:var(--app-muted);line-height:1.4}
+.advanced-details summary{
+  cursor:pointer;list-style:none;padding:12px 2px;font-size:11px;font-weight:800;color:#b7c3d5
+}
+.advanced-details summary::-webkit-details-marker{display:none}
+.advanced-details summary:after{content:"⌄";float:left;color:#60a5fa}
+
+.summary-sheet{
+  position:fixed;inset:0;z-index:3000;background:rgba(2,6,12,.70);
+  display:none;align-items:flex-end;justify-content:center;padding:12px;
+  backdrop-filter:blur(6px)
+}
+.summary-sheet.open{display:flex}
+.summary-card{
+  width:min(100%,520px);max-height:88vh;overflow:auto;
+  background:#101923;border:1px solid #30435c;border-radius:24px 24px 18px 18px;
+  padding:16px;box-shadow:0 -24px 60px rgba(0,0,0,.38)
+}
+.summary-handle{width:42px;height:4px;border-radius:999px;background:#40536d;margin:0 auto 13px}
+.summary-score{text-align:center;font-size:64px;font-weight:900;line-height:1}
+.summary-label{text-align:center;color:var(--app-muted);font-size:10px;margin-top:6px}
+.summary-status{width:max-content;margin:12px auto 0;padding:7px 11px;border-radius:999px;font-size:10px;font-weight:900}
+.summary-status.good{background:#12351d;color:#86efac}
+.summary-status.review{background:#3c2c0b;color:#fde68a}
+.summary-status.bad{background:#4a1717;color:#fecaca}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px}
+.summary-item{background:#172334;border-radius:13px;padding:10px;text-align:center}
+.summary-item b{display:block;font-size:18px}.summary-item span{font-size:8px;color:var(--app-muted)}
+.summary-why{margin-top:11px;padding:11px;background:#0d1726;border:1px solid #1e3a5f;border-radius:13px;font-size:10px;line-height:1.9;color:#bfdbfe}
+.summary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.summary-actions button{min-height:48px}
+.summary-actions .secondary{background:#172334}
+
+.reward-wallet-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-radius:18px;padding:14px;background:linear-gradient(145deg,#221d09,#15130a);
+  border:1px solid #594617;margin-bottom:10px
+}
+.reward-wallet-banner b{font-size:27px;color:#fde68a}
+.reward-wallet-banner span{font-size:10px;color:#f8d978}
+.profile-hero{
+  display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;
+  background:linear-gradient(145deg,#111d2c,#0e1722);border:1px solid #263f5f;border-radius:20px;padding:14px
+}
+.profile-level-orb{
+  width:78px;height:78px;border-radius:50%;display:grid;place-items:center;text-align:center;
+  border:2px solid #2f6df6;background:#0d2346;font-size:10px;color:#93c5fd
+}
+.profile-level-orb b{display:block;color:#fff;font-size:27px}
+.profile-name{font-size:17px;font-weight:900}
+.profile-meta{font-size:10px;color:var(--app-muted);margin-top:4px}
+.skill-mobile{display:grid;gap:8px;margin-top:10px}
+
+.bottom-nav{
+  position:fixed;z-index:2200;bottom:0;left:0;right:0;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:rgba(12,19,28,.96);border-top:1px solid #28384d;
+  padding:7px 7px calc(7px + env(safe-area-inset-bottom,0));
+  backdrop-filter:blur(18px)
+}
+.nav-btn{
+  border:0!important;background:transparent!important;min-height:57px!important;padding:4px!important;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:#7f8fa5!important;font-size:9px!important
+}
+.nav-btn .nav-icon{font-size:19px;line-height:1}
+.nav-btn.active{color:#dbeafe!important}
+.nav-btn.active .nav-icon{filter:drop-shadow(0 0 8px rgba(47,109,246,.75))}
+.nav-btn.active:after{
+  content:"";width:22px;height:3px;border-radius:999px;background:#2f6df6;position:absolute;margin-top:48px
+}
+
+#screen-trip .metrics,#screen-trip .grid2,#screen-trip .learningGrid,
+#screen-trip .gameGrid,#screen-trip .marketGrid{margin:0}
+.compact-score .barrow{margin-top:7px}
+
+.dev-note{font-size:9px;color:#64748b;line-height:1.8}
+
+@media(min-width:760px){
+  .app-shell{padding:16px 18px 100px}
+  .home-stats{grid-template-columns:repeat(4,1fr)}
+  .trip-setup{grid-template-columns:repeat(2,1fr)}
+  #map{height:500px!important}
+  .trip-live-grid{grid-template-columns:repeat(8,1fr)}
+}
+@media(min-width:1050px){
+  body{padding-bottom:0!important}
+  .app-shell{padding:18px 20px 28px 108px}
+  .bottom-nav{
+    left:16px;right:auto;top:50%;bottom:auto;transform:translateY(-50%);
+    width:76px;grid-template-columns:1fr;border:1px solid #28384d;border-radius:22px;
+    padding:8px;background:rgba(12,19,28,.94)
+  }
+  .nav-btn.active:after{width:3px;height:24px;margin-top:0;margin-right:58px}
+  .hero-safe{padding:25px}
+  .hero-title{font-size:30px}
+  .home-stats{grid-template-columns:repeat(4,1fr)}
+  .trip-desktop-grid{display:grid;grid-template-columns:minmax(0,1.5fr) 350px;gap:12px;align-items:start}
+  .trip-desktop-side{position:sticky;top:82px}
+}
+</style>
+
+</head>
+
+<body>
+<div class="app-shell">
+  <header class="app-topbar">
+    <div class="app-brand">
+      <div class="app-logo">🛡️</div>
+      <div style="min-width:0">
+        <div class="app-title">رانندگی ایمن</div>
+        <div class="app-subtitle">هر سفر، یک فرصت برای رانندگی بهتر</div>
+      </div>
+    </div>
+    <div class="top-wallet">🪙 <span id="homeTopCoins">۰</span> سکه</div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section id="screen-home" class="app-screen active">
+      <div class="hero-safe">
+        <div class="hero-eyebrow">امروز امن‌تر رانندگی کن</div>
+        <div class="hero-title">مسیرت را انتخاب کن،<br>امتیاز ایمنی بگیر.</div>
+        <div class="hero-copy">سرعت، ترمز، شتاب و کنترل پیچ بررسی می‌شوند. اگر داده سفر معتبر باشد، تجربه و سکه ایمن می‌گیری.</div>
+        <button id="homeStartTrip" class="hero-cta">انتخاب مقصد و شروع سفر</button>
+      </div>
+
+      <div class="home-stats">
+        <div class="home-stat"><b id="homeAvgScore">--</b><span>میانگین امتیاز</span></div>
+        <div class="home-stat"><b id="homeStreak">۰</b><span>زنجیره سفر ایمن</span></div>
+        <div class="home-stat"><b id="homeLevel">۱</b><span>سطح راننده</span></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>مأموریت فعلی</h3><small>شخصی‌سازی‌شده</small></div>
+
+        <div id="calibrationCard" class="calibrationCard">
+          <div class="calibrationTitle">دوره شناخت راننده</div>
+          <div id="calibrationText" class="calibrationText">برای ساخت مأموریت شخصی، حداقل ۳ سفر معتبر لازم است.</div>
+        </div>
+
+        <div class="mission-compact">
+          <div id="missionTitle" class="mission-compact-title">در حال یادگیری راننده</div>
+          <div id="missionDesc" class="mission-compact-desc">پس از شناخت الگوی رانندگی، مأموریت شخصی اینجا نمایش داده می‌شود.</div>
+          <div class="mission-progress"><div id="missionBar" style="width:0%"></div></div>
+          <div class="missionMeta">
+            <span id="missionProgressText">۰ از ۳</span>
+            <span id="missionReward">پاداش: --</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>پیشرفت راننده</h3><small>بازی‌سازی</small></div>
+        <div class="gameHero">
+          <div class="levelOrb"><span>سطح</span><b id="gLevel">۱</b><span id="gLevelName">تازه‌کار</span></div>
+          <div>
+            <div class="xpTitle"><span id="gXp">۰</span> امتیاز تجربه</div>
+            <div id="gXpNext" class="xpSub">تا سطح بعدی</div>
+            <div class="xpBar"><div id="gXpBar" style="width:0%"></div></div>
+          </div>
+          <div class="walletBox"><b id="gCoins">۰</b><span>سکه ایمن</span></div>
+        </div>
+        <div class="rewardCard">
+          <b>آخرین پاداش</b>
+          <div class="rewardLine"><span>تجربه سفر</span><span id="lastTripXp" class="rewardPlus">+۰</span></div>
+          <div class="rewardLine"><span>تجربه نشان‌ها</span><span id="lastAchievementXp" class="rewardPlus">+۰</span></div>
+          <div class="rewardLine"><span>تجربه مأموریت</span><span id="lastMissionXp" class="rewardPlus">+۰</span></div>
+          <div class="rewardLine"><span>سکه ایمن</span><span id="lastTripCoins" class="rewardPlus">+۰</span></div>
+          <div class="rewardLine"><span>پاداش مأموریت</span><span id="lastMissionReward" class="rewardPlus">+۰</span></div>
+          <div id="lastRewardReason" class="small" style="margin-top:7px">هنوز پاداش جدیدی ثبت نشده است.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRIP -->
+    <section id="screen-trip" class="app-screen">
+      <div class="trip-desktop-grid">
+        <div>
+          <div class="section-card" style="margin-top:0">
+            <div class="section-head"><h3>کجا می‌خوای بری؟</h3><small>مسیریابی آزمایشی ایران</small></div>
+
+            <div class="nav-search-card">
+              <div class="nav-field">
+                <div class="nav-field-label">مبدأ</div>
+                <div class="origin-pill">
+                  <div>
+                    <strong id="originLabel">میدان ونک، تهران</strong>
+                    <small id="originSub">مبدأ نمونه — می‌توانی موقعیت فعلی را جایگزین کنی</small>
+                  </div>
+                  <button id="useMyLocation" class="nav-icon-btn" title="موقعیت فعلی">◎</button>
+                </div>
+              </div>
+
+              <div class="nav-field">
+                <div class="nav-field-label">مقصد</div>
+                <div class="nav-input-row">
+                  <input id="destinationSearch" class="nav-input" type="search"
+                         placeholder="مثلاً برج میلاد، بازار تهران، تجریش...">
+                  <button id="destinationSearchBtn" class="nav-icon-btn" title="جست‌وجو">⌕</button>
+                </div>
+                <div id="destinationResults" class="search-results"></div>
+              </div>
+
+              <div id="routeSummary" class="route-summary">
+                <div class="route-summary-top">
+                  <div class="route-summary-cell"><b id="navDistance">--</b><span>مسافت</span></div>
+                  <div class="route-summary-cell"><b id="navEta">--</b><span>زمان تقریبی</span></div>
+                  <div class="route-summary-cell"><b id="navArrival">--</b><span>زمان رسیدن</span></div>
+                </div>
+                <div id="routeOptions" class="route-options"></div>
+                <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد، مسیر جایگزین معناداری پیدا نشد؛ بهترین مسیر موجود نمایش داده شده است.</div>
+              </div>
+
+              <div class="nav-voice-row">
+                <span>راهنمای صوتی مسیر</span>
+                <button id="voiceToggle" class="nav-voice-toggle">روشن</button>
+              </div>
+              <div class="nav-mode-note">
+                جست‌وجوی مقصد و زمان مسیر در این نسخه از سرویس‌های عمومی نقشه برای Prototype استفاده می‌کند.
+              </div>
+
+              <details class="preset-fallback">
+                <summary>استفاده از مسیرهای نمونه تهران</summary>
+                <div class="trip-setup">
+                  <div>
+                    <label>مسیر نمونه</label>
+                    <select id="routePreset">
+                      <option value="vanakTajrish" selected>میدان ونک تا تجریش</option>
+                      <option value="azadiVanak">میدان آزادی تا میدان ونک</option>
+                      <option value="haftTirVanak">میدان هفت‌تیر تا میدان ونک</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>نوع رانندگی برای تست</label>
+                    <select id="scenario">
+                      <option value="normal" selected>رانندگی عادی</option>
+                      <option value="speeding">تست سرعت غیرمجاز</option>
+                      <option value="mixed">رانندگی ترکیبی</option>
+                      <option value="gpsJump">تست اختلال GPS</option>
+                      <option value="fraudTest">تست موقعیت مکانی جعلی</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>مدت شبیه‌سازی</label>
+                    <select id="duration">
+                      <option value="45">۴۵ ثانیه</option>
+                      <option value="60" selected>۶۰ ثانیه</option>
+                      <option value="90">۹۰ ثانیه</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>نویز GPS / حسگر</label>
+                    <input id="noise" type="range" min="0" max="100" value="22">
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <div class="trip-action-row" style="margin-top:9px">
+              <button id="loadRoute">پیشنهاد مسیرها</button>
+              <button id="start" class="primary">شروع سفر</button>
+            </div>
+            <div class="trip-action-row" style="margin-top:8px">
+              <button id="stop" class="danger" disabled>پایان سفر</button>
+              <button id="fitMap">نمایش کل مسیر</button>
+            </div>
+            <div id="status" class="status">مبدأ و مقصد را انتخاب کن.</div>
+            <button id="reset" style="display:none">پاک‌کردن</button>
+            <button id="csv" disabled style="display:none">خروجی CSV</button>
+          </div>
+
+          <div class="section-card mobile-map-card">
+            <div class="mobile-map-top">
+              <div>
+                <b style="font-size:13px">نقشه سفر</b>
+                <div class="small">موقعیت و رویدادها روی مسیر</div>
+              </div>
+              <div class="live-chip"><span id="progress">۰%</span> • <span id="timeNow">۰ ثانیه</span></div>
+            </div>
+            <div style="position:relative">
+              <div id="turnCard" class="turn-card">
+                <div id="turnArrow" class="turn-arrow">↑</div>
+                <div>
+                  <div id="turnDistance" class="turn-distance">آماده حرکت</div>
+                  <div id="turnInstruction" class="turn-instruction">مسیر را انتخاب کن</div>
+                  <div id="turnStreet" class="turn-street">راهنمای پیچ‌به‌پیچ اینجا نمایش داده می‌شود</div>
+                </div>
+              </div>
+
+              <div class="mapHUD">
+                <div class="speedSign" id="speedSign">--</div>
+              </div>
+
+              <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
+
+              <div id="map" dir="ltr"></div>
+
+              <div class="nav-bottom-strip">
+                <div class="nav-bottom-main">
+                  <div><b id="remainingDistance">--</b><span>باقی‌مانده</span></div>
+                  <div><b id="remainingEta">--</b><span>زمان باقی‌مانده</span></div>
+                  <div><b id="liveArrival">--</b><span>رسیدن</span></div>
+                </div>
+                <div class="route-progress-rail"><div id="routeProgressFill" class="route-progress-fill"></div></div>
+              </div>
+
+              <div id="destinationMapLabel" class="destination-map-label" style="display:none">مقصد: تجریش</div>
+            </div>
+          </div>
+
+          <div class="trip-live-grid">
+            <div class="live-metric"><b id="speed">۰</b><span>سرعت</span></div>
+            <div class="live-metric"><b id="limit">--</b><span>حد مجاز</span></div>
+            <div class="live-metric"><b id="excess">۰</b><span>تجاوز سرعت</span></div>
+            <div class="live-metric"><b id="tripConf">۱۰۰</b><span>اعتبار سفر</span></div>
+            <div class="live-metric"><b id="segment">--</b><span>قطعه مسیر</span></div>
+            <div class="live-metric"><b id="matchConf">--</b><span>تطبیق مسیر</span></div>
+            <div class="live-metric"><b id="gpsAcc">--</b><span>دقت GPS</span></div>
+            <div class="live-metric"><b id="longA">۰.۰۰</b><span>شتاب طولی</span></div>
+          </div>
+
+          <div style="display:none">
+            <span id="roadContext">--</span><span id="riskMult">1.00×</span>
+          </div>
+
+          <details class="section-card advanced-details">
+            <summary>جزئیات فنی سفر</summary>
+
+            <div class="eligibilityBox">
+              <div class="eligibilityHead">
+                <div>
+                  <b>صلاحیت دریافت پاداش</b>
+                  <div class="small">امتیاز ایمنی و اعتبار داده جدا بررسی می‌شوند.</div>
+                </div>
+                <div id="eligibilityStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="dataIntegrity">--</b><span>اعتبار داده</span></div>
+                <div class="eligibilityCell"><b id="fraudRisk">--</b><span>ریسک تقلب</span></div>
+                <div class="eligibilityCell"><b id="eligibilityConfidence">--</b><span>اطمینان صلاحیت</span></div>
+              </div>
+              <div id="eligibilityReasons" class="reasonList">بعد از پایان سفر ارزیابی می‌شود.</div>
+              <div id="rewardGate" class="status">دروازه پاداش: در انتظار ارزیابی</div>
+            </div>
+
+            <div id="scoreBox" class="scoreBox compact-score">
+              <div class="scoreTitle">امتیاز ایمنی</div>
+              <div id="score" class="score">--</div>
+              <div class="barrow"><div class="barhead"><span>سرعت</span><span id="speedN">--</span></div><div class="bar"><div id="speedBar"></div></div></div>
+              <div class="barrow"><div class="barhead"><span>ترمز</span><span id="brakeN">--</span></div><div class="bar"><div id="brakeBar"></div></div></div>
+              <div class="barrow"><div class="barhead"><span>شتاب</span><span id="accelN">--</span></div><div class="bar"><div id="accelBar"></div></div></div>
+              <div class="barrow"><div class="barhead"><span>پیچ</span><span id="cornerN">--</span></div><div class="bar"><div id="cornerBar"></div></div></div>
+              <div class="barrow"><div class="barhead"><span>اعتبار سفر</span><span id="confidenceN">--</span></div><div class="bar"><div id="confidenceBar"></div></div></div>
+              <div id="insight" class="insight"></div>
+            </div>
+
+            <div id="tripInfo" class="infoBox" style="display:none">
+              <div class="infoGrid">
+                <div class="cell"><b id="distance">--</b><span>طول مسیر</span></div>
+                <div class="cell"><b id="segmentCount">--</b><span>قطعات مسیر</span></div>
+                <div class="cell"><b id="compliance">--</b><span>رعایت سرعت</span></div>
+                <div class="cell"><b id="maxExcess">--</b><span>بیشترین تجاوز</span></div>
+                <div class="cell"><b id="contextRisk">--</b><span>ریسک محیط</span></div>
+                <div class="cell"><b id="topRiskEvent">--</b><span>مهم‌ترین ریسک</span></div>
+              </div>
+            </div>
+
+            <div id="whyBox" class="whyBox" style="display:none">
+              <h4>چرا این امتیاز را گرفتی؟</h4>
+              <div id="whyText" class="small">--</div>
+            </div>
+
+            <div class="section-head" style="margin-top:12px"><h3>رویدادهای سفر</h3></div>
+            <div id="events" class="events"><div class="small">هنوز رویدادی ثبت نشده است.</div></div>
+            <div class="timeline"><div id="track" class="track"></div></div>
+
+            <div class="section-head" style="margin-top:12px"><h3>سیگنال‌ها</h3></div>
+            <canvas id="chart" class="chart" width="1100" height="205"></canvas>
+
+            <details style="margin-top:10px">
+              <summary class="dev-note">اطلاعات زیرساخت نقشه</summary>
+              <div class="provider">
+                <b>زیرساخت نقشه و مسیریابی</b><br>
+                مسیریابی آزمایشی: سرویس عمومی OSRM<br>
+                نقشه پایه: OpenStreetMap<br>
+                نسخه عملیاتی: اتصال به سرویس نقشه مناسب ایران
+              </div>
+            </details>
+          </details>
+        </div>
+
+        <div class="trip-desktop-side">
+          <div class="section-card" style="margin-top:0">
+            <div class="section-head"><h3>وضعیت زنده</h3><small>در طول سفر</small></div>
+            <div class="small">در موبایل اطلاعات اصلی روی نقشه و کارت‌های بالا نمایش داده می‌شود. این پنل در دسکتاپ خلاصه سفر را نگه می‌دارد.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REWARDS -->
+    <section id="screen-rewards" class="app-screen">
+      <div class="reward-wallet-banner">
+        <div><span>موجودی کیف پول</span><br><b><span id="marketCoins">۰</span> سکه ایمن</b></div>
+        <div style="font-size:28px">🪙</div>
+      </div>
+
+      <div class="section-card" style="margin-top:0">
+        <div class="section-head"><h3>بازار پاداش</h3><small>نسخه آزمایشی ایران</small></div>
+        <div class="marketFilters">
+          <button data-filter="all" class="marketFilter">همه</button>
+          <button data-filter="fuel" class="marketFilter">سوخت</button>
+          <button data-filter="auto" class="marketFilter">خودرو</button>
+          <button data-filter="food" class="marketFilter">خوراک</button>
+          <button data-filter="insurance" class="marketFilter">بیمه</button>
+        </div>
+        <div id="offerGrid" class="offerGrid"></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>کدهای پاداش من</h3><small>سوابق مصرف</small></div>
+        <div id="voucherBox" class="voucher" style="display:none">
+          <div class="small">آخرین کد پاداش</div>
+          <div id="voucherCode" class="voucherCode">----</div>
+          <div id="voucherMeta" class="voucherMeta"></div>
+        </div>
+        <div id="redeemHistory" class="redeemHistory"><div class="marketEmpty">هنوز سکه‌ای خرج نشده است.</div></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>گردش کیف پول</h3></div>
+        <div id="ledger" class="ledger"><div class="small">هنوز تراکنشی ثبت نشده است.</div></div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="screen-profile" class="app-screen">
+      <div class="profile-hero">
+        <div class="profile-level-orb"><div><b id="profileLevelMirror">۱</b>سطح</div></div>
+        <div>
+          <div class="profile-name">پروفایل رانندگی من</div>
+          <div class="profile-meta"><span id="pTrips">۰</span> سفر معتبر • میانگین <span id="pAvg">--</span></div>
+          <div class="profile-meta">زنجیره سفر ایمن: <span id="pStreak">۰</span> • روند اخیر: <span id="pImprove">--</span></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>مهارت‌های رانندگی</h3><small>میانگین سفرهای اخیر</small></div>
+        <div class="skill-mobile">
+          <div class="skillRow"><div class="skillHead"><span>سرعت</span><span id="pSpeedN">--</span></div><div class="bar"><div id="pSpeedBar"></div></div></div>
+          <div class="skillRow"><div class="skillHead"><span>ترمز</span><span id="pBrakeN">--</span></div><div class="bar"><div id="pBrakeBar"></div></div></div>
+          <div class="skillRow"><div class="skillHead"><span>شتاب</span><span id="pAccelN">--</span></div><div class="bar"><div id="pAccelBar"></div></div></div>
+          <div class="skillRow"><div class="skillHead"><span>پیچ</span><span id="pCornerN">--</span></div><div class="bar"><div id="pCornerBar"></div></div></div>
+        </div>
+        <div id="learningInsight" class="insight">پس از ثبت سفرهای معتبر، الگوی رانندگی اینجا تحلیل می‌شود.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>نشان‌ها</h3><small>دستاوردهای ایمنی</small></div>
+        <div id="achievementGrid" class="achievementGrid"></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>آخرین سفرها</h3></div>
+        <div id="historyList" class="historyList"><div class="small">هنوز سفری ذخیره نشده است.</div></div>
+      </div>
+
+      <div class="profileActions">
+        <button id="resetProfile">پاک‌کردن پروفایل آزمایشی</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="bottom-nav" aria-label="ناوبری اصلی">
+  <button class="nav-btn active" data-screen="home"><span class="nav-icon">⌂</span><span>خانه</span></button>
+  <button class="nav-btn" data-screen="trip"><span class="nav-icon">➤</span><span>سفر</span></button>
+  <button class="nav-btn" data-screen="rewards"><span class="nav-icon">🎁</span><span>پاداش</span></button>
+  <button class="nav-btn" data-screen="profile"><span class="nav-icon">●</span><span>پروفایل</span></button>
+</nav>
+
+<div id="tripSummarySheet" class="summary-sheet">
+  <div class="summary-card">
+    <div class="summary-handle"></div>
+    <div class="summary-label">امتیاز ایمنی این سفر</div>
+    <div id="summaryScore" class="summary-score">--</div>
+    <div id="summaryEligibility" class="summary-status review">در انتظار</div>
+
+    <div class="summary-grid">
+      <div class="summary-item"><b id="summaryXp">+۰</b><span>تجربه</span></div>
+      <div class="summary-item"><b id="summaryCoins">+۰</b><span>سکه ایمن</span></div>
+      <div class="summary-item"><b id="summaryCompliance">--</b><span>رعایت سرعت</span></div>
+    </div>
+
+    <div id="summaryWhy" class="summary-why">پس از پایان سفر، مهم‌ترین نکته اینجا نمایش داده می‌شود.</div>
+
+    <div class="summary-actions">
+      <button id="summaryClose" class="secondary">بازگشت به خانه</button>
+      <button id="summaryRewards" class="primary">دیدن پاداش‌ها</button>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const $=id=>document.getElementById(id);
+
+const faNum=v=>Number(v).toLocaleString('fa-IR');
+const faDate=v=>new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v));
+const faDateTime=v=>new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v));
+
+const chartCtx=$('chart').getContext('2d');
+
+const presets={
+  vanakTajrish:{
+    name:"ونک تا تجریش",
+    points:[[35.7576,51.4096],[35.7808,51.4144],[35.8044,51.4282]]
+  },
+  azadiVanak:{
+    name:"آزادی تا ونک",
+    points:[[35.6997,51.3378],[35.7244,51.3880],[35.7576,51.4096]]
+  },
+  haftTirVanak:{
+    name:"هفت‌تیر تا ونک",
+    points:[[35.7163,51.4255],[35.7370,51.4150],[35.7576,51.4096]]
+  }
+};
+
+let map=L.map('map',{zoomControl:true}).setView([35.756,51.412],13);
+map.getContainer().setAttribute('dir','ltr');
+map.getContainer().style.direction='ltr';
+const baseTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,
+  attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+baseTiles.on('load',()=>fixMapSize(false));
+baseTiles.on('tileerror',()=>{ $('status').textContent='بعضی Tileهای نقشه دریافت نشدند؛ در حال تلاش مجدد...'; });
+
+function fixMapSize(fitRoute=false){
+  // Leaflet can calculate the wrong size when it is created inside a grid
+  // before the browser has finished laying out the page.
+  const refresh = () => {
+    map.invalidateSize({pan:false, animate:false});
+    if(fitRoute && routeLine){
+      map.fitBounds(routeLine.getBounds(),{padding:[25,25],animate:false});
+    }
+  };
+  requestAnimationFrame(refresh);
+  setTimeout(refresh,60);
+  setTimeout(refresh,250);
+  setTimeout(refresh,700);
+}
+
+const mapResizeObserver = new ResizeObserver(() => fixMapSize(false));
+mapResizeObserver.observe(document.getElementById('map'));
+
+let routeCoords=[],routeLine=null,trackLine=null,carMarker=null,eventMarkers=[],speedLayers=[];
+let timer=null,t=0,rows=[],events=[],routeDistanceM=0;
+
+// v1.3 Navigation state
+let navOrigin={lat:35.7576,lng:51.4096,label:"میدان ونک، تهران"};
+let navDestination={lat:35.8044,lng:51.4282,label:"تجریش، تهران"};
+let routeAlternatives=[];
+let selectedRouteIndex=0;
+let routeDurationS=0;
+let routeAltLayers=[];
+let originMarker=null;
+let destinationMarker=null;
+let destinationSearchCache=[];
+let navigationSteps=[];
+let voiceGuidanceEnabled=true;
+let lastSpokenStepIndex=-1;
+let activeSpeed=null,activeGPS=null,activeBrake=null,activeAccel=null,activeCorner=null;
+
+const PROFILE_KEY='drivingLabProfileV07';
+let lastTripResult=null;
+
+const LEVELS=[
+  {level:1,name:"تازه‌کار",min:0},
+  {level:2,name:"راننده پایدار",min:100},
+  {level:3,name:"نگهبان راه",min:250},
+  {level:4,name:"حرفه‌ای ایمنی",min:500},
+  {level:5,name:"نگهبان برتر",min:900},
+  {level:6,name:"استاد راه",min:1400},
+  {level:7,name:"اسطوره ایمنی",min:2200}
+];
+const DAILY_BASE_COIN_CAP=100;
+const ACHIEVEMENTS=[
+  {id:"first_safe",icon:"🛡️",title:"اولین سفر ایمن",desc:"اولین سفر معتبر با امتیاز ایمنی حداقل ۸۵"},
+  {id:"score_90",icon:"⭐",title:"باشگاه ۹۰",desc:"یک سفر با امتیاز ایمنی حداقل ۹۰"},
+  {id:"clean_speed",icon:"🎯",title:"انضباط سرعت",desc:"رعایت سرعت مجاز حداقل ۹۵٪"},
+  {id:"smooth_control",icon:"〰️",title:"رانندگی نرم",desc:"ترمز، شتاب و کنترل پیچ همگی حداقل ۹۵"},
+  {id:"streak_3",icon:"🔥",title:"سه سفر ایمن پیاپی",desc:"سه سفر ایمن متوالی — بدون شرط روزانه"},
+  {id:"mission_complete",icon:"🏅",title:"مأموریت کامل",desc:"اولین مأموریت شخصی تکمیل‌شده"}
+];
+
+function emptyProfile(){
+  return{
+    version:2,
+    trips:[],
+    safeStreak:0,
+    bestSafeStreak:0,
+    mission:null,
+    xp:0,
+    coins:0,
+    walletTx:[],
+    redemptions:[],
+    auditTrips:[],
+    achievements:[],
+    missionsCompleted:0,
+    dailyBaseCoins:{date:"",earned:0},
+    lastReward:null
+  };
+}
+function normalizeProfile(p){
+  const e=emptyProfile();
+  const n={...e,...(p||{})};
+  n.trips=Array.isArray(n.trips)?n.trips:[];
+  n.walletTx=Array.isArray(n.walletTx)?n.walletTx:[];
+  n.redemptions=Array.isArray(n.redemptions)?n.redemptions:[];
+  n.auditTrips=Array.isArray(n.auditTrips)?n.auditTrips:[];
+  n.achievements=Array.isArray(n.achievements)?n.achievements:[];
+  n.dailyBaseCoins=n.dailyBaseCoins&&typeof n.dailyBaseCoins==="object"?n.dailyBaseCoins:{date:"",earned:0};
+  n.xp=Number(n.xp)||0;
+  n.coins=Number(n.coins)||0;
+  n.missionsCompleted=Number(n.missionsCompleted)||0;
+  n.version=2;
+  return n;
+}
+function loadProfile(){
+  try{
+    const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');
+    return normalizeProfile(p&&Array.isArray(p.trips)?p:emptyProfile());
+  }catch(e){return emptyProfile()}
+}
+function saveProfile(p){localStorage.setItem(PROFILE_KEY,JSON.stringify(normalizeProfile(p)))}
+function levelInfo(xp){
+  xp=Number(xp)||0;
+  let current=LEVELS[0];
+  for(const l of LEVELS){if(xp>=l.min)current=l}
+  const idx=LEVELS.findIndex(l=>l.level===current.level);
+  const next=LEVELS[idx+1]||null;
+  return{...current,next};
+}
+let driverProfile=loadProfile();
+
+const carIcon=L.divIcon({
+  className:'',
+  html:'<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 0 0 5px rgba(37,99,235,.25)"></div>',
+  iconSize:[22,22],iconAnchor:[11,11]
+});
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function hav(a,b){
+  const R=6371000,p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180,dp=(b[0]-a[0])*Math.PI/180,dl=(b[1]-a[1])*Math.PI/180;
+  const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function totalDistance(coords){let d=0;for(let i=1;i<coords.length;i++)d+=hav(coords[i-1],coords[i]);return d}
+function interpolateOnRoute(p){
+  if(!routeCoords.length)return [35.756,51.412];
+  p=clamp(p,0,1);
+  const target=routeDistanceM*p;
+  let acc=0;
+  for(let i=1;i<routeCoords.length;i++){
+    const seg=hav(routeCoords[i-1],routeCoords[i]);
+    if(acc+seg>=target){
+      const q=(target-acc)/Math.max(seg,1);
+      return [
+        routeCoords[i-1][0]+(routeCoords[i][0]-routeCoords[i-1][0])*q,
+        routeCoords[i-1][1]+(routeCoords[i][1]-routeCoords[i-1][1])*q
+      ];
+    }
+    acc+=seg;
+  }
+  return routeCoords[routeCoords.length-1];
+}
+
+// Context metadata is simulated in this prototype.
+// Production: road class / junction / curvature / traffic context comes from provider + map matching.
+function segmentMeta(p){
+  if(p<.18)return{
+    id:"R-01",limit:50,name:"Urban Dense",context:"شهری متراکم",
+    reason:"عابر، تقاطع و اصطکاک جانبی بیشتر",
+    mult:{speed:1.25,brake:0.90,accel:1.15,corner:1.10}
+  };
+  if(p<.38)return{
+    id:"R-02",limit:60,name:"Arterial",context:"شریان اصلی",
+    reason:"جریان سریع‌تر ولی دسترسی‌های جانبی همچنان وجود دارد",
+    mult:{speed:1.10,brake:1.00,accel:1.00,corner:1.05}
+  };
+  if(p<.58)return{
+    id:"R-03",limit:80,name:"Expressway",context:"بزرگراه",
+    reason:"سرعت پایه بالا؛ ترمز و تغییر جهت شدید پرریسک‌تر است",
+    mult:{speed:1.00,brake:1.30,accel:0.90,corner:1.25}
+  };
+  if(p<.78)return{
+    id:"R-04",limit:60,name:"Ramp Curve",context:"رمپ / مسیر منحنی",
+    reason:"مقداری نیروی جانبی طبیعی است اما Speeding خطر بیشتری دارد",
+    mult:{speed:1.25,brake:1.10,accel:1.10,corner:0.80}
+  };
+  return{
+    id:"R-05",limit:50,name:"Urban Dense",context:"شهری متراکم",
+    reason:"تقاطع، عابر و تغییرات سرعت بیشتر",
+    mult:{speed:1.25,brake:0.90,accel:1.15,corner:1.10}
+  };
+}
+
+
+function formatKm(m){
+  const km=Number(m||0)/1000;
+  return km<10 ? km.toLocaleString('fa-IR',{maximumFractionDigits:1})+" کیلومتر"
+               : Math.round(km).toLocaleString('fa-IR')+" کیلومتر";
+}
+function formatDurationFa(seconds){
+  const mins=Math.max(1,Math.round(Number(seconds||0)/60));
+  if(mins<60)return mins.toLocaleString('fa-IR')+" دقیقه";
+  const h=Math.floor(mins/60),m=mins%60;
+  return `${h.toLocaleString('fa-IR')} ساعت${m?` و ${m.toLocaleString('fa-IR')} دقیقه`:""}`;
+}
+function formatArrivalFa(seconds){
+  const d=new Date(Date.now()+Number(seconds||0)*1000);
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{
+    hour:'2-digit',minute:'2-digit'
+  }).format(d);
+}
+function shortPlaceName(display){
+  if(!display)return "مقصد انتخاب‌شده";
+  return display.split(',').slice(0,3).join('، ');
+}
+function updateNavLabels(){
+  const o=$('originLabel'),os=$('originSub'),dm=$('destinationMapLabel');
+  if(o)o.textContent=navOrigin.label||"مبدأ";
+  if(os)os.textContent=`${Number(navOrigin.lat).toFixed(4)}, ${Number(navOrigin.lng).toFixed(4)}`;
+  if(dm)dm.textContent=`مقصد: ${navDestination.label||"انتخاب نشده"}`;
+}
+function clearNavMarkers(){
+  if(originMarker){map.removeLayer(originMarker);originMarker=null}
+  if(destinationMarker){map.removeLayer(destinationMarker);destinationMarker=null}
+}
+function renderNavMarkers(){
+  clearNavMarkers();
+  const startIcon=L.divIcon({
+    className:'',
+    html:'<div style="width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 4px rgba(34,197,94,.18)"></div>',
+    iconSize:[18,18],iconAnchor:[9,9]
+  });
+  const destIcon=L.divIcon({
+    className:'',
+    html:'<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#ef4444;border:3px solid #fff;transform:rotate(-45deg);box-shadow:0 0 0 4px rgba(239,68,68,.16)"></div>',
+    iconSize:[22,22],iconAnchor:[11,20]
+  });
+  originMarker=L.marker([navOrigin.lat,navOrigin.lng],{icon:startIcon,zIndexOffset:900}).addTo(map).bindTooltip("مبدأ");
+  destinationMarker=L.marker([navDestination.lat,navDestination.lng],{icon:destIcon,zIndexOffset:900}).addTo(map).bindTooltip(navDestination.label||"مقصد");
+}
+function routeToCoords(route){
+  return route.geometry.coordinates.map(c=>[c[1],c[0]]);
+}
+function renderRouteAlternatives(){
+  routeAltLayers.forEach(l=>map.removeLayer(l));
+  routeAltLayers=[];
+  routeAlternatives.forEach((r,i)=>{
+    if(i===selectedRouteIndex)return;
+    const layer=L.polyline(routeToCoords(r),{
+      color:'#64748b',weight:5,opacity:.42,dashArray:'8 8'
+    }).addTo(map);
+    routeAltLayers.push(layer);
+  });
+}
+
+function maneuverArrow(modifier,type){
+  const m=(modifier||"").toLowerCase(),t=(type||"").toLowerCase();
+  if(t==="roundabout" || t==="rotary")return "↻";
+  if(t==="arrive")return "●";
+  if(t==="depart")return "↑";
+  if(m.includes("sharp right"))return "↱";
+  if(m.includes("slight right"))return "↗";
+  if(m==="right")return "→";
+  if(m.includes("sharp left"))return "↰";
+  if(m.includes("slight left"))return "↖";
+  if(m==="left")return "←";
+  if(m.includes("uturn"))return "↶";
+  if(m==="straight")return "↑";
+  return "↑";
+}
+function maneuverText(step){
+  const man=step?.maneuver||{};
+  const type=(man.type||"").toLowerCase();
+  const mod=(man.modifier||"").toLowerCase();
+  const street=(step.name||"").trim();
+
+  let action="مستقیم ادامه بده";
+  if(type==="depart") action="حرکت را شروع کن";
+  else if(type==="arrive") action="به مقصد می‌رسی";
+  else if(type==="roundabout" || type==="rotary"){
+    const ex=man.exit?` و از خروجی ${Number(man.exit).toLocaleString('fa-IR')} خارج شو`:"";
+    action=`وارد میدان شو${ex}`;
+  }else if(type==="merge") action=mod.includes("left")?"از سمت چپ وارد مسیر شو":"از سمت راست وارد مسیر شو";
+  else if(type==="fork") action=mod.includes("left")?"در دو راهی سمت چپ را بگیر":"در دو راهی سمت راست را بگیر";
+  else if(type==="on ramp") action=mod.includes("left")?"از رمپ سمت چپ وارد شو":"از رمپ سمت راست وارد شو";
+  else if(type==="off ramp") action=mod.includes("left")?"از خروجی سمت چپ خارج شو":"از خروجی سمت راست خارج شو";
+  else if(type==="turn" || type==="continue" || type==="new name" || type==="end of road"){
+    if(mod.includes("sharp right"))action="به تندی به راست بپیچ";
+    else if(mod.includes("slight right"))action="کمی به راست متمایل شو";
+    else if(mod==="right")action="به راست بپیچ";
+    else if(mod.includes("sharp left"))action="به تندی به چپ بپیچ";
+    else if(mod.includes("slight left"))action="کمی به چپ متمایل شو";
+    else if(mod==="left")action="به چپ بپیچ";
+    else if(mod.includes("uturn"))action="دور بزن";
+    else action="مستقیم ادامه بده";
+  }
+
+  return{
+    action,
+    street:street || (type==="arrive" ? navDestination.label : "مسیر فعلی"),
+    arrow:maneuverArrow(mod,type)
+  };
+}
+function buildNavigationSteps(route){
+  navigationSteps=[];
+  const raw=(route?.legs||[]).flatMap(l=>l.steps||[]);
+  if(raw.length){
+    let cumulative=0;
+    raw.forEach((step,i)=>{
+      const info=maneuverText(step);
+      const trigger=cumulative;
+      navigationSteps.push({
+        index:i,
+        atDistance:trigger,
+        stepDistance:Number(step.distance||0),
+        duration:Number(step.duration||0),
+        type:step.maneuver?.type||"",
+        modifier:step.maneuver?.modifier||"",
+        action:info.action,
+        street:info.street,
+        arrow:info.arrow
+      });
+      cumulative+=Number(step.distance||0);
+    });
+  }else{
+    // Fallback instructions when the public router returns no step detail.
+    navigationSteps=[
+      {index:0,atDistance:0,action:"حرکت را شروع کن",street:"مسیر انتخاب‌شده",arrow:"↑"},
+      {index:1,atDistance:routeDistanceM*.35,action:"مسیر را دنبال کن",street:"ادامه مسیر",arrow:"↑"},
+      {index:2,atDistance:routeDistanceM*.70,action:"به سمت مقصد ادامه بده",street:navDestination.label,arrow:"↑"},
+      {index:3,atDistance:Math.max(0,routeDistanceM-30),action:"به مقصد می‌رسی",street:navDestination.label,arrow:"●"}
+    ];
+  }
+  lastSpokenStepIndex=-1;
+}
+function distanceTextFa(m){
+  m=Math.max(0,Number(m||0));
+  if(m<950)return `${Math.max(10,Math.round(m/10)*10).toLocaleString('fa-IR')} متر`;
+  return `${(m/1000).toLocaleString('fa-IR',{maximumFractionDigits:1})} کیلومتر`;
+}
+function nextNavigationStep(travelled){
+  if(!navigationSteps.length)return null;
+  // Skip "depart" once vehicle has started moving.
+  for(let i=0;i<navigationSteps.length;i++){
+    const s=navigationSteps[i];
+    if(s.atDistance>travelled+5)return {step:s,index:i,distance:s.atDistance-travelled};
+  }
+  const last=navigationSteps[navigationSteps.length-1];
+  return {step:{...last,action:"به مقصد می‌رسی",street:navDestination.label,arrow:"●"},index:navigationSteps.length-1,distance:Math.max(0,routeDistanceM-travelled)};
+}
+function speakGuidance(text,index,distance){
+  if(!voiceGuidanceEnabled || !('speechSynthesis' in window))return;
+  if(index===lastSpokenStepIndex)return;
+  // Speak only when fairly close to the maneuver to avoid chatter.
+  if(distance>450)return;
+  lastSpokenStepIndex=index;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='fa-IR';
+    u.rate=.95;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function updateTurnByTurn(progress){
+  const travelled=routeDistanceM*clamp(progress,0,1);
+  const remaining=Math.max(0,routeDistanceM-travelled);
+  const remainingSeconds=Math.max(0,routeDurationS*(1-clamp(progress,0,1)));
+  const next=nextNavigationStep(travelled);
+
+  if($('remainingDistance'))$('remainingDistance').textContent=distanceTextFa(remaining);
+  if($('remainingEta'))$('remainingEta').textContent=formatDurationFa(remainingSeconds);
+  if($('liveArrival'))$('liveArrival').textContent=formatArrivalFa(remainingSeconds);
+  if($('routeProgressFill'))$('routeProgressFill').style.width=`${Math.round(progress*100)}%`;
+
+  if(!next)return;
+  if($('turnArrow'))$('turnArrow').textContent=next.step.arrow||"↑";
+  if($('turnDistance'))$('turnDistance').textContent=progress>=.995?"رسیدی":distanceTextFa(next.distance);
+  if($('turnInstruction'))$('turnInstruction').textContent=progress>=.995?"به مقصد رسیدی":next.step.action;
+  if($('turnStreet'))$('turnStreet').textContent=progress>=.995?navDestination.label:next.step.street;
+
+  if(progress<.995){
+    const voiceText=`${distanceTextFa(next.distance)} دیگر، ${next.step.action}${next.step.street?`، ${next.step.street}`:""}`;
+    speakGuidance(voiceText,next.index,next.distance);
+  }
+
+  const banner=$('arrivalBanner');
+  if(banner)banner.classList.toggle('show',progress>=.995);
+}
+function resetTurnByTurn(){
+  if($('turnArrow'))$('turnArrow').textContent="↑";
+  if($('turnDistance'))$('turnDistance').textContent="آماده حرکت";
+  if($('turnInstruction'))$('turnInstruction').textContent="مسیر را انتخاب کن";
+  if($('turnStreet'))$('turnStreet').textContent="راهنمای پیچ‌به‌پیچ اینجا نمایش داده می‌شود";
+  if($('remainingDistance'))$('remainingDistance').textContent=routeDistanceM?distanceTextFa(routeDistanceM):"--";
+  if($('remainingEta'))$('remainingEta').textContent=routeDurationS?formatDurationFa(routeDurationS):"--";
+  if($('liveArrival'))$('liveArrival').textContent=routeDurationS?formatArrivalFa(routeDurationS):"--";
+  if($('routeProgressFill'))$('routeProgressFill').style.width="0%";
+  $('arrivalBanner')?.classList.remove('show');
+  lastSpokenStepIndex=-1;
+}
+
+function renderRouteOptionCards(){
+  const box=$('routeOptions');
+  if(!box)return;
+  box.innerHTML=routeAlternatives.slice(0,3).map((r,i)=>{
+    const only=routeAlternatives.length===1;
+    const label=only?"بهترین مسیر موجود":i===0?"پیشنهاد اول":i===1?"مسیر جایگزین":"مسیر دیگر";
+    return `<button class="route-option ${i===selectedRouteIndex?'active':''}" onclick="selectRouteAlternative(${i})">
+      <div><b>${label}</b><br><span>${formatKm(r.distance)} • ${only?'مسیر جایگزین مناسب پیدا نشد':i===0?'پیشنهاد سریع‌تر':'گزینه جایگزین'}</span></div>
+      <span class="route-option-time">${formatDurationFa(r.duration)}</span>
+    </button>`;
+  }).join('');
+  $('oneRouteNote')?.classList.toggle('show',routeAlternatives.length===1);
+}
+function updateRouteSummary(){
+  const route=routeAlternatives[selectedRouteIndex];
+  if(!route)return;
+  $('routeSummary')?.classList.add('show');
+  if($('navDistance'))$('navDistance').textContent=formatKm(route.distance);
+  if($('navEta'))$('navEta').textContent=formatDurationFa(route.duration);
+  if($('navArrival'))$('navArrival').textContent=formatArrivalFa(route.duration);
+  renderRouteOptionCards();
+}
+function selectRouteAlternative(index){
+  if(!routeAlternatives[index])return;
+  selectedRouteIndex=index;
+  const route=routeAlternatives[index];
+  routeCoords=routeToCoords(route);
+  routeDistanceM=route.distance||totalDistance(routeCoords);
+  routeDurationS=route.duration||0;
+  buildNavigationSteps(route);
+
+  if(routeLine)map.removeLayer(routeLine);
+  if(trackLine)map.removeLayer(trackLine);
+  speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
+  routeLine=L.polyline(routeCoords,{color:'#2f6df6',weight:6,opacity:.95}).addTo(map);
+  trackLine=L.polyline([],{color:'#ffffff',weight:2,opacity:.65,dashArray:'5 6'}).addTo(map);
+
+  if(carMarker)map.removeLayer(carMarker);
+  carMarker=L.marker(routeCoords[0],{icon:carIcon,zIndexOffset:1000}).addTo(map);
+
+  renderRouteAlternatives();
+  renderNavMarkers();
+  updateRouteSummary();
+  fixMapSize(true);
+
+  $('distance').textContent=formatKm(routeDistanceM);
+  $('segmentCount').textContent="۵";
+  $('tripInfo').style.display="block";
+  $('limit').textContent=segmentMeta(0).limit;
+  $('speedSign').textContent=segmentMeta(0).limit;
+  $('segment').textContent=segmentMeta(0).id;
+  $('status').textContent=`مسیر انتخاب شد • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`;
+  resetTurnByTurn();
+  updateTurnByTurn(0);
+}
+window.selectRouteAlternative=selectRouteAlternative;
+
+function applyPresetSelection(load=true){
+  const preset=presets[$('routePreset').value];
+  if(!preset)return;
+  navOrigin={lat:preset.points[0][0],lng:preset.points[0][1],label:preset.name.split(" تا ")[0]+"، تهران"};
+  const last=preset.points[preset.points.length-1];
+  navDestination={lat:last[0],lng:last[1],label:preset.name.split(" تا ").slice(-1)[0]+"، تهران"};
+  if($('destinationSearch'))$('destinationSearch').value=navDestination.label.replace("، تهران","");
+  updateNavLabels();
+  if(load)loadRoute();
+}
+
+async function searchDestination(){
+  const input=$('destinationSearch');
+  const results=$('destinationResults');
+  const q=(input?.value||"").trim();
+  if(!q){$('status').textContent="نام مقصد را وارد کن.";return}
+
+  $('status').textContent="در حال جست‌وجوی مقصد...";
+  results.innerHTML='<div class="small" style="padding:10px">در حال جست‌وجو...</div>';
+  results.classList.add('open');
+
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=ir&accept-language=fa&q=${encodeURIComponent(q)}`;
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error("geocode");
+    const data=await res.json();
+    destinationSearchCache=data||[];
+    if(!destinationSearchCache.length)throw new Error("empty");
+    results.innerHTML=destinationSearchCache.map((x,i)=>`
+      <button class="search-result" onclick="chooseDestination(${i})">
+        <b>${shortPlaceName(x.display_name)}</b>
+        <span>${x.type||"مکان"} • ایران</span>
+      </button>`).join('');
+    $('status').textContent=`${destinationSearchCache.length.toLocaleString('fa-IR')} نتیجه پیدا شد.`;
+  }catch(e){
+    const fallback=[
+      {display_name:"برج میلاد، تهران",lat:"35.7448",lon:"51.3753"},
+      {display_name:"بازار بزرگ تهران، تهران",lat:"35.6759",lon:"51.4197"},
+      {display_name:"میدان تجریش، تهران",lat:"35.8044",lon:"51.4282"},
+      {display_name:"فرودگاه مهرآباد، تهران",lat:"35.6892",lon:"51.3134"}
+    ].filter(x=>x.display_name.includes(q) || q.length<3);
+    destinationSearchCache=fallback.length?fallback:[
+      {display_name:"برج میلاد، تهران",lat:"35.7448",lon:"51.3753"},
+      {display_name:"میدان تجریش، تهران",lat:"35.8044",lon:"51.4282"}
+    ];
+    results.innerHTML=destinationSearchCache.map((x,i)=>`
+      <button class="search-result" onclick="chooseDestination(${i})">
+        <b>${x.display_name}</b><span>پیشنهاد نمونه تهران</span>
+      </button>`).join('');
+    $('status').textContent="سرویس جست‌وجو پاسخ نداد؛ پیشنهادهای نمونه نمایش داده شدند.";
+  }
+}
+function chooseDestination(index){
+  const x=destinationSearchCache[index];
+  if(!x)return;
+  navDestination={
+    lat:Number(x.lat),lng:Number(x.lon),
+    label:shortPlaceName(x.display_name)
+  };
+  $('destinationSearch').value=navDestination.label;
+  $('destinationResults').classList.remove('open');
+  updateNavLabels();
+  loadRoute();
+}
+window.chooseDestination=chooseDestination;
+
+function useCurrentLocation(){
+  if(!navigator.geolocation){
+    $('status').textContent="مرورگر شما دسترسی موقعیت مکانی ندارد.";
+    return;
+  }
+  $('status').textContent="در حال دریافت موقعیت فعلی...";
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      navOrigin={
+        lat:pos.coords.latitude,
+        lng:pos.coords.longitude,
+        label:"موقعیت فعلی من"
+      };
+      updateNavLabels();
+      $('status').textContent=`موقعیت فعلی دریافت شد • دقت حدود ${Math.round(pos.coords.accuracy).toLocaleString('fa-IR')} متر`;
+      if(navDestination)loadRoute();
+    },
+    err=>{
+      $('status').textContent="دسترسی موقعیت داده نشد؛ مبدأ نمونه تهران حفظ شد.";
+    },
+    {enableHighAccuracy:true,timeout:9000,maximumAge:15000}
+  );
+}
+
+async function loadRoute(){
+  reset(false);
+  updateNavLabels();
+  $('status').textContent="در حال محاسبه مسیرهای پیشنهادی...";
+
+  const coords=`${navOrigin.lng},${navOrigin.lat};${navDestination.lng},${navDestination.lat}`;
+  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=true`;
+
+  try{
+    const res=await fetch(url);
+    if(!res.ok)throw new Error("route service error");
+    const data=await res.json();
+    routeAlternatives=(data.routes||[]).slice(0,3);
+    if(!routeAlternatives.length)throw new Error("no route");
+    selectedRouteIndex=0;
+    selectRouteAlternative(0);
+    $('status').textContent=`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر پیشنهادی آماده است.`;
+  }catch(e){
+    // Fallback route between selected origin and destination.
+    const a=[navOrigin.lat,navOrigin.lng],b=[navDestination.lat,navDestination.lng];
+    routeCoords=[];
+    for(let n=0;n<=80;n++){
+      const q=n/80;
+      const bend=Math.sin(q*Math.PI)*0.008;
+      routeCoords.push([
+        a[0]+(b[0]-a[0])*q+bend*.35,
+        a[1]+(b[1]-a[1])*q+bend
+      ]);
+    }
+    routeDistanceM=totalDistance(routeCoords);
+    routeDurationS=Math.max(600,routeDistanceM/9);
+    routeAlternatives=[{
+      distance:routeDistanceM,
+      duration:routeDurationS,
+      geometry:{coordinates:routeCoords.map(x=>[x[1],x[0]])}
+    }];
+    selectedRouteIndex=0;
+    selectRouteAlternative(0);
+    $('status').textContent="سرویس مسیر پاسخ نداد؛ مسیر آزمایشی جایگزین ساخته شد.";
+  }
+}
+
+function tripConfidence(gps,mapMatch){
+  let c=100;
+  if(gps>15)c-=12;if(gps>30)c-=25;if(gps>60)c-=38;
+  if(mapMatch<80)c-=10;if(mapMatch<60)c-=25;
+  return clamp(Math.round(c),0,100);
+}
+function simulatedState(time,dur){
+  const p=clamp(time/dur,0,1),m=segmentMeta(p);
+  let gps=5+Math.abs(gauss()*2*Number($('noise').value)/100);
+  let match=96-Math.abs(gauss()*4);
+  let mockLocation=false;
+  let integritySignal=100;
+  let speed=m.limit-5+3*Math.sin(time/5),longA=.25*Math.sin(time/2),latA=.22*Math.sin(time/4);
+  const sc=$('scenario').value;
+
+  if(sc==="speeding"){
+    if(p>.14&&p<.34)speed=m.limit+18;
+    if(p>.48&&p<.66)speed=m.limit+28;
+    if(p>.82)speed=m.limit+20;
+  }
+  if(sc==="mixed"){
+    if(p>.13&&p<.24){speed=m.limit+17;longA=3.15}
+    if(p>.34&&p<.41){longA=-4.0;speed=Math.max(15,m.limit-18)}
+    if(p>.50&&p<.64){speed=m.limit+26}
+    if(p>.69&&p<.76){latA=3.6}
+    if(p>.84&&p<.89){gps=68;match=42;speed=m.limit+32}
+  }
+  if(sc==="gpsJump"){
+    if(p>.40&&p<.60){gps=85;match=30;speed=m.limit+35}
+  }
+  if(sc==="fraudTest"){
+    // Simulates a location feed that looks precise but is explicitly marked/mock.
+    speed=m.limit-3+2*Math.sin(time/4);
+    if(p>.28&&p<.58){
+      mockLocation=true;
+      gps=3;
+      match=99;
+      integritySignal=20;
+    }
+  }
+
+  const n=Number($('noise').value)/100;
+  speed+=gauss()*1.1*n;longA+=gauss()*.16*n;latA+=gauss()*.16*n;
+  return{
+    p,meta:m,speed:clamp(speed,0,170),gps,
+    match:clamp(Math.round(match),20,100),longA,latA,
+    mockLocation,integritySignal
+  };
+}
+function closeEvent(holder,type){
+  if(!holder)return null;
+  if(holder.end-holder.start<.35)return null;
+  events.push({...holder,type});
+  return null;
+}
+function detect(s){
+  const excess=s.speed-s.meta.limit,pct=excess/s.meta.limit*100;
+  const validSpeed=s.match>=70&&s.gps<=35;
+  const speeding=validSpeed&&excess>5&&pct>8;
+  if(speeding){
+    let sev=(excess>=30||pct>=40)?"critical":(excess>=20||pct>=25)?"severe":"moderate";
+    if(!activeSpeed)activeSpeed={title:"سرعت غیرمجاز",sev,start:t,end:t,peak:excess,conf:s.match,context:s.meta.context,riskMult:s.meta.mult.speed,reason:s.meta.reason};
+    else{activeSpeed.end=t;activeSpeed.peak=Math.max(activeSpeed.peak,excess);activeSpeed.conf=Math.min(activeSpeed.conf,s.match);if(sev==="critical")activeSpeed.sev="critical";else if(sev==="severe"&&activeSpeed.sev!=="critical")activeSpeed.sev="severe"}
+  }else if(activeSpeed){activeSpeed=closeEvent(activeSpeed,"speeding");renderEvents()}
+
+  const badGPS=s.gps>40||s.match<55;
+  if(badGPS){
+    if(!activeGPS)activeGPS={title:"اختلال موقعیت / GPS",sev:"moderate",start:t,end:t,peak:Math.max(s.gps,100-s.match),conf:s.match,context:s.meta.context,riskMult:0,reason:"داده نامطمئن از Safety Score حذف می‌شود"};
+    else{activeGPS.end=t;activeGPS.peak=Math.max(activeGPS.peak,s.gps,100-s.match);activeGPS.conf=Math.min(activeGPS.conf,s.match)}
+  }else if(activeGPS){activeGPS=closeEvent(activeGPS,"gps");renderEvents()}
+
+  if(s.longA<=-2.5){
+    let sev=s.longA<=-5?"critical":s.longA<=-3.5?"severe":"moderate";
+    if(!activeBrake)activeBrake={title:sev==="critical"?"ترمز بحرانی":"ترمز شدید",sev,start:t,end:t,peak:Math.abs(s.longA),conf:95,context:s.meta.context,riskMult:s.meta.mult.brake,reason:s.meta.reason};
+    else{activeBrake.end=t;activeBrake.peak=Math.max(activeBrake.peak,Math.abs(s.longA));if(sev==="critical")activeBrake.sev="critical"}
+  }else if(activeBrake){activeBrake=closeEvent(activeBrake,"brake");renderEvents()}
+
+  if(s.longA>=3){
+    if(!activeAccel)activeAccel={title:"شتاب شدید",sev:"severe",start:t,end:t,peak:s.longA,conf:95,context:s.meta.context,riskMult:s.meta.mult.accel,reason:s.meta.reason};
+    else{activeAccel.end=t;activeAccel.peak=Math.max(activeAccel.peak,s.longA)}
+  }else if(activeAccel){activeAccel=closeEvent(activeAccel,"accel");renderEvents()}
+
+  if(Math.abs(s.latA)>=3&&s.speed>35){
+    if(!activeCorner)activeCorner={title:"پیچ شدید",sev:"severe",start:t,end:t,peak:Math.abs(s.latA),conf:95,context:s.meta.context,riskMult:s.meta.mult.corner,reason:s.meta.reason};
+    else{activeCorner.end=t;activeCorner.peak=Math.max(activeCorner.peak,Math.abs(s.latA))}
+  }else if(activeCorner){activeCorner=closeEvent(activeCorner,"corner");renderEvents()}
+
+  return{excess,pct,validSpeed};
+}
+function flush(){
+  if(activeSpeed){activeSpeed=closeEvent(activeSpeed,"speeding")}
+  if(activeGPS){activeGPS=closeEvent(activeGPS,"gps")}
+  if(activeBrake){activeBrake=closeEvent(activeBrake,"brake")}
+  if(activeAccel){activeAccel=closeEvent(activeAccel,"accel")}
+  if(activeCorner){activeCorner=closeEvent(activeCorner,"corner")}
+  renderEvents()
+}
+
+function drawTrackSegment(prevRow,row){
+  if(!prevRow)return;
+  const speeding=row.validSpeed&&row.excess>5&&(row.excess/row.limit*100)>8;
+  const uncertain=row.mapMatch<70||row.gps>35;
+  let color=speeding?'#ef4444':uncertain?'#f59e0b':'#22c55e';
+  let l=L.polyline([prevRow.pos,row.pos],{color,weight:7,opacity:.8}).addTo(map);
+  speedLayers.push(l);
+}
+function renderEvents(){
+  if(!events.length){$('events').innerHTML='<div class="small">هنوز رویدادی ثبت نشده است.</div>';renderTimeline();renderPins();return}
+  $('events').innerHTML=events.slice().reverse().map(e=>{
+    const nop=e.type==="gps";
+    return `<div class="event"><div><b>${e.title}</b><div class="small">${e.start.toFixed(1)}–${e.end.toFixed(1)}s • Peak ${e.peak.toFixed(1)} • Conf ${Math.round(e.conf)}%${nop?" • بدون جریمه":` • ${e.context||"--"} • Risk ×${(e.riskMult||1).toFixed(2)}`}</div></div><span class="tag ${e.sev}">${e.sev.toUpperCase()}</span></div>`
+  }).join("");
+  renderTimeline();renderPins()
+}
+function renderTimeline(){
+  const dur=Number($('duration').value);$('track').innerHTML="";
+  events.forEach(e=>{let d=document.createElement('div');d.className=`dot ${e.sev}`;d.style.left=(100*(e.start+e.end)/2/dur)+'%';d.title=e.title;$('track').appendChild(d)})
+}
+function renderPins(){
+  eventMarkers.forEach(m=>map.removeLayer(m));eventMarkers=[];
+  const dur=Number($('duration').value);
+  events.forEach(e=>{
+    const p=((e.start+e.end)/2)/dur,pos=interpolateOnRoute(p);
+    const color=e.type==="gps"?'#f59e0b':e.sev==="critical"?'#991b1b':'#ef4444';
+    const icon=L.divIcon({className:'',html:`<div style="width:15px;height:15px;border-radius:50%;background:${color};border:2px solid #fff"></div>`,iconSize:[15,15],iconAnchor:[7,7]});
+    eventMarkers.push(L.marker(pos,{icon}).addTo(map).bindTooltip(e.title))
+  })
+}
+function drawChart(){
+  const W=chartCtx.canvas.width,H=chartCtx.canvas.height;chartCtx.clearRect(0,0,W,H);chartCtx.fillStyle="#0d131b";chartCtx.fillRect(0,0,W,H);
+  chartCtx.strokeStyle="#263548";for(let i=1;i<5;i++){let y=i*H/5;chartCtx.beginPath();chartCtx.moveTo(0,y);chartCtx.lineTo(W,y);chartCtx.stroke()}
+  const data=rows.slice(-220);if(data.length<2)return;
+  const draw=(fn,color,dash=[])=>{chartCtx.strokeStyle=color;chartCtx.lineWidth=2;chartCtx.setLineDash(dash);chartCtx.beginPath();data.forEach((r,i)=>{let x=i/(data.length-1)*W,y=H-clamp(fn(r)/170,0,1)*H;i?chartCtx.lineTo(x,y):chartCtx.moveTo(x,y)});chartCtx.stroke()};
+  draw(r=>r.speed,'#ffffff');
+  draw(r=>r.limit,'#60a5fa',[7,5]);
+  draw(r=>Math.max(0,r.excess)*3,'#ef4444',[3,5]);
+  chartCtx.setLineDash([])
+}
+function step(){
+  const dur=Number($('duration').value),s=simulatedState(t,dur),det=detect(s);
+  const pos=interpolateOnRoute(s.p);
+  const tc=tripConfidence(s.gps,s.match);
+  const row={
+    time:t,pos,speed:s.speed,limit:s.meta.limit,segment:s.meta.id,
+    roadContext:s.meta.context,contextReason:s.meta.reason,
+    speedMult:s.meta.mult.speed,brakeMult:s.meta.mult.brake,accelMult:s.meta.mult.accel,cornerMult:s.meta.mult.corner,
+    mapMatch:s.match,gps:s.gps,longA:s.longA,latA:s.latA,tripConf:tc,
+    mockLocation:!!s.mockLocation,integritySignal:Number(s.integritySignal||100),
+    excess:det.excess,validSpeed:det.validSpeed
+  };
+  const prev=rows.length?rows[rows.length-1]:null;rows.push(row);
+
+  if(carMarker)carMarker.setLatLng(pos);
+  if(trackLine)trackLine.addLatLng(pos);
+  drawTrackSegment(prev,row);
+
+  $('speed').textContent=Math.round(s.speed);$('limit').textContent=s.meta.limit;$('speedSign').textContent=s.meta.limit;
+  $('excess').textContent=Math.max(0,Math.round(det.excess));$('segment').textContent=s.meta.id;$('matchConf').textContent=s.match+"%";
+  $('gpsAcc').textContent=Math.round(s.gps);$('longA').textContent=s.longA.toFixed(2);$('tripConf').textContent=tc;
+  $('roadContext').textContent=s.meta.context;
+  const liveRisk=Math.max(s.meta.mult.speed,s.meta.mult.brake,s.meta.mult.accel,s.meta.mult.corner);
+  $('riskMult').textContent=liveRisk.toFixed(2)+"×";
+  $('progress').textContent=Math.round(s.p*100)+"%";$('timeNow').textContent=t.toFixed(1)+"s";
+  $('status').textContent=`در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
+  updateTurnByTurn(s.p);
+
+  drawChart();
+  t+=.25;if(t>=dur)finish()
+}
+function start(){
+  if(!routeCoords.length){loadRoute().then(()=>start());return}
+  reset(false,true);
+  resetTurnByTurn();
+  updateTurnByTurn(0);
+  $('start').disabled=true;
+  $('stop').disabled=false;
+  timer=setInterval(step,250)
+}
+function finish(){
+  if(timer)clearInterval(timer);
+  timer=null;
+  flush();
+  $('start').disabled=false;
+  $('stop').disabled=true;
+  $('csv').disabled=!rows.length;
+  $('status').textContent="به مقصد رسیدی.";
+  updateTurnByTurn(1);
+  buildScore();
+  setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),120);
+}
+function reset(full=true,keepRoute=false){
+  if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
+  eventMarkers.forEach(m=>map.removeLayer(m));eventMarkers=[];speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
+  if(trackLine){map.removeLayer(trackLine);trackLine=L.polyline([],{color:'#fff',weight:2,opacity:.6,dashArray:'5 6'}).addTo(map)}
+  $('events').innerHTML='<div class="small">هنوز رویدادی ثبت نشده است.</div>';$('track').innerHTML="";$('scoreBox').style.display="none";$('whyBox').style.display="none";$('csv').disabled=true;
+  $('eligibilityStatus').textContent='WAITING';$('eligibilityStatus').className='eligibilityStatus review';
+  $('dataIntegrity').textContent='--';$('fraudRisk').textContent='--';$('eligibilityConfidence').textContent='--';
+  $('eligibilityReasons').textContent='بعد از پایان سفر ارزیابی می‌شود.';
+  $('rewardGate').textContent='Reward Gate: در انتظار ارزیابی';$('start').disabled=false;$('stop').disabled=true;
+  ['speed','excess'].forEach(id=>$(id).textContent=0);$('matchConf').textContent="--";$('gpsAcc').textContent="--";$('longA').textContent="0.00";$('tripConf').textContent="100";$('roadContext').textContent="--";$('riskMult').textContent="1.00×";$('progress').textContent="0%";$('timeNow').textContent="0.0s";
+  if(routeCoords.length&&carMarker)carMarker.setLatLng(routeCoords[0]);
+  drawChart();
+  resetTurnByTurn();
+  if(full)$('status').textContent=routeCoords.length?"آماده شروع سفر.":"مسیر هنوز بارگذاری نشده."
+}
+
+function evaluateRewardEligibility(result){
+  const total=Math.max(1,rows.length);
+  const uncertain=rows.filter(r=>r.mapMatch<70 || r.gps>35).length/total;
+  const severeUncertain=rows.filter(r=>r.mapMatch<50 || r.gps>60).length/total;
+  const mockExposure=rows.filter(r=>r.mockLocation).length/total;
+  const badIntegrity=rows.filter(r=>(r.integritySignal||100)<60).length/total;
+
+  let dataIntegrity=100;
+  dataIntegrity-=uncertain*45;
+  dataIntegrity-=severeUncertain*55;
+  dataIntegrity-=badIntegrity*80;
+  dataIntegrity=clamp(Math.round(dataIntegrity),0,100);
+
+  let fraudRisk=0;
+  fraudRisk+=mockExposure*120;
+  fraudRisk+=badIntegrity*80;
+  // GPS uncertainty alone is data quality, not automatically fraud.
+  if(mockExposure>0)fraudRisk=Math.max(fraudRisk,90);
+  fraudRisk=clamp(Math.round(fraudRisk),0,100);
+
+  const reasons=[];
+  if(mockExposure>0)reasons.push("Mock / simulated location signal detected");
+  if(uncertain>=.08)reasons.push(`Map/GPS uncertainty ${(uncertain*100).toFixed(0)}% of trip — Reward paused for review`);
+  if(severeUncertain>=.04)reasons.push("Severe GPS/map-match uncertainty detected");
+  if(result.tripConfidence<80)reasons.push(`Trip Confidence ${result.tripConfidence}% is below reward threshold`);
+  if(dataIntegrity<80)reasons.push(`Data Integrity ${dataIntegrity}% is below preferred threshold`);
+
+  let status="ELIGIBLE";
+  if(fraudRisk>=60 || dataIntegrity<55 || result.tripConfidence<60){
+    status="NOT_ELIGIBLE";
+  }else if(
+    fraudRisk>=30 ||
+    uncertain>=0.08 ||
+    severeUncertain>=0.04 ||
+    dataIntegrity<85 ||
+    result.tripConfidence<85
+  ){
+    status="REVIEW";
+  }
+
+  const eligibilityConfidence=clamp(
+    Math.round((result.tripConfidence*0.45)+(dataIntegrity*0.45)+((100-fraudRisk)*0.10)),
+    0,100
+  );
+
+  if(!reasons.length)reasons.push("No material integrity or fraud signal detected");
+
+  return{
+    status,
+    dataIntegrity,
+    fraudRisk,
+    eligibilityConfidence,
+    reasons,
+    uncertaintyPct:Math.round(uncertain*100),
+    mockExposurePct:Math.round(mockExposure*100)
+  };
+}
+function renderEligibility(e){
+  const el=$('eligibilityStatus');
+  el.textContent=e.status==="NOT_ELIGIBLE"?"NOT ELIGIBLE":e.status;
+  el.className="eligibilityStatus "+(e.status==="ELIGIBLE"?"eligible":e.status==="REVIEW"?"review":"blocked");
+  $('dataIntegrity').textContent=e.dataIntegrity+"%";
+  $('fraudRisk').textContent=e.fraudRisk+"%";
+  $('eligibilityConfidence').textContent=e.eligibilityConfidence+"%";
+  $('eligibilityReasons').innerHTML=e.reasons.map(x=>"• "+x).join("<br>");
+  $('rewardGate').textContent=
+    e.status==="ELIGIBLE" ? "Reward Gate: OPEN — XP / SafeCoins / Mission مجاز است" :
+    e.status==="REVIEW" ? "Reward Gate: PAUSED — هیچ Rewardی تا تأیید اعمال نمی‌شود" :
+    "Reward Gate: BLOCKED — XP / SafeCoins / Streak / Mission مسدود است";
+}
+
+function buildScore(){
+  const valid=rows.filter(r=>r.validSpeed);
+  const speeding=valid.filter(r=>r.excess>5&&r.excess/r.limit*100>8);
+  const compliance=valid.length?100*(1-speeding.length/valid.length):100;
+  const maxExcess=valid.length?Math.max(0,...valid.map(r=>r.excess)):0;
+
+  // Context-aware speed exposure: speeding in high-risk road context has greater effect.
+  const weightedSpeedExposure = valid.length
+    ? speeding.reduce((sum,r)=>sum+r.speedMult,0)/valid.length
+    : 0;
+  const speedScore=clamp(Math.round(100-weightedSpeedExposure*72-Math.max(0,maxExcess-10)*.35),0,100);
+
+  let bp=0,ap=0,cp=0;
+  const scoredEvents=events.filter(e=>e.type!=="gps");
+  scoredEvents.forEach(e=>{
+    const base=e.sev==="critical"?12:e.sev==="severe"?6:2;
+    const weighted=base*(e.riskMult||1);
+    e.weightedRisk=weighted;
+    if(e.type==="brake")bp+=weighted;
+    if(e.type==="accel")ap+=weighted;
+    if(e.type==="corner")cp+=weighted;
+    if(e.type==="speeding")e.weightedRisk=Math.max(weighted,e.peak*.18*(e.riskMult||1));
+  });
+
+  const b=clamp(100-bp*2.2,0,100);
+  const a=clamp(100-ap*2.2,0,100);
+  const c=clamp(100-cp*2.2,0,100);
+
+  const avg=rows.reduce((s,r)=>s+r.tripConf,0)/Math.max(1,rows.length);
+  const low=rows.filter(r=>r.tripConf<70).length/Math.max(1,rows.length);
+  const conf=clamp(Math.round(avg-low*35),0,100);
+
+  const score=Math.round(.40*speedScore+.25*b+.15*a+.20*c);
+
+  [['speed',speedScore],['brake',b],['accel',a],['corner',c],['confidence',conf]].forEach(([k,v])=>{
+    $(k+'N').textContent=Math.round(v);
+    $(k+'Bar').style.width=v+'%';
+  });
+
+  const avgContext=rows.length
+    ? rows.reduce((s,r)=>s+Math.max(r.speedMult,r.brakeMult,r.accelMult,r.cornerMult),0)/rows.length
+    : 1;
+
+  const riskEvents=scoredEvents
+    .map(e=>({...e,finalRisk:(e.weightedRisk||0)}))
+    .sort((x,y)=>y.finalRisk-x.finalRisk);
+  const top=riskEvents[0];
+
+  $('score').textContent=score;
+  $('compliance').textContent=Math.round(compliance)+"%";
+  $('maxExcess').textContent="+"+Math.round(maxExcess);
+  $('contextRisk').textContent=avgContext.toFixed(2)+"×";
+  $('topRiskEvent').textContent=top?top.title:"ندارد";
+
+  if(top){
+    $('whyText').innerHTML=
+      `<b>${top.title}</b> در Context «${top.context||"--"}» بیشترین اثر را داشت.<br>`+
+      `ضریب Context: <b>×${(top.riskMult||1).toFixed(2)}</b> — ${top.reason||""}<br>`+
+      `یعنی Eventها دیگر فقط با شدت خام Sensor جریمه نمی‌شوند؛ شرایط جاده نیز در Risk وارد شده است.`;
+  }else{
+    $('whyText').textContent="Event پرریسک معتبری در این سفر ثبت نشد.";
+  }
+
+  const worst=[["سرعت",speedScore],["ترمز",b],["شتاب",a],["پیچ",c]].sort((x,y)=>x[1]-y[1])[0];
+  $('insight').textContent=
+    `بزرگ‌ترین فرصت بهبود: ${worst[0]}. امتیاز بر اساس Severity × Road Context محاسبه شده است. `+
+    `GPS/Map Match نامطمئن همچنان از جریمه حذف می‌شود.`;
+
+  $('scoreBox').style.display="block";
+  $('tripInfo').style.display="block";
+  $('whyBox').style.display="block";
+
+  lastTripResult={
+    score,
+    speedScore,
+    brakeScore:b,
+    accelScore:a,
+    cornerScore:c,
+    tripConfidence:conf,
+    speedCompliance:Math.round(compliance),
+    maxExcess:Math.round(maxExcess),
+    avgContextRisk:Number(avgContext.toFixed(2)),
+    topRiskEvent:top?top.title:null,
+    routeKm:Number((routeDistanceM/1000).toFixed(1))
+  };
+
+  const eligibility=evaluateRewardEligibility(lastTripResult);
+  lastTripResult.rewardEligibility=eligibility.status;
+  lastTripResult.dataIntegrity=eligibility.dataIntegrity;
+  lastTripResult.fraudRisk=eligibility.fraudRisk;
+  lastTripResult.eligibilityConfidence=eligibility.eligibilityConfidence;
+  lastTripResult.eligibilityReasons=eligibility.reasons;
+  renderEligibility(eligibility);
+
+  persistTripToProfile(lastTripResult);
+}
+
+function avg(arr,key){
+  if(!arr.length)return null;
+  return arr.reduce((s,x)=>s+(Number(x[key])||0),0)/arr.length;
+}
+function rollingAvg(trips,key,n=5){
+  return avg(trips.slice(-n),key);
+}
+function componentLabel(key){
+  return {speedScore:"سرعت",brakeScore:"ترمز",accelScore:"شتاب",cornerScore:"پیچ"}[key]||key;
+}
+function buildMission(profile){
+  const trips=profile.trips;
+  if(trips.length<3)return null;
+
+  const keys=["speedScore","brakeScore","accelScore","cornerScore"];
+  const scores=keys.map(k=>[k,rollingAvg(trips,k,Math.min(5,trips.length))||100]).sort((a,b)=>a[1]-b[1]);
+  const weakness=scores[0][0];
+  const latest=trips[trips.length-1];
+
+  let mission;
+  if(weakness==="speedScore"){
+    mission={
+      id:"speed_consistency",
+      type:"speedScore",
+      title:"نگهبان سرعت",
+      description:"در ۳ سفر معتبر بعدی، Speed Compliance را حداقل ۹۰٪ نگه دار.",
+      targetTrips:3,successTrips:0,reward:180,
+      rule:"speedCompliance",threshold:90,createdAt:Date.now()
+    };
+  }else if(weakness==="brakeScore"){
+    mission={
+      id:"smooth_braking",
+      type:"brakeScore",
+      title:"ترمز نرم",
+      description:"در ۳ سفر معتبر بعدی، امتیاز ترمز را حداقل ۹۰ نگه دار.",
+      targetTrips:3,successTrips:0,reward:160,
+      rule:"brakeScore",threshold:90,createdAt:Date.now()
+    };
+  }else if(weakness==="accelScore"){
+    mission={
+      id:"smooth_accel",
+      type:"accelScore",
+      title:"شروع نرم",
+      description:"در ۳ سفر معتبر بعدی، امتیاز شتاب را حداقل ۹۰ نگه دار.",
+      targetTrips:3,successTrips:0,reward:140,
+      rule:"accelScore",threshold:90,createdAt:Date.now()
+    };
+  }else{
+    mission={
+      id:"corner_control",
+      type:"cornerScore",
+      title:"کنترل پیچ",
+      description:"در ۳ سفر معتبر بعدی، امتیاز پیچ را حداقل ۹۰ نگه دار.",
+      targetTrips:3,successTrips:0,reward:150,
+      rule:"cornerScore",threshold:90,createdAt:Date.now()
+    };
+  }
+  return mission;
+}
+function missionSuccess(mission,trip){
+  if(!mission)return false;
+  return Number(trip[mission.rule]||0)>=Number(mission.threshold||0);
+}
+
+function todayKey(){
+  return new Date().toISOString().slice(0,10);
+}
+function addLedger(p,type,amount,label){
+  if(!amount)return;
+  p.walletTx.push({type,amount,label,at:Date.now()});
+  p.walletTx=p.walletTx.slice(-40);
+}
+function ensureDailyCoinWindow(p){
+  const d=todayKey();
+  if(!p.dailyBaseCoins || p.dailyBaseCoins.date!==d){
+    p.dailyBaseCoins={date:d,earned:0};
+  }
+}
+function unlockAchievement(p,id){
+  if(p.achievements.some(a=>a.id===id))return false;
+  p.achievements.push({id,unlockedAt:Date.now()});
+  return true;
+}
+function evaluateAchievements(p,result){
+  const unlocked=[];
+  const tryUnlock=id=>{if(unlockAchievement(p,id))unlocked.push(id)};
+  if(result.score>=85 && result.tripConfidence>=80)tryUnlock("first_safe");
+  if(result.score>=90)tryUnlock("score_90");
+  if(result.speedCompliance>=95)tryUnlock("clean_speed");
+  if(result.brakeScore>=95 && result.accelScore>=95 && result.cornerScore>=95)tryUnlock("smooth_control");
+  if((p.safeStreak||0)>=3)tryUnlock("streak_3");
+  if((p.missionsCompleted||0)>=1)tryUnlock("mission_complete");
+  return unlocked;
+}
+function calculateBaseReward(result,p){
+  let xp=Math.max(0,Math.round((result.score-70)*2));
+  if(result.score>=90)xp+=10;
+  if(result.speedCompliance>=95)xp+=8;
+
+  let wantedCoins=0;
+  if(result.score>=95)wantedCoins=35;
+  else if(result.score>=90)wantedCoins=20;
+  else if(result.score>=85)wantedCoins=10;
+
+  if(wantedCoins>0 && result.speedCompliance>=95)wantedCoins+=5;
+  if(wantedCoins>0 && result.brakeScore>=95 && result.accelScore>=95 && result.cornerScore>=95)wantedCoins+=5;
+
+  ensureDailyCoinWindow(p);
+  const room=Math.max(0,DAILY_BASE_COIN_CAP-(p.dailyBaseCoins.earned||0));
+  const coins=Math.min(wantedCoins,room);
+  p.dailyBaseCoins.earned=(p.dailyBaseCoins.earned||0)+coins;
+
+  return{xp,coins,wantedCoins,capRemaining:Math.max(0,room-coins)};
+}
+
+const MARKET_OFFERS=[
+  {
+    id:"fuel_50",category:"fuel",icon:"⛽",partner:"جایگاه سوخت همکار آزمایشی",
+    title:"۵۰ هزار تومان اعتبار سوخت",description:"کد پاداش آزمایشی برای اعتبار سوخت در شبکه همکار.",
+    cost:180,value:"50K"
+  },
+  {
+    id:"wash_30",category:"auto",icon:"🚗",partner:"کارواش همکار آزمایشی",
+    title:"۳۰٪ تخفیف کارواش",description:"تخفیف آزمایشی برای شست‌وشو و نظافت خودرو.",
+    cost:90,value:"30%"
+  },
+  {
+    id:"service_15",category:"auto",icon:"🛠️",partner:"مرکز خدمات خودرو آزمایشی",
+    title:"۱۵٪ تخفیف سرویس دوره‌ای خودرو",description:"تخفیف آزمایشی برای تعویض روغن، بازدید فنی و سرویس دوره‌ای.",
+    cost:240,value:"15%"
+  },
+  {
+    id:"coffee",category:"food",icon:"☕",partner:"کافه همکار آزمایشی",
+    title:"یک نوشیدنی رایگان",description:"پاداش کوچک برای تشویق رانندگی ایمن.",
+    cost:70,value:"FREE"
+  },
+  {
+    id:"meal_20",category:"food",icon:"🍔",partner:"رستوران همکار آزمایشی",
+    title:"۲۰٪ تخفیف سفارش غذا",description:"کد تخفیف آزمایشی برای سفارش غذا از مجموعه همکار.",
+    cost:120,value:"20%"
+  },
+  {
+    id:"insurance_5",category:"insurance",icon:"🛡️",partner:"بیمه همکار آزمایشی",
+    title:"۵٪ تخفیف خدمات بیمه خودرو",description:"نمونه پاداش بلندمدت برای راننده‌ای با سابقه رانندگی ایمن.",
+    cost:350,value:"5%"
+  }
+];
+let marketFilter="all";
+
+function generateVoucher(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s="SAFE-";
+  for(let i=0;i<8;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function renderMarketplace(){
+  const p=normalizeProfile(driverProfile);
+  $('marketCoins').textContent=p.coins;
+
+  const offers=MARKET_OFFERS.filter(o=>marketFilter==="all"||o.category===marketFilter);
+  $('offerGrid').innerHTML=offers.map(o=>{
+    const can=p.coins>=o.cost;
+    return `<div class="offer">
+      <div class="offerTop">
+        <div class="offerIcon">${o.icon}</div>
+        <span class="offerCat">${o.partner}</span>
+      </div>
+      <h4>${o.title}</h4>
+      <p>${o.description}</p>
+      <div class="offerBottom">
+        <div class="offerCost">${o.cost} SC</div>
+        <button onclick="redeemOffer('${o.id}')" ${can?'':'disabled'}>${can?'Redeem':'Coin کافی نیست'}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const r=(p.redemptions||[]).slice().reverse();
+  $('redeemHistory').innerHTML=r.length?r.slice(0,12).map(x=>{
+    const d=new Date(x.at);
+    return `<div class="redeemRow">
+      <div><b>-${x.cost} SC</b><div class="small">${faDate(d)}</div></div>
+      <div><b>${x.title}</b><div class="small">${x.partner}</div></div>
+      <div class="redeemCode">${x.code}</div>
+    </div>`;
+  }).join(''):'<div class="marketEmpty">هنوز سکه ایمنی خرج نشده است.</div>';
+
+  if(r.length){
+    const last=r[0];
+    $('voucherBox').style.display='block';
+    $('voucherCode').textContent=last.code;
+    $('voucherMeta').innerHTML=
+      `<b>${last.title}</b><br>${last.partner}<br>`+
+      `Cost: ${last.cost} SafeCoins • Issued: ${faDateTime(last.at)}<br>`+
+      `Prototype voucher — در Production باید Server-side و یک‌بارمصرف باشد.`;
+  }else{
+    $('voucherBox').style.display='none';
+  }
+}
+function redeemOffer(id){
+  const offer=MARKET_OFFERS.find(o=>o.id===id);
+  if(!offer)return;
+  driverProfile=loadProfile();
+  const p=driverProfile;
+
+  if((p.coins||0)<offer.cost){
+    alert("SafeCoin کافی نیست.");
+    return;
+  }
+
+  if(!confirm(`${offer.title} با ${offer.cost} SafeCoins خریداری شود؟`))return;
+
+  const code=generateVoucher();
+  p.coins-=offer.cost;
+  p.redemptions=p.redemptions||[];
+  p.redemptions.push({
+    id:"RDM-"+Date.now(),
+    offerId:offer.id,
+    title:offer.title,
+    partner:offer.partner,
+    cost:offer.cost,
+    code,
+    at:Date.now(),
+    status:"ISSUED"
+  });
+  p.redemptions=p.redemptions.slice(-50);
+
+  // Spend transaction: negative SafeCoins
+  p.walletTx.push({
+    type:"coin",
+    amount:-offer.cost,
+    label:`Marketplace: ${offer.title}`,
+    at:Date.now()
+  });
+  p.walletTx=p.walletTx.slice(-40);
+
+  saveProfile(p);
+  driverProfile=normalizeProfile(p);
+  renderProfile();
+  renderMarketplace();
+}
+
+function renderGamification(){
+  const p=normalizeProfile(driverProfile);
+  const li=levelInfo(p.xp);
+  $('gLevel').textContent=li.level;
+  $('gLevelName').textContent=li.name;
+  $('gXp').textContent=p.xp;
+  $('gCoins').textContent=p.coins;
+
+  if(li.next){
+    const span=li.next.min-li.min;
+    const prog=clamp((p.xp-li.min)/Math.max(1,span)*100,0,100);
+    $('gXpBar').style.width=prog+'%';
+    $('gXpNext').textContent=`${p.xp-li.min} / ${span} تا ${li.next.name}`;
+  }else{
+    $('gXpBar').style.width='100%';
+    $('gXpNext').textContent='بالاترین Level فعلی';
+  }
+
+  const r=p.lastReward;
+  $('lastTripXp').textContent=`+${r?.tripBaseXp ?? r?.tripXp ?? 0} XP`;
+  $('lastAchievementXp').textContent=`+${r?.achievementXp||0} XP`;
+  $('lastMissionXp').textContent=`+${r?.missionXp||0} XP`;
+  $('lastTripCoins').textContent=`+${r?.baseCoins||0}`;
+  $('lastMissionReward').textContent=`+${r?.missionCoins||0}`;
+  $('lastRewardReason').textContent=r?.reason||'هنوز Reward جدیدی ثبت نشده است.';
+
+  const unlocked=new Set(p.achievements.map(a=>a.id));
+  $('achievementGrid').innerHTML=ACHIEVEMENTS.map(a=>`
+    <div class="achievement ${unlocked.has(a.id)?'unlocked':''}">
+      <div class="achIcon">${a.icon}</div>
+      <b>${a.title}</b>
+      <span>${a.desc}${unlocked.has(a.id)?'<br>✓ Unlocked':''}</span>
+    </div>`).join('');
+
+  const tx=(p.walletTx||[]).slice().reverse().slice(0,10);
+  $('ledger').innerHTML=tx.length?tx.map(x=>{
+    const d=new Date(x.at);
+    const cls=x.type==="coin"?"coinAmt":"xpAmt";
+    const unit=x.type==="coin"?"SC":"XP";
+    const sign=x.amount>0?'+':'';
+    return `<div class="ledgerRow">
+      <div class="small">${faDate(d)}</div>
+      <div><b>${x.label}</b><div class="small">${d.toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}</div></div>
+      <div class="ledgerAmt ${cls}">${sign}${x.amount} ${unit}</div>
+    </div>`;
+  }).join(''):'<div class="small">هنوز تراکنشی ثبت نشده است.</div>';
+  renderMarketplace();
+}
+
+function renderProfile(){
+  const p=driverProfile,trips=p.trips||[];
+  $('pTrips').textContent=trips.length;
+  $('pStreak').textContent=p.safeStreak||0;
+
+  const calibrationNeeded=Math.max(0,3-trips.length);
+  if(calibrationNeeded>0){
+    $('calibrationCard').style.display='block';
+    $('calibrationText').textContent=`Calibration: ${trips.length} / 3 سفر معتبر ثبت شده. ${calibrationNeeded} سفر دیگر برای ساخت Mission شخصی لازم است.`;
+  }else{
+    $('calibrationCard').style.display='none';
+  }
+
+  if(!trips.length){
+    $('pAvg').textContent='--';$('pImprove').textContent='--';
+    ['Speed','Brake','Accel','Corner'].forEach(k=>{
+      $('p'+k+'N').textContent='--';$('p'+k+'Bar').style.width='0%';
+    });
+    $('learningInsight').textContent='بعد از اولین سفر معتبر، Learning Engine شروع به ساخت Baseline می‌کند.';
+    $('calibrationCard').style.display='block';
+    $('calibrationText').textContent='برای ساخت Mission شخصی، حداقل ۳ سفر معتبر لازم است.';
+    $('missionTitle').textContent='در انتظار Calibration';
+    $('missionDesc').textContent='ابتدا ۳ سفر معتبر ثبت کن تا سیستم Baseline اولیه بسازد.';
+    $('missionBar').style.width='0%';$('missionProgressText').textContent='۰ از ۳';$('missionReward').textContent='Reward: --';
+    $('historyList').innerHTML='<div class="small">هنوز سفری در پروفایل ذخیره نشده است.</div>';
+    renderGamification();
+    return;
+  }
+
+  const avgScore=Math.round(avg(trips,'score'));
+  $('pAvg').textContent=avgScore;
+
+  const recent=trips.slice(-3), previous=trips.slice(-6,-3);
+  let improve='Baseline';
+  let improveClass='trendFlat';
+  if(previous.length){
+    const d=Math.round(avg(recent,'score')-avg(previous,'score'));
+    improve=(d>0?'+':'')+d;
+    improveClass=d>2?'trendUp':d<-2?'trendDown':'trendFlat';
+  }
+  $('pImprove').textContent=improve;
+  $('pImprove').className=improveClass;
+
+  const comps=[
+    ['Speed','speedScore'],['Brake','brakeScore'],['Accel','accelScore'],['Corner','cornerScore']
+  ];
+  const compVals=[];
+  comps.forEach(([id,key])=>{
+    const v=Math.round(rollingAvg(trips,key,Math.min(5,trips.length))||0);
+    compVals.push([key,v]);
+    $('p'+id+'N').textContent=v;
+    $('p'+id+'Bar').style.width=v+'%';
+  });
+  compVals.sort((a,b)=>a[1]-b[1]);
+  const weakest=compVals[0];
+
+  let learning=trips.length<3
+    ? `این هنوز Baseline اولیه است. فعلاً «${componentLabel(weakest[0])}» پایین‌ترین مؤلفه دیده شده، اما برای نتیجه‌گیری حداقل ۳ سفر معتبر لازم است. `
+    : `Baseline اولیه نشان می‌دهد بیشترین فرصت بهبود تکرارشونده در «${componentLabel(weakest[0])}» است (${weakest[1]}). `;
+  if(trips.length>=4){
+    const first=Math.round(avg(trips.slice(0,Math.min(3,trips.length)),'score'));
+    const last=Math.round(avg(trips.slice(-3),'score'));
+    const d=last-first;
+    learning+=d>2?`روند کلی نسبت به شروع حدود ${d} امتیاز بهتر شده است.`:
+              d<-2?`میانگین اخیر ${Math.abs(d)} امتیاز پایین‌تر از شروع است و نیاز به بررسی دارد.`:
+              `روند کلی فعلاً پایدار است.`;
+  }else{
+    learning+='برای تشخیص روند پایدار، چند سفر معتبر دیگر لازم است.';
+  }
+  $('learningInsight').textContent=learning;
+
+  if(trips.length>=3 && (!p.mission || p.mission.successTrips>=p.mission.targetTrips)){
+    p.mission=buildMission(p);
+    saveProfile(p);
+  }
+  if(trips.length<3){
+    p.mission=null;
+    saveProfile(p);
+  }
+
+  const m=p.mission;
+  if(m){
+    $('missionTitle').textContent=m.title;
+    $('missionDesc').textContent=m.description;
+    const pct=100*m.successTrips/Math.max(1,m.targetTrips);
+    $('missionBar').style.width=clamp(pct,0,100)+'%';
+    $('missionProgressText').textContent=`${Number(m.successTrips).toLocaleString('fa-IR')} از ${Number(m.targetTrips).toLocaleString('fa-IR')}`;
+    $('missionReward').textContent=`Reward: ${m.reward} SafeCoins`;
+  }else{
+    $('missionTitle').textContent='در حال یادگیری راننده';
+    $('missionDesc').textContent='پس از تکمیل ۳ سفر معتبر، Mission شخصی بر اساس الگوی واقعی رانندگی ساخته می‌شود.';
+    $('missionBar').style.width=(Math.min(3,trips.length)/3*100)+'%';
+    $('missionProgressText').textContent=`${Math.min(3,trips.length).toLocaleString('fa-IR')} از ۳`;
+    $('missionReward').textContent='Reward: بعد از Calibration';
+  }
+
+  $('historyList').innerHTML=trips.slice(-8).reverse().map((tr,i)=>{
+    const date=new Date(tr.savedAt);
+    const weak=[
+      ['سرعت',tr.speedScore],['ترمز',tr.brakeScore],['شتاب',tr.accelScore],['پیچ',tr.cornerScore]
+    ].sort((a,b)=>a[1]-b[1])[0][0];
+    return `<div class="hist">
+      <div class="histScore">${tr.score}</div>
+      <div><b>سفر ${trips.length-i}</b><div class="histSub">${faDateTime(date)} • فرصت: ${weak}</div></div>
+      <div class="histSub">Conf ${tr.tripConfidence}%</div>
+    </div>`;
+  }).join('');
+  renderGamification();
+}
+function persistTripToProfile(result){
+  if(!result)return;
+
+  driverProfile=loadProfile();
+  const p=driverProfile;
+
+  // Keep an audit trail even when the trip is not reward-eligible.
+  p.auditTrips=p.auditTrips||[];
+  p.auditTrips.push({
+    savedAt:Date.now(),
+    score:result.score,
+    tripConfidence:result.tripConfidence,
+    rewardEligibility:result.rewardEligibility,
+    dataIntegrity:result.dataIntegrity,
+    fraudRisk:result.fraudRisk
+  });
+  p.auditTrips=p.auditTrips.slice(-60);
+
+  if(result.rewardEligibility!=="ELIGIBLE"){
+    p.lastReward={
+      tripBaseXp:0,
+      achievementXp:0,
+      missionXp:0,
+      baseCoins:0,
+      missionCoins:0,
+      reason:result.rewardEligibility==="REVIEW"
+        ? "REVIEW: سفر برای تحلیل ثبت شد، اما XP، SafeCoin، Streak و Mission Progress همگی متوقف شدند."
+        : "Reward مسدود شد؛ سیگنال Integrity/Fraud اجازه XP، Coin، Streak یا Mission Progress نداد.",
+      at:Date.now()
+    };
+    saveProfile(p);
+    driverProfile=normalizeProfile(p);
+    renderProfile();
+    return;
+  }
+
+  // Learning profile only uses eligible trips.
+  if(result.tripConfidence<70)return;
+
+  const missionBefore=p.mission?{...p.mission}:null;
+  let missionCompleted=false;
+  let missionCoins=0;
+  let missionXp=0;
+
+  if(p.trips.length>=3 && p.mission && missionSuccess(p.mission,result)){
+    p.mission.successTrips=Math.min(p.mission.targetTrips,p.mission.successTrips+1);
+    if(p.mission.successTrips>=p.mission.targetTrips){
+      missionCompleted=true;
+      missionCoins=Number(p.mission.reward)||0;
+      missionXp=50;
+      p.missionsCompleted=(p.missionsCompleted||0)+1;
+    }
+  }
+
+  p.trips.push({...result,savedAt:Date.now()});
+  p.trips=p.trips.slice(-50);
+
+  if(result.score>=85 && result.tripConfidence>=80){
+    p.safeStreak=(p.safeStreak||0)+1;
+    p.bestSafeStreak=Math.max(p.bestSafeStreak||0,p.safeStreak);
+  }else{
+    p.safeStreak=0;
+  }
+
+  const base=calculateBaseReward(result,p);
+  p.xp=(p.xp||0)+base.xp+missionXp;
+  p.coins=(p.coins||0)+base.coins+missionCoins;
+
+  if(base.xp)addLedger(p,"xp",base.xp,"Safe trip quality");
+  if(base.coins)addLedger(p,"coin",base.coins,"Safe trip reward");
+  if(missionXp)addLedger(p,"xp",missionXp,`Mission: ${missionBefore?.title||"Complete"}`);
+  if(missionCoins)addLedger(p,"coin",missionCoins,`Mission: ${missionBefore?.title||"Complete"}`);
+
+  const unlocked=evaluateAchievements(p,result);
+  let achievementXp=0;
+  if(unlocked.length){
+    achievementXp=unlocked.length*20;
+    p.xp+=achievementXp;
+    addLedger(p,"xp",achievementXp,`${unlocked.length} Achievement unlocked`);
+  }
+
+  if(p.trips.length>=3 && (!p.mission || missionCompleted)){
+    p.mission=buildMission(p);
+  }
+
+  const reasons=[];
+  if(base.coins>0)reasons.push(`سفر امن: ${base.coins} SafeCoins`);
+  if(base.wantedCoins>base.coins)reasons.push("بخشی از Coin پایه به سقف روزانه رسید");
+  if(missionCoins>0)reasons.push(`Mission تکمیل شد: +${missionCoins}`);
+  if(unlocked.length)reasons.push(`${unlocked.length} Achievement جدید`);
+  if(!reasons.length)reasons.push("سفر معتبر بود؛ Reward فقط بر اساس کیفیت محاسبه شد.");
+
+  p.lastReward={
+    tripBaseXp:base.xp,
+    achievementXp,
+    missionXp,
+    baseCoins:base.coins,
+    missionCoins,
+    reason:reasons.join(" • "),
+    at:Date.now()
+  };
+
+  saveProfile(p);
+  driverProfile=normalizeProfile(p);
+  renderProfile();
+}
+
+function exportCSV(){
+  const head="time_s,lat,lng,speed_kmh,speed_limit_kmh,excess_kmh,segment_id,road_context,speed_context_mult,brake_context_mult,accel_context_mult,corner_context_mult,map_match_confidence,gps_accuracy_m,long_acc_ms2,trip_confidence,mock_location,integrity_signal\n";
+  const body=rows.map(r=>[r.time.toFixed(2),r.pos[0].toFixed(6),r.pos[1].toFixed(6),r.speed.toFixed(2),r.limit,r.excess.toFixed(2),r.segment,r.roadContext,r.speedMult,r.brakeMult,r.accelMult,r.cornerMult,r.mapMatch,r.gps.toFixed(2),r.longA.toFixed(3),r.tripConf,r.mockLocation?1:0,r.integritySignal].join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([head+body],{type:'text/csv'}));a.download='driving_lab_v10.csv';a.click()
+}
+
+$('loadRoute').onclick=loadRoute;
+$('start').onclick=start;
+$('stop').onclick=finish;
+$('reset').onclick=()=>reset(true);
+$('csv').onclick=exportCSV;
+$('fitMap').onclick=()=>{fixMapSize(true)};
+$('routePreset').onchange=()=>applyPresetSelection(true);
+$('destinationSearchBtn').onclick=searchDestination;
+$('useMyLocation').onclick=useCurrentLocation;
+$('destinationSearch').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();searchDestination()}
+});
+$('voiceToggle').onclick=()=>{
+  voiceGuidanceEnabled=!voiceGuidanceEnabled;
+  $('voiceToggle').textContent=voiceGuidanceEnabled?"روشن":"خاموش";
+  if(!voiceGuidanceEnabled && 'speechSynthesis' in window)speechSynthesis.cancel();
+};
+document.querySelectorAll('.marketFilter').forEach(btn=>{
+  btn.onclick=()=>{
+    marketFilter=btn.dataset.filter||'all';
+    renderMarketplace();
+  };
+});
+
+$('resetProfile').onclick=()=>{
+  if(confirm('پروفایل آزمایشی و تاریخچه سفرهای ذخیره‌شده در این مرورگر پاک شود؟')){
+    localStorage.removeItem(PROFILE_KEY);
+    driverProfile=emptyProfile();
+    renderProfile();
+  }
+};
+
+window.addEventListener('resize',()=>fixMapSize(false));
+window.addEventListener('load',()=>fixMapSize(false));
+setTimeout(()=>fixMapSize(false),150);
+renderProfile();
+setTimeout(()=>fixMapSize(false),300);
+setTimeout(()=>fixMapSize(false),900);
+updateNavLabels();
+if($('destinationSearch'))$('destinationSearch').value='تجریش';
+setTimeout(loadRoute,1000);
+</script>
+
+<script>
+(function(){
+  function fa(v){ try{return Number(v).toLocaleString('fa-IR')}catch(e){return v} }
+
+  function switchScreen(name){
+    document.querySelectorAll('.app-screen').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));
+    const el=document.getElementById('screen-'+name);
+    if(el) el.classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(name==='trip'){
+      setTimeout(()=>{
+        try{ fixMapSize(true); }catch(e){}
+      },80);
+    }
+    if(name==='rewards'){
+      try{ renderMarketplace(); }catch(e){}
+    }
+  }
+
+  function refreshAppShell(){
+    try{
+      const p=loadProfile();
+      document.getElementById('homeTopCoins').textContent=fa(p.coins||0);
+      document.getElementById('homeAvgScore').textContent=p.trips?.length?fa(Math.round(p.trips.reduce((s,t)=>s+(Number(t.score)||0),0)/p.trips.length)):'--';
+      document.getElementById('homeStreak').textContent=fa(p.safeStreak||0);
+      const li=levelInfo(p.xp||0);
+      document.getElementById('homeLevel').textContent=fa(li.level);
+      document.getElementById('profileLevelMirror').textContent=fa(li.level);
+    }catch(e){}
+  }
+
+  document.querySelectorAll('.nav-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>switchScreen(btn.dataset.screen));
+  });
+
+  const homeStart=document.getElementById('homeStartTrip');
+  if(homeStart) homeStart.addEventListener('click',()=>switchScreen('trip'));
+
+  const oldRenderProfile=window.renderProfile;
+  if(typeof oldRenderProfile==='function'){
+    window.renderProfile=function(){
+      oldRenderProfile();
+      refreshAppShell();
+    };
+  }
+
+  function showTripSummary(){
+    try{
+      if(!lastTripResult) return;
+      const r=lastTripResult;
+      const p=loadProfile();
+      const lr=p.lastReward||{};
+      document.getElementById('summaryScore').textContent=fa(r.score||0);
+      document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
+      document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
+      document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
+      const st=document.getElementById('summaryEligibility');
+      if(r.rewardEligibility==='ELIGIBLE'){
+        st.textContent='مجاز برای پاداش'; st.className='summary-status good';
+      }else if(r.rewardEligibility==='REVIEW'){
+        st.textContent='نیازمند بررسی'; st.className='summary-status review';
+      }else{
+        st.textContent='غیرمجاز برای پاداش'; st.className='summary-status bad';
+      }
+      document.getElementById('summaryWhy').textContent=
+        r.topRiskEvent
+          ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
+          : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
+      const sheet=document.getElementById('tripSummarySheet');
+      sheet.classList.add('open');
+      const card=sheet.querySelector('.summary-card');
+      if(card) card.scrollTop=0;
+      refreshAppShell();
+    }catch(e){}
+  }
+
+  window.addEventListener('drivinglab:trip-finished',()=>{
+    // Score/profile/reward calculation is complete at this point.
+    showTripSummary();
+  });
+
+  document.getElementById('summaryClose')?.addEventListener('click',()=>{
+    document.getElementById('tripSummarySheet').classList.remove('open');
+    switchScreen('home');
+  });
+  document.getElementById('summaryRewards')?.addEventListener('click',()=>{
+    document.getElementById('tripSummarySheet').classList.remove('open');
+    switchScreen('rewards');
+  });
+
+  refreshAppShell();
+  setTimeout(()=>refreshAppShell(),700);
+})();
+</script>
+
+</body>
+</html>
