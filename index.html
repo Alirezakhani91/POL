@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۷ Temporal Map Matching و GPS Stability</title>
+<title>POL | نسخه ۳.۷.۱ Free Map + Route Label Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2209,6 +2209,144 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
   color:#fde68a;
 }
 
+
+/* ===== v3.7.1 Route label + free map exploration ===== */
+
+/* Definitive fix for the giant horizontal route bars:
+   route labels are <button> elements and inherited global width:100%. */
+.route-alt-label{
+  position:absolute!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:150px!important;
+  height:auto!important;
+  min-height:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:6px 10px!important;
+  margin:0!important;
+  border-radius:999px!important;
+  white-space:nowrap!important;
+  line-height:1.2!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  transform:translate(-50%,-50%)!important;
+  border:1px solid rgba(15,23,42,.08)!important;
+  background:rgba(255,255,255,.97)!important;
+  color:#172033!important;
+  box-shadow:0 7px 18px rgba(15,23,42,.17)!important;
+  backdrop-filter:blur(8px)!important;
+}
+.route-alt-label.active{
+  width:auto!important;
+  background:#2563eb!important;
+  color:#fff!important;
+  border-color:#2563eb!important;
+  box-shadow:0 9px 22px rgba(37,99,235,.25)!important;
+}
+
+/* Legacy route setup must never bleed into map-first route selection. */
+body.map-first-mode #routeSummary,
+body.map-first-mode #routeOptions,
+body.map-first-mode #routeDecisionCard,
+body.map-first-mode #oneRouteNote,
+body.map-first-mode #routeCompareHint{
+  display:none!important;
+}
+
+body.route-selection-mode #map,
+body.driving-mode #map{
+  cursor:grab!important;
+}
+body.route-selection-mode #map:active,
+body.driving-mode #map:active{
+  cursor:grabbing!important;
+}
+
+/* Full-route overview control during route selection */
+#mapFitRouteBtn{display:none!important}
+body.route-selection-mode #mapFitRouteBtn{
+  display:grid!important;
+  place-items:center!important;
+}
+.map-fit-route-btn{
+  font-size:18px!important;
+  font-weight:900!important;
+}
+
+/* Compact route choices remain small. */
+.map-route-choice-strip{
+  justify-content:center;
+  pointer-events:none!important;
+}
+.map-route-choice-chip{
+  pointer-events:auto!important;
+  width:auto!important;
+  max-width:180px!important;
+}
+@media(max-width:650px){
+  .map-route-choice-strip{
+    justify-content:flex-start;
+    pointer-events:auto!important;
+  }
+}
+
+/* Recenter:
+   follow on = compact circle
+   manual map exploration = explicit action pill */
+.drive-recenter-btn{
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  transition:width .18s ease,border-radius .18s ease,transform .18s ease!important;
+}
+.drive-recenter-label{
+  display:none;
+  font-size:9px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  color:inherit!important;
+}
+.drive-recenter-icon{
+  font-size:18px;
+  line-height:1;
+}
+body.driving-mode #driveRecenterBtn.is-needed{
+  width:156px!important;
+  min-width:156px!important;
+  height:46px!important;
+  min-height:46px!important;
+  border-radius:999px!important;
+  padding:0 13px!important;
+}
+body.driving-mode #driveRecenterBtn.is-needed .drive-recenter-label{
+  display:inline-block!important;
+}
+body.driving-mode.map-manual-explore .drive-follow-badge{
+  background:rgba(52,38,10,.90)!important;
+  border-color:rgba(245,158,11,.30)!important;
+}
+body.driving-mode .drive-control-cluster{
+  max-width:170px;
+}
+
+@media(max-width:430px){
+  body.driving-mode #driveRecenterBtn.is-needed{
+    width:144px!important;
+    min-width:144px!important;
+    padding:0 10px!important;
+  }
+  .drive-recenter-label{font-size:8px!important}
+  .route-alt-label{
+    max-width:125px!important;
+    padding:5px 8px!important;
+    font-size:8px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2729,6 +2867,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="floatingMapControls" class="floating-map-controls">
                 <button id="mapCenterBtn" title="موقعیت من">◎</button>
+                <button id="mapFitRouteBtn" class="map-fit-route-btn" title="نمایش کل مسیر">↔</button>
                 <button id="mapSavedBtn" title="مقصدهای اخیر">★</button>
               </div>
 
@@ -2878,7 +3017,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
 
               <div class="drive-control-cluster">
-                <button id="driveRecenterBtn" class="drive-circle-btn" title="مرکز کردن نقشه">◎</button>
+                <button id="driveRecenterBtn" class="drive-circle-btn drive-recenter-btn" title="برگشت به موقعیت فعلی">
+                  <span class="drive-recenter-icon">◎</span>
+                  <b class="drive-recenter-label">برگشت به موقعیت من</b>
+                </button>
                 <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
                 <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
               </div>
@@ -4801,8 +4943,16 @@ function selectRouteAlternative(index){
   renderNavMarkers();
   renderEndpointAccessLines();
   hideRouteFailure();
+  const routeSelectionAlreadyOpen=
+    document.body.classList.contains('route-selection-mode');
+
   updateRouteSummary();
-  fixMapSize(true);
+
+  if(!routeSelectionAlreadyOpen){
+    fixMapSize(true);
+  }else{
+    fixMapSize(false);
+  }
 
   $('distance').textContent=formatKm(routeDistanceM);
   $('segmentCount').textContent="۵";
@@ -5881,9 +6031,61 @@ async function searchDestinationV3(){
   const rawQ=($('navSheetSearchInput')?.value||"").trim();
   await runLiveDestinationSearch(rawQ);
 }
+
+function ensureMapExplorationEnabled(){
+  try{map.dragging?.enable()}catch(e){}
+  try{map.scrollWheelZoom?.enable()}catch(e){}
+  try{map.touchZoom?.enable()}catch(e){}
+  try{map.doubleClickZoom?.enable()}catch(e){}
+  try{map.boxZoom?.enable()}catch(e){}
+  try{map.keyboard?.enable()}catch(e){}
+}
+function fitSelectedRouteForExploration({animate=true}={}){
+  if(!routeLine || !routeCoords.length)return;
+
+  ensureMapExplorationEnabled();
+
+  const h=map.getSize()?.y||700;
+  const sheetOpen=$('mapRouteSheet')?.classList.contains('show');
+
+  try{
+    map.fitBounds(routeLine.getBounds(),{
+      paddingTopLeft:[55,75],
+      paddingBottomRight:[55,sheetOpen?Math.min(270,Math.round(h*.34)):70],
+      animate,
+      duration:.35
+    });
+  }catch(e){
+    try{
+      map.fitBounds(routeLine.getBounds(),{
+        padding:[55,55],
+        animate
+      });
+    }catch(_){}
+  }
+
+  syncRouteAltLabelsSoon();
+}
+function markDrivingMapManualExplore(){
+  if(!document.body.classList.contains('driving-mode'))return;
+
+  userManuallyMovedDrivingMap=true;
+  document.body.classList.add('map-manual-explore');
+
+  if(typeof syncRecenterUi==='function'){
+    syncRecenterUi();
+  }
+}
+
 function setRouteSelectionMode(active){
   document.body.classList.toggle('route-selection-mode',!!active);
-  if(active)closeNavSearchSheet();
+
+  if(active){
+    closeNavSearchSheet();
+    ensureMapExplorationEnabled();
+  }
+
+  syncRouteAltLabelsSoon();
 }
 function nextTurnDistanceAtProgress(progress){
   const travelled=routeDistanceM*clamp(progress,0,1);
@@ -6045,23 +6247,85 @@ function routeMidpointLatLng(route){
 function renderRouteAltLabels(){
   const box=$('routeAltLabels');
   if(!box)return;
+
   box.innerHTML="";
-  if(!routeAlternatives.length)return;
+  if(!routeAlternatives.length || document.body.classList.contains('driving-mode'))return;
+
+  const mapSize=map.getSize();
+  const bottomReserved=$('mapRouteSheet')?.classList.contains('show')
+    ?Math.min(250,Math.round(mapSize.y*.32))
+    :80;
+
+  const placed=[];
 
   routeAlternatives.slice(0,3).forEach((route,index)=>{
-    const p=routeMidpointLatLng(route);
-    if(!p)return;
-    const pt=map.latLngToContainerPoint(p);
+    const coords=routeToCoords(route);
+    if(!coords.length)return;
+
+    const fractions=[.42,.56,.33,.66,.25,.74];
+    let best=null;
+    let bestScore=-Infinity;
+
+    for(const fraction of fractions){
+      const idx=Math.min(
+        coords.length-1,
+        Math.max(0,Math.round((coords.length-1)*fraction))
+      );
+
+      const ll=coords[idx];
+      const pt=map.latLngToContainerPoint(ll);
+
+      const marginX=70;
+      const marginTop=82;
+      const maxY=mapSize.y-bottomReserved;
+
+      if(
+        pt.x<marginX ||
+        pt.x>mapSize.x-marginX ||
+        pt.y<marginTop ||
+        pt.y>maxY
+      )continue;
+
+      let separation=999;
+      for(const prior of placed){
+        separation=Math.min(
+          separation,
+          Math.hypot(pt.x-prior.x,pt.y-prior.y)
+        );
+      }
+
+      const edgeScore=Math.min(
+        pt.x,
+        mapSize.x-pt.x,
+        pt.y,
+        maxY-pt.y
+      );
+
+      const score=Math.min(separation,220)+edgeScore*.35;
+
+      if(score>bestScore){
+        bestScore=score;
+        best={pt,ll};
+      }
+    }
+
+    if(!best)return;
+
+    placed.push({x:best.pt.x,y:best.pt.y});
+
     const el=document.createElement('button');
+    el.type='button';
     el.className=`route-alt-label ${index===selectedRouteIndex?'active':''}`;
-    el.style.left=`${pt.x}px`;
-    el.style.top=`${pt.y}px`;
+    el.style.left=`${best.pt.x}px`;
+    el.style.top=`${best.pt.y}px`;
     el.textContent=`${(index+1).toLocaleString('fa-IR')} • ${formatDurationFa(route.duration)}`;
+
     el.onclick=(ev)=>{
       ev.stopPropagation();
       selectRouteAlternative(index);
       renderMapRouteSheet();
     };
+
     box.appendChild(el);
   });
 }
@@ -6151,7 +6415,9 @@ function renderMapRouteSheet(){
 
   sheet.classList.add('show');
   setRouteSelectionMode(true);
+  ensureMapExplorationEnabled();
   renderCompactRouteChoices();
+  syncRouteAltLabelsSoon();
   $('mapDevBtn').style.display='none';
 }
 function closeMapRouteSheet(){
@@ -7060,6 +7326,7 @@ function updateOfflineDrivingBanner(){
 function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
+  ensureMapExplorationEnabled();
   updateOfflineDrivingBanner();
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
@@ -7080,6 +7347,7 @@ function enterDrivingMode(){
 }
 function exitDrivingMode(){
   document.body.classList.remove('driving-mode');
+  document.body.classList.remove('map-manual-explore');
   userManuallyMovedDrivingMap=false;
   $('offlineDriveBanner')?.classList.remove('show');
   $('speedAlertBanner')?.classList.remove('show');
@@ -9438,9 +9706,29 @@ $('navSheetClearRecent').onclick=()=>{
   renderMapRecentDestinations();
 };
 
+$('mapFitRouteBtn').onclick=(e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(!routeCoords.length || !routeLine){
+    showMapStatus("هنوز مسیری برای نمایش وجود ندارد.");
+    return;
+  }
+
+  fitSelectedRouteForExploration({animate:true});
+};
+
 $('mapCenterBtn').onclick=()=>{
+  ensureMapExplorationEnabled();
+
   if(originConfirmed){
-    try{map.setView([navOrigin.lat,navOrigin.lng],16,{animate:true})}catch(e){}
+    try{
+      map.flyTo(
+        [navOrigin.lat,navOrigin.lng],
+        Math.max(15,Number(map.getZoom()||15)),
+        {animate:true,duration:.30}
+      );
+    }catch(e){}
   }else{
     autoLocateOriginMapFirst({silent:false});
   }
@@ -9581,27 +9869,37 @@ map.on('click',e=>{
 });
 map.on('moveend zoomend',()=>syncRouteAltLabelsSoon());
 map.on('dragstart',()=>{
-  if(document.body.classList.contains('driving-mode')){
-    userManuallyMovedDrivingMap=true;
-    if(typeof syncRecenterUi==='function')syncRecenterUi();
-  }
+  markDrivingMapManualExplore();
 });
 
-// Only real user gestures pause Follow Mode.
-// Navigation's own zoom/pan must never turn Follow Mode off.
+// Only real user interaction pauses Follow Mode.
 const mapContainerEl=map.getContainer();
+
 mapContainerEl.addEventListener('wheel',()=>{
-  if(document.body.classList.contains('driving-mode')){
-    userManuallyMovedDrivingMap=true;
-    if(typeof syncRecenterUi==='function')syncRecenterUi();
-  }
+  markDrivingMapManualExplore();
 },{passive:true});
+
 mapContainerEl.addEventListener('touchstart',(e)=>{
   if(!document.body.classList.contains('driving-mode'))return;
   if(e.target.closest?.('button,.turn-card,.nav-bottom-strip,.drive-control-cluster,.drive-report-btn'))return;
-  userManuallyMovedDrivingMap=true;
-  if(typeof syncRecenterUi==='function')syncRecenterUi();
+  markDrivingMapManualExplore();
 },{passive:true});
+
+mapContainerEl.addEventListener('dblclick',()=>{
+  markDrivingMapManualExplore();
+},{passive:true});
+
+// Leaflet +/- controls need explicit manual-follow handling.
+setTimeout(()=>{
+  const zoomIn=mapContainerEl.querySelector('.leaflet-control-zoom-in');
+  const zoomOut=mapContainerEl.querySelector('.leaflet-control-zoom-out');
+
+  [zoomIn,zoomOut].forEach(btn=>{
+    btn?.addEventListener('click',()=>{
+      markDrivingMapManualExplore();
+    });
+  });
+},0);
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
@@ -9918,10 +10216,14 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     return {center:L.latLng(lookAhead[0],lookAhead[1]),zoom};
   }
   function syncRecenterUi(){
+    const manual=
+      !!userManuallyMovedDrivingMap &&
+      document.body.classList.contains('driving-mode');
+
     const btn=$('driveRecenterBtn');
-    if(btn){
-      btn.classList.toggle('is-needed',!!userManuallyMovedDrivingMap && document.body.classList.contains('driving-mode'));
-    }
+    if(btn)btn.classList.toggle('is-needed',manual);
+
+    document.body.classList.toggle('map-manual-explore',manual);
     updateFollowBadge();
   }
   function smoothPanMap(target,zoom,{force=false}={}){
@@ -9976,17 +10278,50 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   }
   function recenterDrivingCamera(){
     userManuallyMovedDrivingMap=false;
+    document.body.classList.remove('map-manual-explore');
     followCameraLastUpdate=0;
     updateFollowBadge();
     syncRecenterUi();
+    ensureMapExplorationEnabled();
+
+    let actualPoint=null;
+    let progress=0;
+    let speed=0;
+
     if(isRealGpsMode()&&realGpsState.firstFix){
-      const point=realGpsState.matchedPoint||[realGpsState.lat,realGpsState.lng];
-      updateDrivingCamera(Number(realGpsState.routeProgress||0),point,Number(realGpsState.speedKmh||0),{force:true});
-      return;
+      actualPoint=
+        realGpsState.matchedPoint ||
+        [realGpsState.lat,realGpsState.lng];
+      progress=Number(realGpsState.routeProgress||0);
+      speed=Number(realGpsState.speedKmh||0);
+    }else{
+      const dur=Math.max(1,Number($('duration')?.value||1));
+      const simP=clamp(Number(t||0)/dur,0,1);
+      actualPoint=currentRoutePosition(simP);
+      progress=currentNavigationProgress(simP);
+      speed=Number($('speed')?.textContent||0);
     }
-    const dur=Math.max(1,Number($('duration')?.value||1));
-    const simP=clamp(Number(t||0)/dur,0,1);
-    updateDrivingCamera(currentNavigationProgress(simP),currentRoutePosition(simP),Number($('speed')?.textContent||0),{force:true});
+
+    // First visibly return to the moving vehicle.
+    if(Array.isArray(actualPoint)&&actualPoint.length>=2){
+      try{
+        map.flyTo(
+          [Number(actualPoint[0]),Number(actualPoint[1])],
+          Math.max(15,Number(map.getZoom()||15)),
+          {animate:true,duration:.28,noMoveStart:true}
+        );
+      }catch(e){}
+    }
+
+    // Then resume normal navigation look-ahead.
+    setTimeout(()=>{
+      updateDrivingCamera(
+        progress,
+        actualPoint,
+        speed,
+        {force:true}
+      );
+    },280);
   }
   map.on('dragend zoomend',()=>syncRecenterUi());
   if(document.body.classList.contains('driving-mode'))syncRecenterUi();
