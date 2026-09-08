@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۳ Map Matching واقعی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۴ مقایسه مسیر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -751,6 +751,94 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   box-shadow:0 0 0 4px rgba(45,212,191,.12)
 }
 
+
+/* ===== v2.4 Route Comparison ===== */
+.route-tools-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px
+}
+.route-compare-btn{
+  width:auto!important;min-height:36px!important;padding:6px 10px!important;font-size:9px!important
+}
+.route-tools-row span{font-size:8px;color:#7f91a8}
+
+.route-decision-card{
+  margin-top:9px;padding:11px;border-radius:14px;background:#0e1723;border:1px solid #294b73
+}
+.route-decision-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.route-decision-head small{display:block;font-size:8px;color:#7f91a8}
+.route-decision-head b{display:block;font-size:11px;margin-top:2px}
+.route-decision-head>span{
+  padding:4px 7px;border-radius:999px;background:#17396d;border:1px solid #356db0;
+  color:#bfdbfe;font-size:8px;white-space:nowrap
+}
+.route-decision-card p{font-size:9px;color:#9dacc0;line-height:1.8;margin:6px 0 0}
+.route-decision-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.route-decision-metrics>div{padding:7px;border-radius:10px;background:#142131;text-align:center}
+.route-decision-metrics b{display:block;font-size:11px}
+.route-decision-metrics span{display:block;font-size:7px;color:#8fa0b5;margin-top:2px}
+
+.route-compare-sheet{
+  position:fixed;inset:0;z-index:3200;background:rgba(2,6,12,.72);
+  display:none;align-items:flex-end;justify-content:center;padding:12px;backdrop-filter:blur(7px)
+}
+.route-compare-sheet.open{display:flex}
+.route-compare-card{
+  width:min(100%,560px);max-height:90vh;overflow:auto;background:#101923;
+  border:1px solid #30435c;border-radius:25px 25px 18px 18px;padding:15px;
+  box-shadow:0 -25px 65px rgba(0,0,0,.40)
+}
+.route-compare-top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.route-compare-top small{font-size:8px;color:#60a5fa}
+.route-compare-top h3{font-size:16px;margin:3px 0 0}
+.route-compare-top p{font-size:8px;color:#91a0b5;line-height:1.8;margin:5px 0 0}
+.route-compare-close{
+  width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;
+  border-radius:10px!important;font-size:20px!important
+}
+.route-compare-list{display:grid;gap:8px;margin-top:12px}
+.route-compare-item{
+  background:#111b27;border:1px solid #293d55;border-radius:15px;padding:11px;
+  cursor:pointer;transition:.15s ease
+}
+.route-compare-item.selected{
+  border-color:#3b82f6;background:#102343;box-shadow:0 0 0 1px rgba(59,130,246,.15)
+}
+.route-compare-item-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.route-compare-item-title b{font-size:11px}
+.route-compare-item-title span{display:block;font-size:8px;color:#90a1b5;line-height:1.6;margin-top:2px}
+.route-compare-radio{
+  width:20px;height:20px;border-radius:50%;border:2px solid #53677f;
+  display:grid;place-items:center;flex:0 0 auto
+}
+.route-compare-item.selected .route-compare-radio{border-color:#60a5fa}
+.route-compare-item.selected .route-compare-radio:after{
+  content:"";width:10px;height:10px;border-radius:50%;background:#60a5fa
+}
+.route-compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}
+.route-compare-grid>div{background:#162231;border-radius:10px;padding:7px;text-align:center}
+.route-compare-grid b{display:block;font-size:10px}
+.route-compare-grid span{display:block;font-size:7px;color:#8fa0b5;margin-top:2px}
+.route-compare-reason{
+  margin-top:8px;padding:8px;border-radius:10px;background:#0d1723;
+  color:#9fb0c4;font-size:8px;line-height:1.7
+}
+.route-compare-reason.recommended{
+  background:#0f1b16;border:1px solid #28543c;color:#b8e4ca
+}
+.route-compare-foot{
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+  margin-top:12px;padding-top:10px;border-top:1px solid #25364a
+}
+.route-compare-foot b{display:block;font-size:9px}
+.route-compare-foot span{display:block;font-size:8px;color:#8294aa;line-height:1.7;margin-top:2px}
+.route-compare-foot button{width:auto!important;min-width:110px}
+
+@media(max-width:430px){
+  .route-compare-grid{grid-template-columns:repeat(2,1fr)}
+  .route-compare-foot{grid-template-columns:1fr}
+  .route-compare-foot button{width:100%!important}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1043,8 +1131,23 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div class="route-summary-cell"><b id="navEta">--</b><span>زمان تقریبی</span></div>
                   <div class="route-summary-cell"><b id="navArrival">--</b><span>زمان رسیدن</span></div>
                 </div>
-                <div id="routeOptions" class="route-options"></div>
-                <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد، مسیر جایگزین معناداری پیدا نشد؛ مسیر پیشنهادی موجود نمایش داده شده است.</div>
+                <div class="route-tools-row">
+                <button id="openRouteCompareBtn" class="route-compare-btn">مقایسه مسیرها</button>
+                <span id="routeCompareHint">فقط مسیرهای معتبر نمایش داده می‌شوند</span>
+              </div>
+              <div id="routeOptions" class="route-options"></div>
+                <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد فقط یک مسیر معتبر و غیرتکراری پیدا شد.</div>
+                <div id="routeDecisionCard" class="route-decision-card">
+                  <div class="route-decision-head">
+                    <div>
+                      <small>چرا این مسیر؟</small>
+                      <b id="routeDecisionTitle">در حال تحلیل مسیر...</b>
+                    </div>
+                    <span id="routeDecisionBadge">پیشنهادی</span>
+                  </div>
+                  <p id="routeDecisionText">بعد از دریافت مسیرها، دلیل پیشنهاد اینجا نمایش داده می‌شود.</p>
+                  <div id="routeDecisionMetrics" class="route-decision-metrics"></div>
+                </div>
                 <div id="routeFailureBox" class="route-failure-box">
                   <b>مسیر معتبر دریافت نشد</b>
                   <span id="routeFailureText">سرویس مسیریابی پاسخ قابل اعتماد نداد.</span>
@@ -1438,6 +1541,31 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
   <button class="nav-btn" data-screen="profile"><span class="nav-icon">●</span><span>پروفایل</span></button>
 </nav>
 
+
+
+<div id="routeCompareSheet" class="route-compare-sheet">
+  <div class="route-compare-card">
+    <div class="ready-handle"></div>
+    <div class="route-compare-top">
+      <div>
+        <small>مقایسه مسیرهای معتبر</small>
+        <h3>مسیر مناسب این سفر را انتخاب کن</h3>
+        <p>این مقایسه بر اساس داده فعلی موتور مسیر است. ترافیک لحظه‌ای هنوز در این نسخه لحاظ نمی‌شود.</p>
+      </div>
+      <button id="closeRouteCompareBtn" class="route-compare-close">×</button>
+    </div>
+
+    <div id="routeCompareList" class="route-compare-list"></div>
+
+    <div class="route-compare-foot">
+      <div>
+        <b>شفافیت انتخاب</b>
+        <span>«پیشنهادی» یعنی انتخاب مناسب‌تر بین Routeهای معتبر همین موتور و همین داده فعلی؛ نه بهترین مسیر مطلق در دنیای واقعی.</span>
+      </div>
+      <button id="confirmRouteCompareBtn" class="primary">تأیید مسیر</button>
+    </div>
+  </div>
+</div>
 
 <div id="tripReadySheet" class="ready-sheet">
   <div class="ready-card">
@@ -2340,6 +2468,146 @@ function resetTurnByTurn(){
   lastSpokenStepIndex=-1;
 }
 
+
+function routeComparisonData(route,index){
+  const stats=routeStepStats(route);
+  const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
+  const shortest=Math.min(...routeAlternatives.map(r=>Number(r.distance||Infinity)));
+
+  return{
+    index,
+    route,
+    stats,
+    duration:Number(route.duration||0),
+    distance:Number(route.distance||0),
+    etaDelta:Math.max(0,Math.round((Number(route.duration||0)-fastest)/60)),
+    distDelta:Math.max(0,Number(route.distance||0)-shortest),
+    recommended:index===0
+  };
+}
+function routeDecisionExplanation(index){
+  const d=routeComparisonData(routeAlternatives[index],index);
+  const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
+  const shortest=Math.min(...routeAlternatives.map(r=>Number(r.distance||Infinity)));
+
+  if(index===0){
+    let body="این Route بین گزینه‌های معتبر فعلی کمترین ETA را دارد";
+    if(d.stats.uturns===0)body+=" و دوربرگردان غیرضروری ندارد";
+    body+=".";
+    return{
+      title:"مسیر پیشنهادی برای شروع",
+      badge:"پیشنهادی",
+      body,
+      data:d
+    };
+  }
+
+  const minDelta=Math.max(0,Math.round((d.duration-fastest)/60));
+  const kmDiff=Math.max(0,(d.distance-shortest)/1000);
+  let body=minDelta>0
+    ?`حدود ${minDelta.toLocaleString('fa-IR')} دقیقه بیشتر از سریع‌ترین Route معتبر فعلی زمان دارد`
+    :"زمان آن تقریباً با سریع‌ترین Route معتبر برابر است";
+
+  if(kmDiff>0.2){
+    body+=` و حدود ${kmDiff.toLocaleString('fa-IR',{maximumFractionDigits:1})} کیلومتر از کوتاه‌ترین گزینه طولانی‌تر است`;
+  }
+  body+=".";
+
+  return{
+    title:"مسیر انتخاب‌شده توسط شما",
+    badge:"انتخاب شما",
+    body,
+    data:d
+  };
+}
+function renderRouteDecision(){
+  if(!routeAlternatives.length)return;
+  const d=routeDecisionExplanation(selectedRouteIndex);
+
+  if($('routeDecisionTitle'))$('routeDecisionTitle').textContent=d.title;
+  if($('routeDecisionBadge'))$('routeDecisionBadge').textContent=d.badge;
+  if($('routeDecisionText')){
+    $('routeDecisionText').textContent=
+      d.body+" ترافیک لحظه‌ای هنوز در این نسخه لحاظ نمی‌شود.";
+  }
+  if($('routeDecisionMetrics')){
+    $('routeDecisionMetrics').innerHTML=`
+      <div><b>${formatDurationFa(d.data.duration)}</b><span>زمان مسیر</span></div>
+      <div><b>${formatKm(d.data.distance)}</b><span>مسافت</span></div>
+      <div><b>${d.data.stats.turns.toLocaleString('fa-IR')}</b><span>مانور اصلی</span></div>
+    `;
+  }
+  if($('routeCompareHint')){
+    $('routeCompareHint').textContent=routeAlternatives.length>1
+      ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر برای مقایسه`
+      :"فقط یک مسیر معتبر پیدا شد";
+  }
+}
+function renderRouteComparisonSheet(){
+  const box=$('routeCompareList');
+  if(!box)return;
+
+  if(!routeAlternatives.length){
+    box.innerHTML='<div class="small">مسیر معتبری برای مقایسه وجود ندارد.</div>';
+    return;
+  }
+
+  const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
+
+  box.innerHTML=routeAlternatives.map((route,index)=>{
+    const d=routeComparisonData(route,index);
+    const option=classifyRouteOption(route,index);
+    const extraTime=Math.max(0,Math.round((d.duration-fastest)/60));
+
+    let reason;
+    if(d.recommended){
+      reason="در داده فعلی، این گزینه کمترین ETA را بین مسیرهای معتبر دارد.";
+      if(d.stats.uturns===0)reason+=" دوربرگردان غیرضروری هم ندارد.";
+    }else{
+      const parts=[];
+      if(extraTime<=2)parts.push("اختلاف زمانی کمی با مسیر پیشنهادی دارد");
+      if(d.distDelta<250)parts.push("مسافت آن نزدیک به کوتاه‌ترین گزینه است");
+      if(d.stats.uturns===0)parts.push("دوربرگردان ندارد");
+      reason=parts.length?parts.join(" • "):"مسیر خودرویی معتبر و قابل انتخاب";
+    }
+
+    return `<div class="route-compare-item ${index===selectedRouteIndex?'selected':''}" data-route-compare-index="${index}">
+      <div class="route-compare-item-top">
+        <div class="route-compare-item-title">
+          <b>${option.title}</b>
+          <span>${option.badge}${extraTime>0?` • ${extraTime.toLocaleString('fa-IR')} دقیقه بیشتر`:""}</span>
+        </div>
+        <div class="route-compare-radio"></div>
+      </div>
+
+      <div class="route-compare-grid">
+        <div><b>${formatDurationFa(d.duration)}</b><span>ETA</span></div>
+        <div><b>${formatKm(d.distance)}</b><span>مسافت</span></div>
+        <div><b>${d.stats.turns.toLocaleString('fa-IR')}</b><span>مانور</span></div>
+        <div><b>${d.stats.uturns.toLocaleString('fa-IR')}</b><span>دوربرگردان</span></div>
+      </div>
+
+      <div class="route-compare-reason ${d.recommended?'recommended':''}">${reason}</div>
+    </div>`;
+  }).join("");
+
+  box.querySelectorAll('[data-route-compare-index]').forEach(el=>{
+    el.onclick=()=>{
+      const i=Number(el.dataset.routeCompareIndex);
+      selectRouteAlternative(i);
+      renderRouteComparisonSheet();
+    };
+  });
+}
+function openRouteComparison(){
+  if(!routeAlternatives.length)return;
+  renderRouteComparisonSheet();
+  $('routeCompareSheet')?.classList.add('open');
+}
+function closeRouteComparison(){
+  $('routeCompareSheet')?.classList.remove('open');
+}
+
 function renderRouteOptionCards(){
   const box=$('routeOptions');
   if(!box)return;
@@ -2367,6 +2635,7 @@ function renderRouteOptionCards(){
   }).join('');
 
   $('oneRouteNote')?.classList.toggle('show',routeAlternatives.length===1);
+  renderRouteDecision();
 }
 function updateRouteSummary(){
   const route=routeAlternatives[selectedRouteIndex];
@@ -2411,6 +2680,8 @@ function selectRouteAlternative(index){
   $('status').textContent=`مسیر انتخاب شد • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`;
   resetTurnByTurn();
   updateTurnByTurn(0);
+  renderRouteDecision();
+  if($('routeCompareSheet')?.classList.contains('open'))renderRouteComparisonSheet();
 }
 window.selectRouteAlternative=selectRouteAlternative;
 
@@ -3070,7 +3341,14 @@ async function updateTripReadiness(){
   const routeLabel=(navOrigin?.label&&navDestination?.label)
     ? `${navOrigin.label} تا ${navDestination.label}`
     : 'مسیر انتخاب‌شده';
-  if($('readyRouteText'))$('readyRouteText').textContent=routeLabel;
+  if($('readyRouteText')){
+    const routeInfo=routeAlternatives.length
+      ?classifyRouteOption(routeAlternatives[selectedRouteIndex],selectedRouteIndex)
+      :null;
+    $('readyRouteText').textContent=routeInfo
+      ?`${routeLabel} • ${routeInfo.title}`
+      :routeLabel;
+  }
   if($('readyDistance'))$('readyDistance').textContent=routeDistanceM?formatKm(routeDistanceM):'--';
   if($('readyEta'))$('readyEta').textContent=routeDurationS?formatDurationFa(routeDurationS):'--';
 
@@ -5082,6 +5360,12 @@ $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
 };
 $('retryRouteBtn').onclick=()=>loadRoute();
+$('openRouteCompareBtn').onclick=openRouteComparison;
+$('closeRouteCompareBtn').onclick=closeRouteComparison;
+$('confirmRouteCompareBtn').onclick=closeRouteComparison;
+$('routeCompareSheet').onclick=(e)=>{
+  if(e.target===$('routeCompareSheet'))closeRouteComparison();
+};
 updateRoutingDataDisclosure();
 
 $('navigationMode').onchange=()=>{
