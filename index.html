@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۶ Real Trip Integrity Gate</title>
+<title>POL | نسخه ۴.۷ Real Reward Eligibility Shadow Gate</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3260,6 +3260,38 @@ body.trip-replay-mode .trip-replay-event-strip{
   color:#94a3b8!important;
 }
 
+
+/* ===== v4.7 Real Reward Eligibility Shadow Gate ===== */
+.real-reward-shadow-box{border-color:rgba(34,197,94,.24)!important}
+.real-reward-shadow-box .eligibilityStatus.eligible{background:#12351d;border-color:#28543c;color:#86efac}
+.real-reward-shadow-box .eligibilityStatus.review{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.real-reward-shadow-box .eligibilityStatus.blocked{background:#441717;border-color:#7d3030;color:#fecaca}
+.shadow-production-lock{margin-top:9px;padding:8px 9px;border-radius:10px;background:#161f2b;border:1px solid #33465d}
+.shadow-production-lock b{display:block;color:#fbbf24;font-size:8px}
+.shadow-production-lock span{display:block;margin-top:3px;color:#95a5b9;font-size:7px;line-height:1.55}
+
+.summary-reward-shadow-card{display:none;margin-top:10px;padding:11px;border-radius:14px;background:#101923;border:1px solid #2b4058}
+.summary-reward-shadow-card.show{display:block}
+.summary-reward-shadow-card.eligible{border-color:#28543c}
+.summary-reward-shadow-card.review{border-color:#6d551d}
+.summary-reward-shadow-card.blocked{border-color:#7d3030}
+.summary-shadow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:9px}
+.summary-shadow-head small{display:block;color:#8fa0b6;font-size:7px}
+.summary-shadow-head b{display:block;margin-top:2px;font-size:11px}
+.summary-shadow-confidence{padding:5px 8px;border-radius:999px;background:#172334;border:1px solid #3b526f;color:#bfdbfe;font-size:8px;white-space:nowrap}
+.summary-shadow-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+.summary-shadow-grid>div{padding:7px;border-radius:10px;background:#172334;text-align:center}
+.summary-shadow-grid b{display:block;font-size:12px}
+.summary-shadow-grid span{display:block;margin-top:2px;color:#8fa0b6;font-size:7px}
+.summary-shadow-reason{margin-top:8px;padding:8px 9px;border-radius:10px;background:#0e1823;color:#c2cedc;font-size:8px;line-height:1.65}
+.summary-shadow-lock{margin-top:7px;padding:6px 8px;border-radius:9px;background:#3b2d0d;border:1px solid #6d551d;color:#fde68a;text-align:center;font-size:7px}
+
+.trusted-trip-shadow{display:inline-flex;width:auto!important;margin:6px 5px 0 0!important;padding:3px 6px!important;border-radius:999px!important;font-size:7px!important;background:#172334!important;border:1px solid #3b526f!important;color:#bfdbfe!important}
+.trusted-trip-shadow.ELIGIBLE{background:#12351d!important;border-color:#28543c!important;color:#86efac!important}
+.trusted-trip-shadow.REVIEW{background:#3b2d0d!important;border-color:#6d551d!important;color:#fde68a!important}
+.trusted-trip-shadow.NOT_ELIGIBLE{background:#441717!important;border-color:#7d3030!important;color:#fecaca!important}
+.trusted-trip-shadow.LEGACY{color:#94a3b8!important}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4013,9 +4045,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.6</span>
+              <span class="lab-version-chip">v4.7</span>
               <div>
-                <b>Real Trip Integrity Gate</b>
+                <b>Real Reward Eligibility Shadow Gate</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4034,6 +4066,33 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox real-reward-shadow-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Real Reward Shadow Gate</b>
+                  <div class="small">پیش‌نمایش صلاحیت پاداش • هیچ Coin/XP واقعی صادر نمی‌شود</div>
+                </div>
+                <div id="realRewardShadowStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="realRewardShadowConfidence">--</b><span>Gate Confidence</span></div>
+                <div class="eligibilityCell"><b id="realRewardShadowExposure">--</b><span>Exposure</span></div>
+                <div class="eligibilityCell"><b id="realRewardShadowSpeedCoverage">--</b><span>Speed Coverage</span></div>
+              </div>
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="realRewardShadowIntegrity">--</b><span>Integrity</span></div>
+                <div class="eligibilityCell"><b id="realRewardShadowScore">--</b><span>Safety Score</span></div>
+                <div class="eligibilityCell"><b id="realRewardShadowBlockers">۰</b><span>Blocker</span></div>
+              </div>
+              <div id="realRewardShadowReasons" class="reasonList">
+                بعد از جمع‌شدن داده کافی، صلاحیت پاداش در حالت Shadow ارزیابی می‌شود.
+              </div>
+              <div class="shadow-production-lock">
+                <b>Production Reward: PAUSED</b>
+                <span>Speed Limit فعلی هنوز Prototype است؛ حتی ELIGIBLE بودن Coin صادر نمی‌کند.</span>
+              </div>
             </div>
 
             <div class="eligibilityBox trip-integrity-debug-box">
@@ -4599,6 +4658,23 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       </div>
     </div>
 
+    <div id="summaryRewardShadowCard" class="summary-reward-shadow-card">
+      <div class="summary-shadow-head">
+        <div>
+          <small>Reward Eligibility • Shadow Mode</small>
+          <b id="summaryRewardShadowTitle">در انتظار</b>
+        </div>
+        <div id="summaryRewardShadowConfidence" class="summary-shadow-confidence">--</div>
+      </div>
+      <div class="summary-shadow-grid">
+        <div><b id="summaryRewardShadowIntegrity">--</b><span>Integrity</span></div>
+        <div><b id="summaryRewardShadowScore">--</b><span>Safety Score</span></div>
+        <div><b id="summaryRewardShadowCoverage">--</b><span>Speed Coverage</span></div>
+      </div>
+      <div id="summaryRewardShadowReason" class="summary-shadow-reason">--</div>
+      <div class="summary-shadow-lock">هیچ XP یا SafeCoin صادر نشده است</div>
+    </div>
+
     <div id="summaryIntegrityCard" class="summary-integrity-card">
       <div class="summary-integrity-head">
         <div>
@@ -4802,6 +4878,24 @@ let confidenceSafetyScoreState={
   evidence:""
 };
 
+
+let realRewardShadowState={
+  status:"WAITING",
+  confidence:0,
+  blockers:[],
+  reviews:[],
+  passes:[],
+  exposureKm:0,
+  durationS:0,
+  speedCoverage:null,
+  speedCompliance:null,
+  safetyScore:null,
+  scoreConfidence:0,
+  integrityStatus:"COLLECTING",
+  integrityConfidence:0,
+  productionRewardEnabled:false,
+  reason:""
+};
 
 let realTripIntegrityState={
   active:false,
@@ -7061,6 +7155,7 @@ function saveRecentDestination(dest){
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
   resetRealTelemetry();
+resetRealRewardShadow();
 resetRealTripIntegrity();
 resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
@@ -10337,6 +10432,143 @@ function renderMappedSpeedDiagnostics(){
 }
 
 
+function resetRealRewardShadow(){
+  realRewardShadowState={
+    status:"WAITING",confidence:0,blockers:[],reviews:[],passes:[],
+    exposureKm:0,durationS:0,speedCoverage:null,speedCompliance:null,
+    safetyScore:null,scoreConfidence:0,integrityStatus:"COLLECTING",
+    integrityConfidence:0,productionRewardEnabled:false,reason:""
+  };
+  renderRealRewardShadowDiagnostics();
+}
+
+function rewardShadowStatusFa(status){
+  if(status==="ELIGIBLE")return"Shadow ELIGIBLE";
+  if(status==="REVIEW")return"Shadow REVIEW";
+  if(status==="NOT_ELIGIBLE")return"Shadow NOT ELIGIBLE";
+  return"در انتظار";
+}
+
+function evaluateRealRewardShadow({integrity=null,scoreModel=null,finalize=false}={}){
+  const i=integrity||realTripIntegrityState.result||computeRealTripIntegrity({finalize:false});
+  const s=scoreModel||confidenceSafetyScoreState||{};
+
+  const exposureKm=Number.isFinite(Number(s.exposureKm))
+    ?Number(s.exposureKm)
+    :realTelemetryActualDistanceM()/1000;
+
+  const durationS=Number.isFinite(Number(s.durationS))
+    ?Number(s.durationS)
+    :realTelemetryDurationS();
+
+  const score=Number.isFinite(Number(s.score))?Number(s.score):null;
+  const scoreConfidence=Number(s.confidence||0);
+  const speedCoverage=mappedSpeedCoveragePreview();
+  const speedCompliance=mappedSpeedCompliancePreview();
+
+  const blockers=[],reviews=[],passes=[];
+
+  if(i?.status==="INVALID")blockers.push("Trip Integrity نامعتبر است");
+  if(s?.status==="insufficient"||score==null)blockers.push("Safety Score قابل استفاده وجود ندارد");
+  if(exposureKm<.5)blockers.push("Exposure کمتر از ۰.۵ کیلومتر است");
+  if(durationS<45)blockers.push("مدت داده رفتاری کمتر از ۴۵ ثانیه است");
+
+  if(i?.status==="REVIEW")reviews.push("Trip Integrity نیازمند بررسی است");
+  if(i?.status==="COLLECTING")reviews.push("Integrity هنوز در حال جمع‌آوری داده است");
+
+  if(Number(i?.confidence||0)<75)reviews.push(`Integrity Confidence ${Math.round(Number(i?.confidence||0))}٪ است`);
+  else passes.push("Integrity Confidence مناسب");
+
+  if(scoreConfidence<72)reviews.push(`Safety Score Confidence ${Math.round(scoreConfidence)}٪ است`);
+  else passes.push("Safety Score Confidence مناسب");
+
+  if(exposureKm<1.5)reviews.push("Exposure برای Reward قوی هنوز کوتاه است");
+  else passes.push("Exposure کافی");
+
+  if(score!=null){
+    if(score<60)blockers.push(`Safety Score ${Math.round(score)} پایین‌تر از حد Shadow است`);
+    else if(score<75)reviews.push(`Safety Score ${Math.round(score)} برای Reward مرزی است`);
+    else passes.push("Safety Score مناسب");
+  }
+
+  if(speedCoverage==null||speedCoverage<35)reviews.push("Speed Limit Coverage پایین/ناموجود است");
+  else if(speedCoverage<70)reviews.push(`Speed Limit Coverage فقط ${Math.round(speedCoverage)}٪ است`);
+  else passes.push("Speed Limit Coverage مناسب برای Preview");
+
+  if(speedCompliance!=null){
+    if(speedCompliance<70)blockers.push(`Speed Compliance Preview ${Math.round(speedCompliance)}٪ است`);
+    else if(speedCompliance<85)reviews.push(`Speed Compliance Preview ${Math.round(speedCompliance)}٪ است`);
+    else passes.push("Speed Compliance Preview مناسب");
+  }
+
+  let status="ELIGIBLE";
+  if(blockers.length)status="NOT_ELIGIBLE";
+  else if(reviews.length)status="REVIEW";
+
+  let gateConfidence=
+    Number(i?.confidence||0)*.36+
+    scoreConfidence*.34+
+    clamp(exposureKm/2,0,1)*100*.16+
+    (speedCoverage==null?35:Number(speedCoverage))*.14;
+
+  if(status==="NOT_ELIGIBLE"&&blockers.length)gateConfidence=Math.max(gateConfidence,72);
+  gateConfidence=clamp(Math.round(gateConfidence),0,96);
+
+  const reason=status==="ELIGIBLE"
+    ?"همه شرط‌های Shadow Gate پاس شده‌اند؛ Production Reward همچنان قفل است."
+    :status==="REVIEW"
+      ?(reviews[0]||"بعضی شرط‌ها هنوز نیازمند داده بیشتر هستند.")
+      :(blockers[0]||"یکی از شرط‌های اصلی Reward Gate رد شده است.");
+
+  realRewardShadowState={
+    status,confidence:gateConfidence,blockers,reviews,passes,
+    exposureKm,durationS,speedCoverage,speedCompliance,safetyScore:score,
+    scoreConfidence,integrityStatus:i?.status||"COLLECTING",
+    integrityConfidence:Number(i?.confidence||0),
+    productionRewardEnabled:false,reason,finalized:!!finalize
+  };
+
+  renderRealRewardShadowDiagnostics();
+  return realRewardShadowState;
+}
+
+function renderRealRewardShadowDiagnostics(){
+  const s=realRewardShadowState;
+  const status=$('realRewardShadowStatus');
+
+  if(status){
+    status.classList.remove('eligible','review','blocked');
+    if(s.status==="ELIGIBLE"){status.classList.add('eligible');status.textContent="ELIGIBLE"}
+    else if(s.status==="NOT_ELIGIBLE"){status.classList.add('blocked');status.textContent="NOT ELIGIBLE"}
+    else{status.classList.add('review');status.textContent=s.status==="WAITING"?"در انتظار":"REVIEW"}
+  }
+
+  if($('realRewardShadowConfidence'))$('realRewardShadowConfidence').textContent=
+    s.status==="WAITING"?"—":`${Number(s.confidence||0).toLocaleString('fa-IR')}٪`;
+  if($('realRewardShadowExposure'))$('realRewardShadowExposure').textContent=
+    s.status==="WAITING"?"—":`${Number(s.exposureKm||0).toLocaleString('fa-IR',{maximumFractionDigits:1})} km`;
+  if($('realRewardShadowSpeedCoverage'))$('realRewardShadowSpeedCoverage').textContent=
+    s.speedCoverage==null?"—":`${Math.round(s.speedCoverage).toLocaleString('fa-IR')}٪`;
+  if($('realRewardShadowIntegrity'))$('realRewardShadowIntegrity').textContent=
+    s.status==="WAITING"?"—":integrityFa(s.integrityStatus);
+  if($('realRewardShadowScore'))$('realRewardShadowScore').textContent=
+    s.safetyScore==null?"—":Math.round(s.safetyScore).toLocaleString('fa-IR');
+  if($('realRewardShadowBlockers'))$('realRewardShadowBlockers').textContent=
+    Number(s.blockers?.length||0).toLocaleString('fa-IR');
+
+  if($('realRewardShadowReasons')){
+    if(s.status==="WAITING"){
+      $('realRewardShadowReasons').textContent="بعد از جمع‌شدن داده کافی، صلاحیت پاداش در حالت Shadow ارزیابی می‌شود.";
+    }else{
+      const lines=[];
+      (s.blockers||[]).forEach(x=>lines.push(`✕ ${x}`));
+      (s.reviews||[]).slice(0,4).forEach(x=>lines.push(`△ ${x}`));
+      (s.passes||[]).slice(0,3).forEach(x=>lines.push(`✓ ${x}`));
+      $('realRewardShadowReasons').innerHTML=lines.length?lines.join("<br>"):s.reason;
+    }
+  }
+}
+
 function resetRealTripIntegrity(){
   realTripIntegrityState={
     active:false,
@@ -11506,6 +11738,11 @@ function trustedHistoryCopy(result){
     integrityGpsJumps:Number(result.integrityGpsJumps||0),
     integrityFixes:Number(result.integrityFixes||0),
 
+    shadowRewardStatus:result.shadowRewardStatus||"LEGACY",
+    shadowRewardConfidence:Number(result.shadowRewardConfidence||0),
+    shadowRewardReason:result.shadowRewardReason||"",
+    shadowRewardProductionEnabled:false,
+
     score:result.score==null?null:Number(result.score),
     behaviorScore:result.behaviorScore==null?null:Number(result.behaviorScore),
     scoreStatus:result.scoreStatus||(result.navigationOnly?"insufficient":"preliminary"),
@@ -11694,6 +11931,9 @@ function renderTrustedRealTrips(){
           <span class="trusted-trip-integrity ${trip.integrityStatus||"LEGACY"}">
             Integrity: ${integrityFa(trip.integrityStatus||"LEGACY")}
           </span>
+          <span class="trusted-trip-shadow ${trip.shadowRewardStatus||"LEGACY"}">
+            Reward: ${trip.shadowRewardStatus==="ELIGIBLE"?"Shadow Eligible":trip.shadowRewardStatus==="REVIEW"?"Shadow Review":trip.shadowRewardStatus==="NOT_ELIGIBLE"?"Not Eligible":"Legacy"}
+          </span>
         </div>
         <div class="trusted-trip-score ${status==='insufficient'?'insufficient':''}">
           <b>${scoreText}</b><span>Safety Score</span>
@@ -11816,6 +12056,12 @@ function buildRealTelemetryResult(){
     scoreModel.evidence="Trip Integrity نامعتبر است؛ Safety Score نمایش داده نمی‌شود.";
   }
 
+  const shadowEligibility=evaluateRealRewardShadow({
+    integrity,
+    scoreModel,
+    finalize:true
+  });
+
   const coach=coachActionForWeakness(
     ranked[0][0],
     scoreModel.status,
@@ -11836,6 +12082,13 @@ function buildRealTelemetryResult(){
     integrityTelemetryRatio:integrity.telemetryValidRatio,
     integrityGpsJumps:integrity.implausibleJumpCount,
     integrityFixes:integrity.fixes,
+
+    shadowRewardStatus:shadowEligibility.status,
+    shadowRewardConfidence:shadowEligibility.confidence,
+    shadowRewardReason:shadowEligibility.reason,
+    shadowRewardBlockers:[...shadowEligibility.blockers],
+    shadowRewardReviews:[...shadowEligibility.reviews],
+    shadowRewardProductionEnabled:false,
 
     score:scoreModel.score,
     behaviorScore:scoreModel.score,
@@ -11887,16 +12140,14 @@ function buildRealTelemetryResult(){
     mapMatchRatio:Math.round(Number(realGpsState.networkMatch.matchedRatio||0)*100),
 
     rewardEligibility:"REVIEW",
-    dataIntegrity:null,
+    dataIntegrity:integrity.confidence,
     fraudRisk:null,
-    eligibilityConfidence:null,
+    eligibilityConfidence:shadowEligibility.confidence,
     eligibilityReasons:[
-      scoreModel.status==="insufficient"
-        ?"Insufficient driving exposure for a fair score."
-        :"Confidence-aware behavior score calculated.",
-      "Speed is excluded from the score.",
-      "OSM mapped maxspeed remains prototype-only.",
-      "Rewards remain paused."
+      `Shadow Gate: ${shadowEligibility.status}`,
+      shadowEligibility.reason,
+      "Production reward disabled.",
+      "OSM mapped maxspeed remains prototype-only."
     ]
   };
 
@@ -12051,6 +12302,15 @@ async function processRealGps(position){
     mapDistance:Number(networkRouteMatch.distance||Infinity)
   });
 
+  if(realTelemetryState.validSamples>=6){
+    const liveScore=calculateExposureNormalizedSafetyScore();
+    evaluateRealRewardShadow({
+      integrity:realTripIntegrityState.result,
+      scoreModel:liveScore,
+      finalize:false
+    });
+  }
+
   const threshold=Math.max(55,accuracy*1.8);
 
   const trustedOffRoute=
@@ -12174,6 +12434,7 @@ function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
   resetRealTelemetry();
+  resetRealRewardShadow();
   resetRealTripIntegrity();
   realTripIntegrityState.active=true;
   realTripIntegrityState.startedAt=Date.now();
@@ -12311,6 +12572,19 @@ async function triggerRealGpsReroute(rawPoint){
 }
 function buildRealGpsNavigationResult(){
   const integrity=computeRealTripIntegrity({finalize:true});
+
+  const navShadow=evaluateRealRewardShadow({
+    integrity,
+    scoreModel:{
+      status:"insufficient",
+      score:null,
+      confidence:0,
+      exposureKm:realTelemetryActualDistanceM()/1000,
+      durationS:realTelemetryDurationS()
+    },
+    finalize:true
+  });
+
   const tripConf=gpsRouteConfidence(
     Number(realGpsState.accuracy||999),
     Number(realGpsState.distanceFromRoute||999)
@@ -12329,6 +12603,13 @@ function buildRealGpsNavigationResult(){
     integrityTelemetryRatio:integrity.telemetryValidRatio,
     integrityGpsJumps:integrity.implausibleJumpCount,
     integrityFixes:integrity.fixes,
+
+    shadowRewardStatus:navShadow.status,
+    shadowRewardConfidence:navShadow.confidence,
+    shadowRewardReason:navShadow.reason,
+    shadowRewardBlockers:[...navShadow.blockers],
+    shadowRewardReviews:[...navShadow.reviews],
+    shadowRewardProductionEnabled:false,
 
     score:null,
     scoreStatus:"insufficient",
@@ -12991,6 +13272,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
+  resetRealRewardShadow();
   resetRealTripIntegrity();
   resetConfidenceSafetyScore();
   resetMappedSpeedTripStats();
@@ -14681,6 +14963,35 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const p=loadProfile();
       const lr=p.lastReward||{};
 
+      const shadowCard=document.getElementById('summaryRewardShadowCard');
+
+      if(shadowCard){
+        const showShadow=r.navigationMode==="real-gps";
+        shadowCard.classList.toggle('show',showShadow);
+        shadowCard.classList.remove('eligible','review','blocked');
+
+        if(showShadow){
+          const shadowStatus=r.shadowRewardStatus||"REVIEW";
+
+          if(shadowStatus==="ELIGIBLE")shadowCard.classList.add('eligible');
+          else if(shadowStatus==="NOT_ELIGIBLE")shadowCard.classList.add('blocked');
+          else shadowCard.classList.add('review');
+
+          document.getElementById('summaryRewardShadowTitle').textContent=
+            rewardShadowStatusFa(shadowStatus);
+          document.getElementById('summaryRewardShadowConfidence').textContent=
+            `${Number(r.shadowRewardConfidence||0).toLocaleString('fa-IR')}٪`;
+          document.getElementById('summaryRewardShadowIntegrity').textContent=
+            integrityFa(r.integrityStatus||"REVIEW");
+          document.getElementById('summaryRewardShadowScore').textContent=
+            r.score==null?"—":Number(r.score).toLocaleString('fa-IR');
+          document.getElementById('summaryRewardShadowCoverage').textContent=
+            r.mappedSpeedCoverage==null?"—":`${Number(r.mappedSpeedCoverage).toLocaleString('fa-IR')}٪`;
+          document.getElementById('summaryRewardShadowReason').textContent=
+            r.shadowRewardReason||"Production Reward همچنان غیرفعال است.";
+        }
+      }
+
       const integrityCard=document.getElementById('summaryIntegrityCard');
 
       if(integrityCard){
@@ -14768,9 +15079,18 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       }
       const st=document.getElementById('summaryEligibility');
 
-      if(r.navigationMode==="real-gps" && r.integrityStatus==="INVALID"){
+      if(r.navigationMode==="real-gps" && r.shadowRewardStatus==="ELIGIBLE"){
+        st.textContent='Shadow Eligible • پاداش قفل';
+        st.className='summary-status good';
+      }else if(r.navigationMode==="real-gps" && r.shadowRewardStatus==="NOT_ELIGIBLE"){
+        st.textContent='Shadow Not Eligible';
+        st.className='summary-status bad';
+      }else if(r.navigationMode==="real-gps" && r.integrityStatus==="INVALID"){
         st.textContent='داده سفر نامعتبر';
         st.className='summary-status bad';
+      }else if(r.navigationMode==="real-gps" && r.shadowRewardStatus==="REVIEW"){
+        st.textContent='Shadow Review • پاداش قفل';
+        st.className='summary-status review';
       }else if(r.navigationOnly){
         st.textContent='تست Navigation واقعی';
         st.className='summary-status review';
@@ -14836,9 +15156,10 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
 
       const rewardsBtn=document.getElementById('summaryRewards');
       if(rewardsBtn){
-        rewardsBtn.disabled=!!r.telemetryOnly;
-        rewardsBtn.textContent=r.telemetryOnly
-          ?'پاداش هنوز فعال نیست'
+        const realGpsRewardLocked=r.navigationMode==="real-gps";
+        rewardsBtn.disabled=realGpsRewardLocked;
+        rewardsBtn.textContent=realGpsRewardLocked
+          ?'پاداش واقعی هنوز قفل است'
           :'دیدن پاداش‌ها';
       }
 
