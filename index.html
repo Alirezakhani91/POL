@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۶ دستیار ایمنی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۶.۱ اصلاح صدا</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -510,6 +510,11 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
   .safety-coach-alert{left:7px;right:7px;top:86px}
 }
 
+
+.voice-ok{color:#86efac!important}
+.voice-warn{color:#fde68a!important}
+.voice-bad{color:#fecaca!important}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -807,8 +812,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
 
               <div class="nav-voice-row">
-                <span>راهنمای صوتی مسیر</span>
-                <button id="voiceToggle" class="nav-voice-toggle">روشن</button>
+                <div>
+                  <span>راهنمای صوتی مسیر</span>
+                  <small id="voiceStatusText" style="display:block;font-size:8px;color:#7f91aa;margin-top:2px">در انتظار فعال‌سازی</small>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button id="voiceTestBtn" class="nav-voice-toggle">تست صدا</button>
+                  <button id="voiceToggle" class="nav-voice-toggle">روشن</button>
+                </div>
               </div>
               <div class="nav-mode-note">
                 جست‌وجوی مقصد و زمان مسیر در این نسخه از سرویس‌های عمومی نقشه برای Prototype استفاده می‌کند.
@@ -1202,6 +1213,15 @@ let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
 let rerouteState={active:false,offSince:null,lastAt:-999,count:0,noticeTimer:null};
+let ttsState={
+  ready:false,
+  unlocked:false,
+  voice:null,
+  voices:[],
+  lastError:"",
+  initialized:false
+};
+
 let safetyCoach={
   state:"calm",
   lastAlertAt:{speed:-999,brake:-999,accel:-999,corner:-999,gps:-999},
@@ -1504,18 +1524,11 @@ function nextNavigationStep(travelled){
   return {step:{...last,action:"به مقصد می‌رسی",street:navDestination.label,arrow:"●"},index:navigationSteps.length-1,distance:Math.max(0,routeDistanceM-travelled)};
 }
 function speakGuidance(text,index,distance){
-  if(!voiceGuidanceEnabled || !('speechSynthesis' in window))return;
+  if(!voiceGuidanceEnabled)return;
   if(index===lastSpokenStepIndex)return;
-  // Speak only when fairly close to the maneuver to avoid chatter.
   if(distance>450)return;
   lastSpokenStepIndex=index;
-  try{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang='fa-IR';
-    u.rate=.95;
-    speechSynthesis.speak(u);
-  }catch(e){}
+  speakPersian(text,{interrupt:true,rate:.95});
 }
 function updateTurnByTurn(progress){
   const travelled=routeDistanceM*clamp(progress,0,1);
@@ -1912,15 +1925,146 @@ function setCoachState(state,label){
   if(pill)pill.className=`safety-coach-pill ${state}`;
   if($('safetyCoachState'))$('safetyCoachState').textContent=label;
 }
-function coachVoice(text){
-  if(!voiceGuidanceEnabled || !('speechSynthesis' in window))return;
+function updateVoiceStatus(message,state="warn"){
+  const el=$('voiceStatusText');
+  if(!el)return;
+  el.textContent=message;
+  el.className=state==="ok"?"voice-ok":state==="bad"?"voice-bad":"voice-warn";
+}
+
+function selectPersianVoice(){
+  if(!('speechSynthesis' in window))return null;
+  const voices=speechSynthesis.getVoices()||[];
+  ttsState.voices=voices;
+
+  // Preferred exact Persian voices first.
+  let voice=voices.find(v=>(v.lang||"").toLowerCase()==="fa-ir");
+  if(!voice) voice=voices.find(v=>(v.lang||"").toLowerCase().startsWith("fa"));
+  if(!voice) voice=voices.find(v=>/persian|farsi|فارسی/i.test(v.name||""));
+
+  ttsState.voice=voice||null;
+  ttsState.ready=true;
+
+  if(voice){
+    updateVoiceStatus(`صدای فارسی آماده است: ${voice.name}`,"ok");
+  }else if(voices.length){
+    updateVoiceStatus("Voice فارسی روی این دستگاه پیدا نشد","warn");
+  }else{
+    updateVoiceStatus("در حال بارگذاری Voiceهای دستگاه...","warn");
+  }
+  return ttsState.voice;
+}
+
+function initTTS(){
+  if(ttsState.initialized)return;
+  ttsState.initialized=true;
+
+  if(!('speechSynthesis' in window)){
+    updateVoiceStatus("این مرورگر از تبدیل متن به گفتار پشتیبانی نمی‌کند","bad");
+    return;
+  }
+
+  selectPersianVoice();
+
+  // Chrome loads voice list asynchronously.
+  speechSynthesis.onvoiceschanged=()=>{
+    selectPersianVoice();
+  };
+
+  // Retry a few times because some browsers expose voices late.
+  [250,700,1500,3000].forEach(ms=>{
+    setTimeout(()=>selectPersianVoice(),ms);
+  });
+}
+
+function unlockTTS(){
+  initTTS();
+  if(!('speechSynthesis' in window))return false;
+
   try{
+    speechSynthesis.resume();
+
+    // A very short silent-ish utterance must happen inside a real user gesture.
+    const u=new SpeechSynthesisUtterance(" ");
+    u.volume=0.01;
+    u.rate=1;
+    u.lang='fa-IR';
+    if(ttsState.voice)u.voice=ttsState.voice;
+
+    u.onend=()=>{
+      ttsState.unlocked=true;
+      updateVoiceStatus(ttsState.voice?"صدا فعال است":"صدا فعال شد؛ Voice فارسی یافت نشد",ttsState.voice?"ok":"warn");
+    };
+    u.onerror=()=>{
+      // Still mark as attempted; many browsers fire odd errors for blank utterances.
+      ttsState.unlocked=true;
+    };
+
+    speechSynthesis.speak(u);
+    ttsState.unlocked=true;
+    return true;
+  }catch(e){
+    ttsState.lastError=String(e);
+    updateVoiceStatus("فعال‌سازی صدا ناموفق بود","bad");
+    return false;
+  }
+}
+
+function speakPersian(text,{interrupt=true,rate=.96,volume=1,pitch=1}={}){
+  if(!voiceGuidanceEnabled || !text)return false;
+  initTTS();
+
+  if(!('speechSynthesis' in window)){
+    updateVoiceStatus("مرورگر از صدا پشتیبانی نمی‌کند","bad");
+    return false;
+  }
+
+  try{
+    // Required for Chrome after tab visibility changes.
+    speechSynthesis.resume();
+    if(interrupt)speechSynthesis.cancel();
+
     const u=new SpeechSynthesisUtterance(text);
     u.lang='fa-IR';
-    u.rate=.98;
-    speechSynthesis.cancel();
+    u.rate=rate;
+    u.volume=volume;
+    u.pitch=pitch;
+
+    const voice=ttsState.voice || selectPersianVoice();
+    if(voice)u.voice=voice;
+
+    u.onstart=()=>{
+      ttsState.unlocked=true;
+      updateVoiceStatus(voice?`در حال پخش با ${voice.name}`:"در حال پخش با Voice پیش‌فرض","ok");
+    };
+    u.onend=()=>{
+      updateVoiceStatus(voice?`صدای فارسی آماده است: ${voice.name}`:"صدا فعال است","ok");
+    };
+    u.onerror=(e)=>{
+      ttsState.lastError=e.error||"speech error";
+      updateVoiceStatus(`خطای صدا: ${ttsState.lastError}`,"bad");
+    };
+
     speechSynthesis.speak(u);
-  }catch(e){}
+    return true;
+  }catch(e){
+    ttsState.lastError=String(e);
+    updateVoiceStatus("پخش صدا ناموفق بود","bad");
+    return false;
+  }
+}
+
+function testVoice(){
+  unlockTTS();
+  setTimeout(()=>{
+    speakPersian("راهنمای صوتی رانندگی ایمن فعال است. سفر خوبی داشته باشی.",{
+      interrupt:true,rate:.94
+    });
+  },120);
+}
+
+function coachVoice(text){
+  return speakPersian(text,{interrupt:true,rate:.98});
 }
 function showSafetyCoachAlert(type,title,message,level="caution",speakText=null){
   // Cooldown prevents repeated warnings from becoming distracting.
@@ -1940,6 +2084,9 @@ function showSafetyCoachAlert(type,title,message,level="caution",speakText=null)
   if(safetyCoach.alertTimer)clearTimeout(safetyCoach.alertTimer);
   safetyCoach.alertTimer=setTimeout(()=>box.classList.remove('show'),2200);
 
+  if(level==="warning" && navigator.vibrate){
+    try{navigator.vibrate([70,40,70])}catch(e){}
+  }
   if(speakText)coachVoice(speakText);
 }
 function sustainedCondition(type,active,minSeconds=0.7){
@@ -2056,7 +2203,14 @@ function syncVoiceButtons(){
 function toggleVoiceGuidance(){
   voiceGuidanceEnabled=!voiceGuidanceEnabled;
   syncVoiceButtons();
-  if(!voiceGuidanceEnabled && 'speechSynthesis' in window)speechSynthesis.cancel();
+
+  if(voiceGuidanceEnabled){
+    unlockTTS();
+    updateVoiceStatus("راهنمای صوتی روشن است","ok");
+  }else{
+    if('speechSynthesis' in window)speechSynthesis.cancel();
+    updateVoiceStatus("راهنمای صوتی خاموش است","warn");
+  }
 }
 function simulatedOffRoutePosition(base,p){
   if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.30&&p<.43))return base;
@@ -2160,6 +2314,9 @@ function step(){
   t+=.25;if(t>=dur)finish()
 }
 function start(){
+  // Start is a real user gesture: use it to unlock browser TTS.
+  if(voiceGuidanceEnabled)unlockTTS();
+
   if(!routeCoords.length){loadRoute().then(()=>start());return}
   reset(false,true);
   resetTurnByTurn();
@@ -2903,11 +3060,25 @@ $('destinationSearch').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();searchDestination()}
 });
 $('voiceToggle').onclick=toggleVoiceGuidance;
-$('driveVoiceBtn').onclick=toggleVoiceGuidance;
+$('voiceTestBtn').onclick=testVoice;
+$('driveVoiceBtn').onclick=()=>{
+  if(!voiceGuidanceEnabled){
+    voiceGuidanceEnabled=true;
+    syncVoiceButtons();
+  }
+  testVoice();
+};
 $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
 };
+initTTS();
 syncVoiceButtons();
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==="visible" && 'speechSynthesis' in window){
+    try{speechSynthesis.resume()}catch(e){}
+  }
+});
 document.querySelectorAll('.marketFilter').forEach(btn=>{
   btn.onclick=()=>{
     marketFilter=btn.dataset.filter||'all';
