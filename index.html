@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۵ حالت رانندگی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۶ دستیار ایمنی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -458,6 +458,58 @@ body.driving-mode .destination-map-label{display:none!important}
   .current-speed-gauge b{font-size:22px}
 }
 
+
+/* ===== v1.6 Safety Co-Pilot ===== */
+.safety-coach-pill{
+  display:none;position:absolute;z-index:982;right:10px;bottom:162px;
+  min-width:108px;align-items:center;gap:7px;padding:7px 9px;
+  border-radius:13px;background:rgba(10,29,20,.94);border:1px solid #245c3b;
+  backdrop-filter:blur(10px);box-shadow:0 8px 22px rgba(0,0,0,.22)
+}
+.safety-coach-pill .coach-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.10)}
+.safety-coach-pill small{display:block;font-size:7px;color:#94a3b8;line-height:1.3}
+.safety-coach-pill b{display:block;font-size:10px;color:#bbf7d0;margin-top:1px}
+.safety-coach-pill.caution{background:rgba(58,43,10,.94);border-color:#735719}
+.safety-coach-pill.caution .coach-dot{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.10)}
+.safety-coach-pill.caution b{color:#fde68a}
+.safety-coach-pill.warning{background:rgba(75,20,20,.95);border-color:#8f3434}
+.safety-coach-pill.warning .coach-dot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.12)}
+.safety-coach-pill.warning b{color:#fecaca}
+
+.safety-coach-alert{
+  display:none;position:absolute;z-index:990;top:92px;left:12px;right:12px;
+  grid-template-columns:38px 1fr;gap:9px;align-items:center;
+  padding:9px 10px;border-radius:15px;background:rgba(62,43,8,.96);
+  border:1px solid #855f13;color:#fff;backdrop-filter:blur(12px);
+  box-shadow:0 12px 28px rgba(0,0,0,.28)
+}
+.safety-coach-alert.show{display:grid;animation:coachIn .18s ease}
+.safety-coach-alert.warning{background:rgba(83,20,20,.96);border-color:#a63d3d}
+.safety-coach-alert.info{background:rgba(15,35,60,.96);border-color:#315d8e}
+.safety-coach-alert-icon{
+  width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.08);
+  display:grid;place-items:center;font-size:19px;font-weight:900
+}
+.safety-coach-alert b{display:block;font-size:11px}
+.safety-coach-alert span{display:block;font-size:9px;color:#d6dfeb;margin-top:2px;line-height:1.6}
+@keyframes coachIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+.summary-coach{
+  margin-top:9px;padding:11px;border-radius:13px;background:#101b16;
+  border:1px solid #28543c;color:#d1fae5
+}
+.summary-coach b{display:block;font-size:11px}
+.summary-coach span{display:block;font-size:9px;color:#a7f3d0;line-height:1.8;margin-top:3px}
+
+body.driving-mode .safety-coach-pill{display:flex}
+body.driving-mode .speed-alert-banner{display:none!important} /* unified into Safety Coach */
+body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-alert{top:151px}
+
+@media(max-width:430px){
+  .safety-coach-pill{right:7px;bottom:157px;min-width:101px}
+  .safety-coach-alert{left:7px;right:7px;top:86px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -844,6 +896,19 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="speedAlertBanner" class="speed-alert-banner">سرعتت از حد مجاز بیشتره</div>
 
+              <div id="safetyCoachAlert" class="safety-coach-alert">
+                <div id="safetyCoachAlertIcon" class="safety-coach-alert-icon">!</div>
+                <div>
+                  <b id="safetyCoachAlertTitle">هشدار ایمنی</b>
+                  <span id="safetyCoachAlertText">رانندگی را نرم و یکنواخت نگه دار.</span>
+                </div>
+              </div>
+
+              <div id="safetyCoachPill" class="safety-coach-pill calm">
+                <span class="coach-dot"></span>
+                <div><small>دستیار ایمنی</small><b id="safetyCoachState">آرام</b></div>
+              </div>
+
               <div class="drive-control-cluster">
                 <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
                 <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
@@ -1054,6 +1119,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     </div>
 
     <div id="summaryWhy" class="summary-why">پس از پایان سفر، مهم‌ترین نکته اینجا نمایش داده می‌شود.</div>
+    <div id="summaryCoach" class="summary-coach">
+      <b>دستیار ایمنی</b>
+      <span>بعد از سفر، بازخورد کوتاه و کاربردی اینجا نمایش داده می‌شود.</span>
+    </div>
 
     <div class="summary-actions">
       <button id="summaryClose" class="secondary">بازگشت به خانه</button>
@@ -1133,6 +1202,13 @@ let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
 let rerouteState={active:false,offSince:null,lastAt:-999,count:0,noticeTimer:null};
+let safetyCoach={
+  state:"calm",
+  lastAlertAt:{speed:-999,brake:-999,accel:-999,corner:-999,gps:-999},
+  counts:{speed:0,brake:0,accel:0,corner:0,gps:0},
+  activeSince:{speed:null,brake:null,accel:null,corner:null,gps:null},
+  alertTimer:null
+};
 let activeSpeed=null,activeGPS=null,activeBrake=null,activeAccel=null,activeCorner=null;
 
 const PROFILE_KEY='drivingLabProfileV07';
@@ -1817,7 +1893,145 @@ function drawChart(){
   chartCtx.setLineDash([])
 }
 
+
+function resetSafetyCoach(){
+  safetyCoach.state="calm";
+  safetyCoach.lastAlertAt={speed:-999,brake:-999,accel:-999,corner:-999,gps:-999};
+  safetyCoach.counts={speed:0,brake:0,accel:0,corner:0,gps:0};
+  safetyCoach.activeSince={speed:null,brake:null,accel:null,corner:null,gps:null};
+  if(safetyCoach.alertTimer)clearTimeout(safetyCoach.alertTimer);
+  safetyCoach.alertTimer=null;
+  const pill=$('safetyCoachPill');
+  if(pill)pill.className="safety-coach-pill calm";
+  if($('safetyCoachState'))$('safetyCoachState').textContent="آرام";
+  $('safetyCoachAlert')?.classList.remove('show');
+}
+function setCoachState(state,label){
+  safetyCoach.state=state;
+  const pill=$('safetyCoachPill');
+  if(pill)pill.className=`safety-coach-pill ${state}`;
+  if($('safetyCoachState'))$('safetyCoachState').textContent=label;
+}
+function coachVoice(text){
+  if(!voiceGuidanceEnabled || !('speechSynthesis' in window))return;
+  try{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='fa-IR';
+    u.rate=.98;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function showSafetyCoachAlert(type,title,message,level="caution",speakText=null){
+  // Cooldown prevents repeated warnings from becoming distracting.
+  const cooldown=type==="speed"?7:5;
+  if(t-(safetyCoach.lastAlertAt[type]??-999)<cooldown)return;
+  safetyCoach.lastAlertAt[type]=t;
+  safetyCoach.counts[type]=(safetyCoach.counts[type]||0)+1;
+
+  const box=$('safetyCoachAlert');
+  if(!box)return;
+  box.className=`safety-coach-alert show ${level==="warning"?"warning":level==="info"?"info":""}`;
+  $('safetyCoachAlertIcon').textContent=
+    type==="speed"?"↟":type==="brake"?"!":type==="accel"?"↗":type==="corner"?"↪":"◎";
+  $('safetyCoachAlertTitle').textContent=title;
+  $('safetyCoachAlertText').textContent=message;
+
+  if(safetyCoach.alertTimer)clearTimeout(safetyCoach.alertTimer);
+  safetyCoach.alertTimer=setTimeout(()=>box.classList.remove('show'),2200);
+
+  if(speakText)coachVoice(speakText);
+}
+function sustainedCondition(type,active,minSeconds=0.7){
+  if(active){
+    if(safetyCoach.activeSince[type]==null)safetyCoach.activeSince[type]=t;
+    return (t-safetyCoach.activeSince[type])>=minSeconds;
+  }
+  safetyCoach.activeSince[type]=null;
+  return false;
+}
+function updateSafetyCoach(s,det){
+  const gpsWeak=s.gps>40||s.match<55;
+  const speedRisk=det.validSpeed && det.excess>8 && det.pct>12;
+  const brakeRisk=s.longA<=-3.5;
+  const accelRisk=s.longA>=3;
+  const cornerRisk=Math.abs(s.latA)>=3 && s.speed>35;
+
+  const severeSpeed=det.validSpeed && (det.excess>=20 || det.pct>=25);
+  const severeBrake=s.longA<=-5;
+
+  if(severeSpeed || severeBrake || cornerRisk){
+    setCoachState("warning","هشدار");
+  }else if(speedRisk || brakeRisk || accelRisk || gpsWeak){
+    setCoachState("caution","احتیاط");
+  }else{
+    setCoachState("calm","آرام");
+  }
+
+  if(sustainedCondition("speed",speedRisk,.8)){
+    showSafetyCoachAlert(
+      "speed",
+      "سرعتت بالاست",
+      `حد مجاز این بخش ${s.meta.limit.toLocaleString('fa-IR')} کیلومتر بر ساعت است.`,
+      severeSpeed?"warning":"caution",
+      severeSpeed?"سرعت را کاهش بده":null
+    );
+  }
+  if(sustainedCondition("brake",brakeRisk,.25)){
+    showSafetyCoachAlert(
+      "brake",
+      severeBrake?"ترمز خیلی شدید":"ترمز شدید",
+      "فاصله طولی را بیشتر کن تا نیاز به ترمز ناگهانی کمتر شود.",
+      severeBrake?"warning":"caution",
+      severeBrake?"فاصله ایمن را بیشتر کن":null
+    );
+  }
+  if(sustainedCondition("accel",accelRisk,.35)){
+    showSafetyCoachAlert(
+      "accel",
+      "شتاب‌گیری تند",
+      "گاز را نرم‌تر و یکنواخت‌تر فشار بده.",
+      "caution",
+      null
+    );
+  }
+  if(sustainedCondition("corner",cornerRisk,.25)){
+    showSafetyCoachAlert(
+      "corner",
+      "ورود تند به پیچ",
+      "پیش از پیچ سرعت را کم کن و فرمان را نرم نگه دار.",
+      "warning",
+      "پیش از پیچ سرعت را کم کن"
+    );
+  }
+  if(sustainedCondition("gps",gpsWeak,1.2)){
+    showSafetyCoachAlert(
+      "gps",
+      "اطمینان موقعیت پایین است",
+      "فعلاً داده نامطمئن در امتیاز ایمنی جریمه نمی‌شود.",
+      "info",
+      null
+    );
+  }
+}
+function safetyCoachSummary(){
+  const c=safetyCoach.counts;
+  const total=(c.speed||0)+(c.brake||0)+(c.accel||0)+(c.corner||0);
+  if(total===0){
+    return "هشدار رفتاری فوری نداشتی؛ رانندگی این سفر از نظر کنترل لحظه‌ای آرام بود.";
+  }
+  const items=[
+    ["سرعت",c.speed||0],
+    ["ترمز",c.brake||0],
+    ["شتاب",c.accel||0],
+    ["پیچ",c.corner||0]
+  ].sort((a,b)=>b[1]-a[1]);
+  const top=items[0];
+  return `در طول سفر ${total.toLocaleString('fa-IR')} هشدار ایمنی ضروری نمایش داده شد. بیشترین هشدار مربوط به «${top[0]}» بود.`;
+}
+
 function enterDrivingMode(){
+  resetSafetyCoach();
   document.body.classList.add('driving-mode');
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
@@ -1901,7 +2115,7 @@ function updateDrivingSpeedUI(s,det){
   if(speedEl)speedEl.textContent=Math.round(s.speed).toLocaleString('fa-IR');
   const over=det.validSpeed && det.excess>5 && (det.excess/s.meta.limit*100)>8;
   if(gauge)gauge.classList.toggle('over',over);
-  if(alert)alert.classList.toggle('show',over);
+  if(alert)alert.classList.remove('show');
 }
 
 function step(){
@@ -1916,6 +2130,7 @@ function step(){
     mapMatch:s.match,gps:s.gps,longA:s.longA,latA:s.latA,tripConf:tc,
     mockLocation:!!s.mockLocation,integritySignal:Number(s.integritySignal||100),
     offRoute:!!s.offRoute,
+    coachState:safetyCoach.state,
     excess:det.excess,validSpeed:det.validSpeed
   };
   const prev=rows.length?rows[rows.length-1]:null;rows.push(row);
@@ -1934,6 +2149,7 @@ function step(){
   $('status').textContent=`در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
   updateTurnByTurn(s.p);
   updateDrivingSpeedUI(s,det);
+  updateSafetyCoach(s,det);
   handleOffRoute(s,pos);
 
   if(document.body.classList.contains('driving-mode') && Math.round(t*4)%4===0){
@@ -1971,6 +2187,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
   rerouteState.active=false;rerouteState.offSince=null;
+  resetSafetyCoach();
   exitDrivingMode();
   eventMarkers.forEach(m=>map.removeLayer(m));eventMarkers=[];speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
   if(trackLine){map.removeLayer(trackLine);trackLine=L.polyline([],{color:'#fff',weight:2,opacity:.6,dashArray:'5 6'}).addTo(map)}
@@ -2140,7 +2357,14 @@ function buildScore(){
     maxExcess:Math.round(maxExcess),
     avgContextRisk:Number(avgContext.toFixed(2)),
     topRiskEvent:top?top.title:null,
-    routeKm:Number((routeDistanceM/1000).toFixed(1))
+    routeKm:Number((routeDistanceM/1000).toFixed(1)),
+    coachAlerts:{
+      speed:safetyCoach.counts.speed||0,
+      brake:safetyCoach.counts.brake||0,
+      accel:safetyCoach.counts.accel||0,
+      corner:safetyCoach.counts.corner||0,
+      gps:safetyCoach.counts.gps||0
+    }
   };
 
   const eligibility=evaluateRewardEligibility(lastTripResult);
@@ -2780,6 +3004,10 @@ setTimeout(loadRoute,1000);
         r.topRiskEvent
           ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
           : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
+      if(document.getElementById('summaryCoach')){
+        document.getElementById('summaryCoach').innerHTML=
+          `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
+      }
       const sheet=document.getElementById('tripSummarySheet');
       sheet.classList.add('open');
       const card=sheet.querySelector('.summary-card');
