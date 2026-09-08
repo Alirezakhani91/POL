@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۳ پولیش نویگیشن و گرافیک نقشه</title>
+<title>POL | نسخه ۳.۳.۱ اصلاح نقشه بدون API</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1651,7 +1651,7 @@ body.destination-area-pick #map{cursor:crosshair!important}
 #map{
   background:#dbeafe;
 }
-.leaflet-tile-pane{filter:saturate(1.06) contrast(1.02) brightness(1.01)}
+.leaflet-tile-pane{filter:saturate(.92) contrast(.98) brightness(1.035)}
 .leaflet-control-zoom{
   border:none!important;
   box-shadow:0 10px 25px rgba(15,23,42,.14)!important;
@@ -2510,7 +2510,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div class="provider">
                 <b>زیرساخت نقشه و مسیریابی</b><br>
                 مسیریابی آزمایشی: سرویس عمومی OSRM<br>
-                نقشه پایه: Carto Voyager<br>
+                نقشه پایه: OpenStreetMap — بدون API Key<br>
                 نسخه عملیاتی: اتصال به سرویس نقشه مناسب ایران
               </div>
             </details>
@@ -2864,6 +2864,7 @@ const presets={
 let map=L.map('map',{zoomControl:true}).setView([35.756,51.412],13);
 map.getContainer().setAttribute('dir','ltr');
 map.getContainer().style.direction='ltr';
+// Base map intentionally uses a no-key public OSM tile endpoint. Do not replace with a client-side API-key map.
 const baseTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   maxZoom:19,
   attribution:'&copy; OpenStreetMap contributors'
@@ -8734,27 +8735,18 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     };
   }
 
-  let premiumTiles=null;
-  function applyPremiumMapStyle(){
+  function applyNoKeyMapStyle(){
+    // Keep the standard OpenStreetMap tile layer. It does not require an API key.
+    // Visual polish is done locally with CSS/route styling so GitHub Pages never exposes a secret.
     try{
-      premiumTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-        maxZoom:20,
-        subdomains:'abcd',
-        attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
-      });
-      try{ map.removeLayer(baseTiles); }catch(e){}
-      premiumTiles.addTo(map);
-      premiumTiles.on('load',()=>fixMapSize(false));
-      premiumTiles.on('tileerror',()=>{
-        try{
-          if(!map.hasLayer(baseTiles))baseTiles.addTo(map);
-        }catch(e){}
-      });
+      if(!map.hasLayer(baseTiles))baseTiles.addTo(map);
+      baseTiles.setOpacity(1);
+      baseTiles.on('load',()=>fixMapSize(false));
     }catch(e){
-      console.warn('premium basemap failed',e);
+      console.warn('base map style init failed',e);
     }
   }
-  applyPremiumMapStyle();
+  applyNoKeyMapStyle();
 
   function drivingCameraTarget(progress,speedKmh){
     const zoom=desiredDrivingZoom(progress,speedKmh);
