@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۴ راهنمای مسیر</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۵ حالت رانندگی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -354,6 +354,110 @@ button{font-weight:800}
   .nav-bottom-main b{font-size:12px}
 }
 
+
+/* ===== v1.5 Driving Mode ===== */
+.reroute-banner{
+  display:none;position:absolute;z-index:985;top:88px;left:12px;right:12px;
+  background:rgba(61,42,9,.96);border:1px solid #8a6416;border-radius:15px;
+  padding:10px 12px;color:#fde68a;backdrop-filter:blur(12px);
+  box-shadow:0 12px 28px rgba(0,0,0,.25)
+}
+.reroute-banner.show{display:block}
+.reroute-banner b{display:block;font-size:12px}
+.reroute-banner span{display:block;font-size:9px;margin-top:2px;color:#fcd34d}
+
+.speed-alert-banner{
+  display:none;position:absolute;z-index:980;top:91px;left:50%;transform:translateX(-50%);
+  padding:7px 11px;border-radius:999px;background:rgba(127,29,29,.94);
+  border:1px solid #ef4444;color:#fee2e2;font-size:10px;font-weight:900;
+  white-space:nowrap;backdrop-filter:blur(10px)
+}
+.speed-alert-banner.show{display:block}
+
+.drive-control-cluster{
+  display:none;position:absolute;z-index:980;left:10px;bottom:88px;gap:8px;flex-direction:column
+}
+.drive-circle-btn{
+  width:46px!important;height:46px!important;min-height:46px!important;border-radius:50%!important;
+  padding:0!important;background:rgba(16,25,35,.94)!important;border:1px solid #3a506e!important;
+  font-size:17px!important;backdrop-filter:blur(10px)
+}
+.drive-circle-btn.end{color:#fecaca!important;border-color:#783b3b!important;background:rgba(59,20,20,.94)!important}
+
+.current-speed-gauge{
+  display:none;position:absolute;z-index:980;right:10px;bottom:88px;
+  width:66px;height:66px;border-radius:20px;background:rgba(11,19,28,.94);
+  border:1px solid #334a69;align-items:center;justify-content:center;flex-direction:column;
+  backdrop-filter:blur(10px);box-shadow:0 9px 24px rgba(0,0,0,.25)
+}
+.current-speed-gauge b{font-size:24px;line-height:1}
+.current-speed-gauge span{font-size:8px;color:#94a3b8;margin-top:3px}
+.current-speed-gauge.over{
+  background:rgba(86,20,20,.95);border-color:#ef4444;color:#fff;
+  box-shadow:0 0 0 3px rgba(239,68,68,.16),0 9px 24px rgba(0,0,0,.25)
+}
+
+/* When a trip starts, the app becomes a distraction-minimized navigation screen. */
+body.driving-mode{
+  overflow:hidden!important;padding:0!important;background:#081019!important
+}
+body.driving-mode .app-topbar,
+body.driving-mode .bottom-nav,
+body.driving-mode #tripSetupPanel,
+body.driving-mode #tripLiveMetrics,
+body.driving-mode #tripAdvanced,
+body.driving-mode .trip-desktop-side{
+  display:none!important
+}
+body.driving-mode .app-shell{
+  max-width:none!important;width:100%!important;height:100vh!important;
+  padding:0!important;margin:0!important
+}
+body.driving-mode main,
+body.driving-mode #screen-trip,
+body.driving-mode .trip-desktop-grid,
+body.driving-mode .trip-desktop-grid>div:first-child{
+  display:block!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important
+}
+body.driving-mode #tripMapCard{
+  position:fixed!important;inset:0!important;z-index:2100!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  width:100%!important;height:100vh!important;background:#081019!important
+}
+body.driving-mode #tripMapCard .mobile-map-top{display:none!important}
+body.driving-mode #map{
+  height:100vh!important;min-height:100vh!important;max-height:none!important;
+  border:0!important;border-radius:0!important
+}
+body.driving-mode .turn-card{
+  top:calc(10px + env(safe-area-inset-top,0))!important;
+  left:10px!important;right:72px!important;
+  border-radius:18px!important;padding:11px!important
+}
+body.driving-mode .turn-arrow{width:50px;height:50px;font-size:29px}
+body.driving-mode .turn-distance{font-size:19px}
+body.driving-mode .turn-instruction{font-size:12px}
+body.driving-mode .mapHUD{
+  top:calc(10px + env(safe-area-inset-top,0))!important;right:10px!important
+}
+body.driving-mode .speedSign{width:52px;height:52px;font-size:16px}
+body.driving-mode .nav-bottom-strip{
+  bottom:calc(10px + env(safe-area-inset-bottom,0))!important;
+  left:84px!important;right:84px!important;padding:9px 10px!important
+}
+body.driving-mode .drive-control-cluster,
+body.driving-mode .current-speed-gauge{display:flex}
+body.driving-mode .destination-map-label{display:none!important}
+
+@media(max-width:430px){
+  body.driving-mode .turn-card{right:66px!important;left:7px!important;top:calc(7px + env(safe-area-inset-top,0))!important}
+  body.driving-mode .nav-bottom-strip{left:79px!important;right:79px!important}
+  body.driving-mode .drive-control-cluster{left:7px}
+  body.driving-mode .current-speed-gauge{right:7px}
+  .current-speed-gauge{width:62px;height:62px}
+  .current-speed-gauge b{font-size:22px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -615,7 +719,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     <section id="screen-trip" class="app-screen">
       <div class="trip-desktop-grid">
         <div>
-          <div class="section-card" style="margin-top:0">
+          <div id="tripSetupPanel" class="section-card" style="margin-top:0">
             <div class="section-head"><h3>کجا می‌خوای بری؟</h3><small>مسیریابی آزمایشی ایران</small></div>
 
             <div class="nav-search-card">
@@ -676,6 +780,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                       <option value="speeding">تست سرعت غیرمجاز</option>
                       <option value="mixed">رانندگی ترکیبی</option>
                       <option value="gpsJump">تست اختلال GPS</option>
+                      <option value="offRoute">تست خروج از مسیر</option>
                       <option value="fraudTest">تست موقعیت مکانی جعلی</option>
                     </select>
                   </div>
@@ -708,7 +813,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <button id="csv" disabled style="display:none">خروجی CSV</button>
           </div>
 
-          <div class="section-card mobile-map-card">
+          <div id="tripMapCard" class="section-card mobile-map-card">
             <div class="mobile-map-top">
               <div>
                 <b style="font-size:13px">نقشه سفر</b>
@@ -732,6 +837,23 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
 
+              <div id="rerouteBanner" class="reroute-banner">
+                <b id="rerouteTitle">از مسیر خارج شدی</b>
+                <span id="rerouteText">در حال محاسبه مسیر جدید...</span>
+              </div>
+
+              <div id="speedAlertBanner" class="speed-alert-banner">سرعتت از حد مجاز بیشتره</div>
+
+              <div class="drive-control-cluster">
+                <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
+                <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
+              </div>
+
+              <div id="currentSpeedGauge" class="current-speed-gauge">
+                <b id="driveCurrentSpeed">۰</b>
+                <span>km/h</span>
+              </div>
+
               <div id="map" dir="ltr"></div>
 
               <div class="nav-bottom-strip">
@@ -747,7 +869,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             </div>
           </div>
 
-          <div class="trip-live-grid">
+          <div id="tripLiveMetrics" class="trip-live-grid">
             <div class="live-metric"><b id="speed">۰</b><span>سرعت</span></div>
             <div class="live-metric"><b id="limit">--</b><span>حد مجاز</span></div>
             <div class="live-metric"><b id="excess">۰</b><span>تجاوز سرعت</span></div>
@@ -762,7 +884,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <span id="roadContext">--</span><span id="riskMult">1.00×</span>
           </div>
 
-          <details class="section-card advanced-details">
+          <details id="tripAdvanced" class="section-card advanced-details">
             <summary>جزئیات فنی سفر</summary>
 
             <div class="eligibilityBox">
@@ -1010,6 +1132,7 @@ let destinationSearchCache=[];
 let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
+let rerouteState={active:false,offSince:null,lastAt:-999,count:0,noticeTimer:null};
 let activeSpeed=null,activeGPS=null,activeBrake=null,activeAccel=null,activeCorner=null;
 
 const PROFILE_KEY='drivingLabProfileV07';
@@ -1557,6 +1680,7 @@ function simulatedState(time,dur){
   let match=96-Math.abs(gauss()*4);
   let mockLocation=false;
   let integritySignal=100;
+  let offRoute=false;
   let speed=m.limit-5+3*Math.sin(time/5),longA=.25*Math.sin(time/2),latA=.22*Math.sin(time/4);
   const sc=$('scenario').value;
 
@@ -1585,13 +1709,22 @@ function simulatedState(time,dur){
       integritySignal=20;
     }
   }
+  if(sc==="offRoute"){
+    // Real navigation deviation simulation: good GPS, but vehicle leaves the planned route.
+    speed=m.limit-7+2*Math.sin(time/4);
+    if(p>.30&&p<.43){
+      offRoute=true;
+      gps=6;
+      match=92;
+    }
+  }
 
   const n=Number($('noise').value)/100;
   speed+=gauss()*1.1*n;longA+=gauss()*.16*n;latA+=gauss()*.16*n;
   return{
     p,meta:m,speed:clamp(speed,0,170),gps,
     match:clamp(Math.round(match),20,100),longA,latA,
-    mockLocation,integritySignal
+    mockLocation,integritySignal,offRoute
   };
 }
 function closeEvent(holder,type){
@@ -1683,9 +1816,98 @@ function drawChart(){
   draw(r=>Math.max(0,r.excess)*3,'#ef4444',[3,5]);
   chartCtx.setLineDash([])
 }
+
+function enterDrivingMode(){
+  document.body.classList.add('driving-mode');
+  $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
+  $('speedAlertBanner')?.classList.remove('show');
+  $('rerouteBanner')?.classList.remove('show');
+  setTimeout(()=>{
+    try{
+      map.invalidateSize(true);
+      if(routeCoords.length)map.setView(routeCoords[0],16,{animate:false});
+    }catch(e){}
+  },80);
+}
+function exitDrivingMode(){
+  document.body.classList.remove('driving-mode');
+  $('speedAlertBanner')?.classList.remove('show');
+  $('rerouteBanner')?.classList.remove('show');
+  setTimeout(()=>{try{map.invalidateSize(true)}catch(e){}},80);
+}
+function syncVoiceButtons(){
+  if($('voiceToggle'))$('voiceToggle').textContent=voiceGuidanceEnabled?"روشن":"خاموش";
+  if($('driveVoiceBtn'))$('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
+}
+function toggleVoiceGuidance(){
+  voiceGuidanceEnabled=!voiceGuidanceEnabled;
+  syncVoiceButtons();
+  if(!voiceGuidanceEnabled && 'speechSynthesis' in window)speechSynthesis.cancel();
+}
+function simulatedOffRoutePosition(base,p){
+  if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.30&&p<.43))return base;
+  // ~250–400 m visual departure in Tehran lat/lng scale.
+  const phase=(p-.30)/.13;
+  const swell=Math.sin(Math.PI*phase);
+  return [base[0]+0.0027*swell,base[1]-0.0032*swell];
+}
+function showRerouteNotice(title,message,success=false){
+  const box=$('rerouteBanner');
+  if(!box)return;
+  $('rerouteTitle').textContent=title;
+  $('rerouteText').textContent=message;
+  box.style.background=success?'rgba(12,43,26,.96)':'rgba(61,42,9,.96)';
+  box.style.borderColor=success?'#297044':'#8a6416';
+  box.classList.add('show');
+  if(rerouteState.noticeTimer)clearTimeout(rerouteState.noticeTimer);
+  rerouteState.noticeTimer=setTimeout(()=>box.classList.remove('show'),success?1800:3000);
+}
+function triggerReroute(pos){
+  if(rerouteState.active)return;
+  rerouteState.active=true;
+  rerouteState.lastAt=t;
+  rerouteState.count++;
+  showRerouteNotice("از مسیر خارج شدی","در حال محاسبه مسیر جدید...");
+  $('turnArrow').textContent="↻";
+  $('turnDistance').textContent="در حال محاسبه";
+  $('turnInstruction').textContent="مسیر جدید";
+  $('turnStreet').textContent="موقعیت فعلی تا مقصد";
+
+  // Prototype: demonstrate reroute state without corrupting the safety-score simulation.
+  setTimeout(()=>{
+    rerouteState.active=false;
+    rerouteState.offSince=null;
+    showRerouteNotice("مسیر جدید آماده شد","راهنمای مسیر ادامه پیدا می‌کند.",true);
+    const progress=Math.min(.98,Number($('progress').textContent.replace('%',''))/100 || 0);
+    updateTurnByTurn(progress);
+  },1200);
+}
+function handleOffRoute(s,pos){
+  // GPS uncertainty is NOT treated as off-route. Only a confident deviation triggers rerouting.
+  const confidentDeviation=!!s.offRoute && s.gps<=35 && s.match>=70;
+  if(confidentDeviation){
+    if(rerouteState.offSince==null)rerouteState.offSince=t;
+    if(t-rerouteState.offSince>=1.25 && !rerouteState.active && t-rerouteState.lastAt>4){
+      triggerReroute(pos);
+    }
+  }else{
+    rerouteState.offSince=null;
+  }
+}
+function updateDrivingSpeedUI(s,det){
+  const gauge=$('currentSpeedGauge');
+  const speedEl=$('driveCurrentSpeed');
+  const alert=$('speedAlertBanner');
+  if(speedEl)speedEl.textContent=Math.round(s.speed).toLocaleString('fa-IR');
+  const over=det.validSpeed && det.excess>5 && (det.excess/s.meta.limit*100)>8;
+  if(gauge)gauge.classList.toggle('over',over);
+  if(alert)alert.classList.toggle('show',over);
+}
+
 function step(){
   const dur=Number($('duration').value),s=simulatedState(t,dur),det=detect(s);
-  const pos=interpolateOnRoute(s.p);
+  const routePos=interpolateOnRoute(s.p);
+  const pos=simulatedOffRoutePosition(routePos,s.p);
   const tc=tripConfidence(s.gps,s.match);
   const row={
     time:t,pos,speed:s.speed,limit:s.meta.limit,segment:s.meta.id,
@@ -1693,6 +1915,7 @@ function step(){
     speedMult:s.meta.mult.speed,brakeMult:s.meta.mult.brake,accelMult:s.meta.mult.accel,cornerMult:s.meta.mult.corner,
     mapMatch:s.match,gps:s.gps,longA:s.longA,latA:s.latA,tripConf:tc,
     mockLocation:!!s.mockLocation,integritySignal:Number(s.integritySignal||100),
+    offRoute:!!s.offRoute,
     excess:det.excess,validSpeed:det.validSpeed
   };
   const prev=rows.length?rows[rows.length-1]:null;rows.push(row);
@@ -1710,6 +1933,12 @@ function step(){
   $('progress').textContent=Math.round(s.p*100)+"%";$('timeNow').textContent=t.toFixed(1)+"s";
   $('status').textContent=`در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
   updateTurnByTurn(s.p);
+  updateDrivingSpeedUI(s,det);
+  handleOffRoute(s,pos);
+
+  if(document.body.classList.contains('driving-mode') && Math.round(t*4)%4===0){
+    try{map.panTo(pos,{animate:true,duration:.18})}catch(e){}
+  }
 
   drawChart();
   t+=.25;if(t>=dur)finish()
@@ -1721,6 +1950,9 @@ function start(){
   updateTurnByTurn(0);
   $('start').disabled=true;
   $('stop').disabled=false;
+  rerouteState.offSince=null;
+  rerouteState.active=false;
+  enterDrivingMode();
   timer=setInterval(step,250)
 }
 function finish(){
@@ -1733,10 +1965,13 @@ function finish(){
   $('status').textContent="به مقصد رسیدی.";
   updateTurnByTurn(1);
   buildScore();
-  setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),120);
+  exitDrivingMode();
+  setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),180);
 }
 function reset(full=true,keepRoute=false){
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
+  rerouteState.active=false;rerouteState.offSince=null;
+  exitDrivingMode();
   eventMarkers.forEach(m=>map.removeLayer(m));eventMarkers=[];speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
   if(trackLine){map.removeLayer(trackLine);trackLine=L.polyline([],{color:'#fff',weight:2,opacity:.6,dashArray:'5 6'}).addTo(map)}
   $('events').innerHTML='<div class="small">هنوز رویدادی ثبت نشده است.</div>';$('track').innerHTML="";$('scoreBox').style.display="none";$('whyBox').style.display="none";$('csv').disabled=true;
@@ -2443,11 +2678,12 @@ $('useMyLocation').onclick=useCurrentLocation;
 $('destinationSearch').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();searchDestination()}
 });
-$('voiceToggle').onclick=()=>{
-  voiceGuidanceEnabled=!voiceGuidanceEnabled;
-  $('voiceToggle').textContent=voiceGuidanceEnabled?"روشن":"خاموش";
-  if(!voiceGuidanceEnabled && 'speechSynthesis' in window)speechSynthesis.cancel();
+$('voiceToggle').onclick=toggleVoiceGuidance;
+$('driveVoiceBtn').onclick=toggleVoiceGuidance;
+$('driveEndBtn').onclick=()=>{
+  if(confirm("سفر پایان داده شود؟"))finish();
 };
+syncVoiceButtons();
 document.querySelectorAll('.marketFilter').forEach(btn=>{
   btn.onclick=()=>{
     marketFilter=btn.dataset.filter||'all';
@@ -2523,6 +2759,7 @@ setTimeout(loadRoute,1000);
 
   function showTripSummary(){
     try{
+      exitDrivingMode();
       if(!lastTripResult) return;
       const r=lastTripResult;
       const p=loadProfile();
