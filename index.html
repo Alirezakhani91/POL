@@ -3092,6 +3092,18 @@ const carIcon=L.divIcon({
   iconSize:[28,28],iconAnchor:[14,14]
 });
 
+// v3.3.2: Keep this helper in the main script scope because route-selection
+// functions call it before/independently of the app-shell IIFE below.
+function tagCarMarkerForSmoothMotion(){
+  if(!carMarker)return;
+  carMarker.options.__smoothNavMarker=true;
+  const rotor=carMarker.getElement()?.querySelector('.nav-car-rotor');
+  if(rotor && Number.isFinite(carMarker.__heading)){
+    rotor.style.transform=`rotate(${carMarker.__heading}deg)`;
+  }
+}
+
+
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 function hav(a,b){
@@ -8662,7 +8674,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
 
 
   /* ===== v3.3 Navigation polish + smooth follow camera ===== */
-  function tagCarMarkerForSmoothMotion(){
+  function tagCarMarkerForSmoothMotionLocal(){
     if(!carMarker)return;
     carMarker.options.__smoothNavMarker=true;
     applyCarMarkerHeading(carMarker, carMarker.__heading ?? 0);
