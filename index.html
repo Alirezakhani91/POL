@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۷ تحلیل راننده</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۸ آمادگی سفر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -599,6 +599,78 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
   .trip-details-modern{grid-template-columns:repeat(3,1fr)}
 }
 
+
+/* ===== v1.8 Trip Readiness ===== */
+.ready-sheet{
+  position:fixed;inset:0;z-index:3100;background:rgba(2,6,12,.72);
+  display:none;align-items:flex-end;justify-content:center;padding:12px;
+  backdrop-filter:blur(7px)
+}
+.ready-sheet.open{display:flex}
+.ready-card{
+  width:min(100%,520px);max-height:90vh;overflow:auto;
+  background:#101923;border:1px solid #30435c;border-radius:25px 25px 18px 18px;
+  padding:15px;box-shadow:0 -25px 65px rgba(0,0,0,.40)
+}
+.ready-handle{width:42px;height:4px;border-radius:999px;background:#40536d;margin:0 auto 13px}
+.ready-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.ready-kicker{font-size:9px;color:#60a5fa;font-weight:800}
+.ready-head h3{font-size:17px;margin:3px 0 0}
+.ready-head p{font-size:9px;color:#91a0b5;line-height:1.8;margin:5px 0 0}
+.ready-overall{
+  min-width:64px;padding:8px 9px;border-radius:12px;text-align:center;font-size:9px;font-weight:900
+}
+.ready-overall.checking{background:#172334;color:#cbd5e1}
+.ready-overall.good{background:#12351d;color:#86efac}
+.ready-overall.warn{background:#3c2c0b;color:#fde68a}
+
+.ready-route{
+  margin-top:12px;padding:11px;border-radius:14px;background:#0d1726;border:1px solid #244468;
+  display:flex;justify-content:space-between;gap:10px;align-items:center
+}
+.ready-route span{font-size:8px;color:#93a6bd}
+.ready-route b{display:block;font-size:11px;margin-top:2px;line-height:1.6}
+.ready-route-meta{display:flex;gap:5px;white-space:nowrap;color:#bfdbfe}
+
+.ready-checks{display:grid;gap:7px;margin-top:10px}
+.ready-check{
+  display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:center;
+  padding:9px 10px;border-radius:13px;background:#111b27;border:1px solid #293c54
+}
+.ready-check-icon{
+  width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  background:#17263a;color:#cbd5e1;font-size:15px
+}
+.ready-check b{display:block;font-size:10px}
+.ready-check span{display:block;font-size:8px;color:#91a0b5;line-height:1.6;margin-top:2px}
+.ready-check.good{border-color:#28543c;background:#0f1a15}
+.ready-check.good .ready-check-icon{background:#12351d;color:#86efac}
+.ready-check.warn{border-color:#6a5019;background:#19150c}
+.ready-check.warn .ready-check-icon{background:#3c2c0b;color:#fde68a}
+.ready-check.bad{border-color:#743232;background:#1d1010}
+.ready-check.bad .ready-check-icon{background:#4a1717;color:#fecaca}
+
+.ready-notice{
+  margin-top:9px;padding:9px 10px;border-radius:12px;background:#0d131b;
+  border:1px solid #28384c;color:#8293aa;font-size:8px;line-height:1.8
+}
+.ready-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:11px}
+.ready-actions button{min-height:50px}
+
+.offline-drive-banner{
+  display:none;position:absolute;z-index:996;top:90px;left:12px;right:12px;
+  padding:9px 11px;border-radius:14px;background:rgba(61,42,9,.96);
+  border:1px solid #8a6416;color:#fde68a;backdrop-filter:blur(12px);
+  box-shadow:0 12px 28px rgba(0,0,0,.24)
+}
+.offline-drive-banner.show{display:block}
+.offline-drive-banner b{display:block;font-size:10px}
+.offline-drive-banner span{display:block;font-size:8px;line-height:1.7;color:#f8d57e;margin-top:2px}
+
+@media(min-width:760px){
+  .ready-checks{grid-template-columns:1fr 1fr}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -949,7 +1021,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
             <div class="trip-action-row" style="margin-top:9px">
               <button id="loadRoute">پیشنهاد مسیرها</button>
-              <button id="start" class="primary">شروع سفر</button>
+              <button id="start" class="primary">بررسی و شروع سفر</button>
             </div>
             <div class="trip-action-row" style="margin-top:8px">
               <button id="stop" class="danger" disabled>پایان سفر</button>
@@ -984,7 +1056,13 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
 
-              <div id="rerouteBanner" class="reroute-banner">
+              
+              <div id="offlineDriveBanner" class="offline-drive-banner">
+                <b>اتصال اینترنت قطع است</b>
+                <span>مسیر فعلی ادامه دارد؛ جست‌وجوی مقصد و محاسبه مجدد ممکن است موقتاً در دسترس نباشد.</span>
+              </div>
+
+<div id="rerouteBanner" class="reroute-banner">
                 <b id="rerouteTitle">از مسیر خارج شدی</b>
                 <span id="rerouteText">در حال محاسبه مسیر جدید...</span>
               </div>
@@ -1253,6 +1331,62 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
   <button class="nav-btn" data-screen="profile"><span class="nav-icon">●</span><span>پروفایل</span></button>
 </nav>
 
+
+<div id="tripReadySheet" class="ready-sheet">
+  <div class="ready-card">
+    <div class="ready-handle"></div>
+
+    <div class="ready-head">
+      <div>
+        <div class="ready-kicker">آماده حرکت</div>
+        <h3>قبل از شروع، یک بررسی کوتاه</h3>
+        <p>فقط موارد ضروری بررسی می‌شوند؛ بعد از شروع سفر رابط ساده و کم‌حواس‌پرتی می‌شود.</p>
+      </div>
+      <div id="readyOverall" class="ready-overall checking">...</div>
+    </div>
+
+    <div class="ready-route">
+      <div>
+        <span>مسیر</span>
+        <b id="readyRouteText">--</b>
+      </div>
+      <div class="ready-route-meta">
+        <span id="readyDistance">--</span>
+        <span>•</span>
+        <span id="readyEta">--</span>
+      </div>
+    </div>
+
+    <div class="ready-checks">
+      <div id="readyRouteCheck" class="ready-check">
+        <div class="ready-check-icon">✓</div>
+        <div><b>مسیر</b><span>در حال بررسی...</span></div>
+      </div>
+      <div id="readyNetworkCheck" class="ready-check">
+        <div class="ready-check-icon">⌁</div>
+        <div><b>اتصال</b><span>در حال بررسی...</span></div>
+      </div>
+      <div id="readyLocationCheck" class="ready-check">
+        <div class="ready-check-icon">◎</div>
+        <div><b>موقعیت</b><span>در حال بررسی...</span></div>
+      </div>
+      <div id="readyVoiceCheck" class="ready-check">
+        <div class="ready-check-icon">🔊</div>
+        <div><b>راهنمای صوتی</b><span>در حال بررسی...</span></div>
+      </div>
+    </div>
+
+    <div id="readyNotice" class="ready-notice">
+      در نسخه وب، بعضی قابلیت‌های سیستم‌عامل بسته به مرورگر در دسترس هستند. هیچ مورد غیرضروری مانع شروع سفر نمی‌شود.
+    </div>
+
+    <div class="ready-actions">
+      <button id="readyCancel">بازگشت</button>
+      <button id="readyStartDrive" class="primary">شروع رانندگی</button>
+    </div>
+  </div>
+</div>
+
 <div id="tripSummarySheet" class="summary-sheet">
   <div class="summary-card">
     <div class="summary-handle"></div>
@@ -1355,6 +1489,8 @@ let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
 let rerouteState={active:false,offSince:null,lastAt:-999,count:0,noticeTimer:null};
+let wakeLockSentinel=null;
+let pendingDriveStart=false;
 let ttsState={
   ready:false,
   unlocked:false,
@@ -2326,9 +2462,120 @@ function safetyCoachSummary(){
   return `در طول سفر ${total.toLocaleString('fa-IR')} هشدار ایمنی ضروری نمایش داده شد. بیشترین هشدار مربوط به «${top[0]}» بود.`;
 }
 
+
+async function requestScreenWakeLock(){
+  if(!('wakeLock' in navigator))return false;
+  try{
+    wakeLockSentinel=await navigator.wakeLock.request('screen');
+    wakeLockSentinel.addEventListener('release',()=>{ wakeLockSentinel=null; });
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+async function releaseScreenWakeLock(){
+  if(wakeLockSentinel){
+    try{await wakeLockSentinel.release()}catch(e){}
+    wakeLockSentinel=null;
+  }
+}
+function setReadyCheck(id,state,message){
+  const el=$(id);
+  if(!el)return;
+  el.classList.remove('good','warn','bad');
+  el.classList.add(state);
+  const span=el.querySelector('span');
+  if(span)span.textContent=message;
+}
+async function getLocationReadiness(){
+  if(!navigator.geolocation){
+    return{state:'warn',message:'مرورگر دسترسی موقعیت ندارد؛ مبدأ انتخاب‌شده استفاده می‌شود.'};
+  }
+  try{
+    if(navigator.permissions?.query){
+      const p=await navigator.permissions.query({name:'geolocation'});
+      if(p.state==='denied'){
+        return{state:'warn',message:'اجازه موقعیت غیرفعال است؛ مبدأ انتخاب‌شده استفاده می‌شود.'};
+      }
+      if(p.state==='granted'){
+        return{state:'good',message:'دسترسی موقعیت فعال است.'};
+      }
+    }
+  }catch(e){}
+  return{state:'good',message:'موقعیت در زمان نیاز از مرورگر درخواست می‌شود.'};
+}
+async function updateTripReadiness(){
+  const hasRoute=Array.isArray(routeCoords)&&routeCoords.length>1;
+  const online=navigator.onLine!==false;
+  const loc=await getLocationReadiness();
+
+  setReadyCheck('readyRouteCheck',hasRoute?'good':'bad',
+    hasRoute?'مسیر آماده و قابل شروع است.':'ابتدا مسیر را بارگذاری کن.');
+  setReadyCheck('readyNetworkCheck',online?'good':'warn',
+    online?'اتصال اینترنت برقرار است.':'آفلاین هستی؛ مسیر فعلی می‌تواند ادامه پیدا کند.');
+  setReadyCheck('readyLocationCheck',loc.state,loc.message);
+  setReadyCheck('readyVoiceCheck',voiceGuidanceEnabled?'good':'warn',
+    voiceGuidanceEnabled?'راهنمای صوتی روشن است.':'راهنمای صوتی خاموش است؛ مانع شروع سفر نیست.');
+
+  const routeLabel=(navOrigin?.label&&navDestination?.label)
+    ? `${navOrigin.label} تا ${navDestination.label}`
+    : 'مسیر انتخاب‌شده';
+  if($('readyRouteText'))$('readyRouteText').textContent=routeLabel;
+  if($('readyDistance'))$('readyDistance').textContent=routeDistanceM?formatKm(routeDistanceM):'--';
+  if($('readyEta'))$('readyEta').textContent=routeDurationS?formatDurationFa(routeDurationS):'--';
+
+  const overall=$('readyOverall');
+  if(overall){
+    if(!hasRoute){
+      overall.textContent='ناقص';overall.className='ready-overall warn';
+    }else if(!online || loc.state==='warn' || !voiceGuidanceEnabled){
+      overall.textContent='قابل شروع';overall.className='ready-overall warn';
+    }else{
+      overall.textContent='آماده';overall.className='ready-overall good';
+    }
+  }
+  $('readyStartDrive').disabled=!hasRoute;
+  return hasRoute;
+}
+async function openTripReadiness(){
+  pendingDriveStart=true;
+  const sheet=$('tripReadySheet');
+  sheet?.classList.add('open');
+  await updateTripReadiness();
+}
+function closeTripReadiness(){
+  pendingDriveStart=false;
+  $('tripReadySheet')?.classList.remove('open');
+}
+async function startDrivingConfirmed(){
+  const ok=await updateTripReadiness();
+  if(!ok)return;
+  closeTripReadiness();
+
+  // These calls are triggered by a real user gesture.
+  if(voiceGuidanceEnabled)unlockTTS();
+  requestScreenWakeLock();
+
+  try{
+    if(document.documentElement.requestFullscreen && !document.fullscreenElement){
+      const p=document.documentElement.requestFullscreen({navigationUI:'hide'});
+      if(p?.catch)p.catch(()=>{});
+    }
+  }catch(e){}
+
+  startCoreDrive();
+}
+function updateOfflineDrivingBanner(){
+  const box=$('offlineDriveBanner');
+  if(!box)return;
+  const offline=navigator.onLine===false && document.body.classList.contains('driving-mode');
+  box.classList.toggle('show',offline);
+}
+
 function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
+  updateOfflineDrivingBanner();
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
@@ -2341,6 +2588,7 @@ function enterDrivingMode(){
 }
 function exitDrivingMode(){
   document.body.classList.remove('driving-mode');
+  $('offlineDriveBanner')?.classList.remove('show');
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
   setTimeout(()=>{try{map.invalidateSize(true)}catch(e){}},80);
@@ -2463,9 +2711,13 @@ function step(){
   t+=.25;if(t>=dur)finish()
 }
 function start(){
-  // Start is a real user gesture: use it to unlock browser TTS.
-  if(voiceGuidanceEnabled)unlockTTS();
-
+  if(!routeCoords.length){
+    loadRoute().then(()=>openTripReadiness());
+    return;
+  }
+  openTripReadiness();
+}
+function startCoreDrive(){
   if(!routeCoords.length){loadRoute().then(()=>start());return}
   reset(false,true);
   resetTurnByTurn();
@@ -2487,6 +2739,8 @@ function finish(){
   $('status').textContent="به مقصد رسیدی.";
   updateTurnByTurn(1);
   buildScore();
+  releaseScreenWakeLock();
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
   exitDrivingMode();
   setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),180);
 }
@@ -2494,6 +2748,9 @@ function reset(full=true,keepRoute=false){
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
   rerouteState.active=false;rerouteState.offSince=null;
   resetSafetyCoach();
+  releaseScreenWakeLock();
+  closeTripReadiness();
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
   exitDrivingMode();
   eventMarkers.forEach(m=>map.removeLayer(m));eventMarkers=[];speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
   if(trackLine){map.removeLayer(trackLine);trackLine=L.polyline([],{color:'#fff',weight:2,opacity:.6,dashArray:'5 6'}).addTo(map)}
@@ -3446,6 +3703,24 @@ $('driveVoiceBtn').onclick=()=>{
 $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
 };
+$('readyCancel').onclick=closeTripReadiness;
+$('readyStartDrive').onclick=startDrivingConfirmed;
+
+window.addEventListener('online',()=>{
+  updateOfflineDrivingBanner();
+  if($('tripReadySheet')?.classList.contains('open'))updateTripReadiness();
+});
+window.addEventListener('offline',()=>{
+  updateOfflineDrivingBanner();
+  if($('tripReadySheet')?.classList.contains('open'))updateTripReadiness();
+});
+
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState==='visible' && document.body.classList.contains('driving-mode')){
+    updateOfflineDrivingBanner();
+    if(!wakeLockSentinel)await requestScreenWakeLock();
+  }
+});
 initTTS();
 syncVoiceButtons();
 
