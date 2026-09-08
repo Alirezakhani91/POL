@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۹ SafeCoin Shadow Ledger & Daily Best</title>
+<title>POL | نسخه ۵.۰ Shadow Wallet & Marketplace Readiness</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3384,6 +3384,160 @@ body.trip-replay-mode .trip-replay-event-strip{
 .summary-shadow-ledger-card.blocked{border-color:#7d3030}
 @media(max-width:650px){.shadow-ledger-overview{grid-template-columns:repeat(2,1fr)}}
 
+
+/* ===== v5.0 Shadow Wallet & Marketplace Readiness ===== */
+.demo-wallet-banner small{
+  display:block;
+  margin-top:4px;
+  color:#d6bc72;
+  font-size:7px;
+  line-height:1.5;
+}
+.shadow-market-wallet{
+  border-color:rgba(245,158,11,.24)!important;
+}
+.shadow-wallet-hero{
+  display:grid;
+  grid-template-columns:1.4fr .8fr;
+  gap:9px;
+}
+.shadow-wallet-balance,
+.shadow-wallet-lock{
+  padding:13px;
+  border-radius:14px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.shadow-wallet-balance{
+  background:#171409;
+  border-color:#5d4815;
+}
+.shadow-wallet-balance span,
+.shadow-wallet-lock span{
+  display:block;
+  color:#9caabd;
+  font-size:8px;
+}
+.shadow-wallet-balance b{
+  display:block;
+  margin-top:4px;
+  color:#fde68a;
+  font-size:26px;
+}
+.shadow-wallet-lock b{
+  display:block;
+  margin-top:4px;
+  color:#94a3b8;
+  font-size:20px;
+}
+.shadow-wallet-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:9px;
+}
+.shadow-wallet-grid>div{
+  padding:8px;
+  border-radius:10px;
+  background:#101923;
+  border:1px solid #293b50;
+  text-align:center;
+}
+.shadow-wallet-grid b{
+  display:block;
+  font-size:14px;
+}
+.shadow-wallet-grid span{
+  display:block;
+  margin-top:2px;
+  color:#8fa0b6;
+  font-size:7px;
+}
+.shadow-market-policy{
+  margin-top:9px;
+  padding:9px 10px;
+  border-radius:11px;
+  background:#12351d;
+  border:1px solid #28543c;
+}
+.shadow-market-policy b{
+  display:block;
+  color:#86efac;
+  font-size:8px;
+}
+.shadow-market-policy span{
+  display:block;
+  margin-top:3px;
+  color:#b6d9c1;
+  font-size:7px;
+  line-height:1.65;
+}
+.shadow-market-preview{
+  border-color:rgba(96,165,250,.18)!important;
+}
+.shadow-offer{
+  position:relative;
+}
+.shadow-offer-status{
+  display:inline-flex;
+  width:auto;
+  margin-bottom:8px;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:7px;
+  border:1px solid #3b526f;
+  color:#bfdbfe;
+  background:#172334;
+}
+.shadow-offer-status.affordable{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.shadow-offer-status.locked{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.shadow-preview-btn{
+  opacity:1!important;
+  cursor:not-allowed!important;
+}
+.shadow-preview-btn.affordable{
+  background:#12351d!important;
+  color:#86efac!important;
+  border:1px solid #28543c!important;
+}
+.shadow-preview-btn.locked{
+  background:#172334!important;
+  color:#94a3b8!important;
+  border:1px solid #304760!important;
+}
+.shadow-offer-lock-note{
+  margin-top:7px;
+  color:#8495a9;
+  font-size:7px;
+  line-height:1.5;
+}
+.marketplace-readiness-box{
+  border-color:rgba(96,165,250,.22)!important;
+}
+.marketplace-readiness-box .eligibilityStatus.ready{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.marketplace-readiness-box .eligibilityStatus.review{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+@media(max-width:600px){
+  .shadow-wallet-hero{grid-template-columns:1fr}
+  .shadow-wallet-grid{grid-template-columns:1fr 1fr}
+  .shadow-wallet-grid>div:last-child{grid-column:1/-1}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4137,9 +4291,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.9</span>
+              <span class="lab-version-chip">v5.0</span>
               <div>
-                <b>SafeCoin Shadow Ledger & Daily Best</b>
+                <b>Shadow Wallet & Marketplace Readiness</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4158,6 +4312,26 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox marketplace-readiness-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Marketplace Readiness</b>
+                  <div class="small">Shadow Wallet → Offer Affordability • Redemption واقعی غیرفعال</div>
+                </div>
+                <div id="marketplaceReadinessStatus" class="eligibilityStatus review">قفل</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="marketplaceReadinessBalance">۰</b><span>Shadow Balance</span></div>
+                <div class="eligibilityCell"><b id="marketplaceReadinessOffers">۰</b><span>Affordable Offers</span></div>
+                <div class="eligibilityCell"><b id="marketplaceReadinessActual">۰</b><span>Actual Redemption</span></div>
+              </div>
+
+              <div id="marketplaceReadinessReason" class="reasonList">
+                Marketplace واقعی تا فعال‌شدن Production Reward Ledger قفل می‌ماند.
+              </div>
             </div>
 
             <div class="eligibilityBox shadow-ledger-debug-box">
@@ -4449,13 +4623,57 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
     <!-- REWARDS -->
     <section id="screen-rewards" class="app-screen">
-      <div class="reward-wallet-banner">
-        <div><span>موجودی کیف پول</span><br><b><span id="marketCoins">۰</span> سکه ایمن</b></div>
+      <div class="reward-wallet-banner demo-wallet-banner">
+        <div>
+          <span>کیف پول Gamification Demo</span><br>
+          <b><span id="marketCoins">۰</span> سکه ایمن</b>
+          <small>این موجودی مربوط به Simulator قدیمی است، نه سفر GPS واقعی</small>
+        </div>
         <div style="font-size:28px">🪙</div>
       </div>
 
+      <div class="section-card shadow-market-wallet" style="margin-top:0">
+        <div class="section-head">
+          <h3>Shadow Wallet سفرهای واقعی</h3>
+          <small>Preview فقط • Actual Wallet = 0</small>
+        </div>
+
+        <div class="shadow-wallet-hero">
+          <div class="shadow-wallet-balance">
+            <span>Projected Shadow Balance</span>
+            <b><span id="shadowMarketBalance">۰</span> SC</b>
+          </div>
+          <div class="shadow-wallet-lock">
+            <span>موجودی واقعی</span>
+            <b>۰ SC</b>
+          </div>
+        </div>
+
+        <div class="shadow-wallet-grid">
+          <div><b id="shadowMarketWinningDays">۰</b><span>روز منتخب در Ledger</span></div>
+          <div><b id="shadowMarketAffordable">۰</b><span>Offer قابل دسترس در Preview</span></div>
+          <div><b id="shadowMarketTransactions">۰</b><span>Redemption واقعی</span></div>
+        </div>
+
+        <div class="shadow-market-policy">
+          <b>Safety-first Reward Policy</b>
+          <span>
+            این صفحه هرگز نمی‌گوید برای گرفتن Coin بیشتر، بیشتر رانندگی کن.
+            مسافت، مدت و تعداد سفر هیچ Reward اضافه‌ای ایجاد نمی‌کنند.
+          </span>
+        </div>
+      </div>
+
+      <div class="section-card shadow-market-preview">
+        <div class="section-head">
+          <h3>پیش‌نمایش Marketplace واقعی</h3>
+          <small>بر اساس Shadow Ledger • بدون خرید</small>
+        </div>
+        <div id="shadowOfferGrid" class="offerGrid"></div>
+      </div>
+
       <div class="section-card" style="margin-top:0">
-        <div class="section-head"><h3>بازار پاداش</h3><small>نسخه آزمایشی ایران</small></div>
+        <div class="section-head"><h3>بازار پاداش Demo</h3><small>برای Gamification Simulator</small></div>
         <div class="marketFilters">
           <button data-filter="all" class="marketFilter">همه</button>
           <button data-filter="fuel" class="marketFilter">سوخت</button>
@@ -5147,6 +5365,7 @@ function registerShadowRewardDecision({
     shadowRewardLedgerLastDecision=decision;
     renderShadowRewardLedger();
     renderShadowLedgerDebug(decision);
+    renderShadowMarketplace();
     return decision;
   }
 
@@ -5202,6 +5421,7 @@ function registerShadowRewardDecision({
   shadowRewardLedgerLastDecision=entry;
   renderShadowRewardLedger();
   renderShadowLedgerDebug(entry);
+  renderShadowMarketplace();
   return entry;
 }
 function shadowLedgerProjectedTotal(){
@@ -7570,6 +7790,7 @@ resetRealTripIntegrity();
 resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
 renderShadowRewardLedger();
+renderShadowMarketplace();
 renderTrustedRealTrips();
 renderRecentDestinations();
 }
@@ -14331,7 +14552,126 @@ function generateVoucher(){
   for(let i=0;i<8;i++)s+=chars[Math.floor(Math.random()*chars.length)];
   return s;
 }
+
+function shadowWalletSnapshot(){
+  const ledger=loadShadowRewardLedger();
+  const days=Object.values(ledger.days||{})
+    .filter(d=>Number(d.winnerCoins||0)>0);
+
+  const projectedBalance=days.reduce(
+    (sum,d)=>sum+Number(d.winnerCoins||0),
+    0
+  );
+
+  const affordableOffers=MARKET_OFFERS.filter(
+    o=>projectedBalance>=Number(o.cost||0)
+  );
+
+  return{
+    projectedBalance,
+    winningDays:days.length,
+    actualBalance:0,
+    actualRedemptions:0,
+    affordableOffers,
+    totalOffers:MARKET_OFFERS.length
+  };
+}
+
+function renderShadowMarketplace(){
+  const snapshot=shadowWalletSnapshot();
+
+  if($('shadowMarketBalance')){
+    $('shadowMarketBalance').textContent=
+      Number(snapshot.projectedBalance).toLocaleString('fa-IR');
+  }
+
+  if($('shadowMarketWinningDays')){
+    $('shadowMarketWinningDays').textContent=
+      Number(snapshot.winningDays).toLocaleString('fa-IR');
+  }
+
+  if($('shadowMarketAffordable')){
+    $('shadowMarketAffordable').textContent=
+      Number(snapshot.affordableOffers.length).toLocaleString('fa-IR');
+  }
+
+  if($('shadowMarketTransactions')){
+    $('shadowMarketTransactions').textContent='۰';
+  }
+
+  if($('marketplaceReadinessBalance')){
+    $('marketplaceReadinessBalance').textContent=
+      Number(snapshot.projectedBalance).toLocaleString('fa-IR');
+  }
+
+  if($('marketplaceReadinessOffers')){
+    $('marketplaceReadinessOffers').textContent=
+      Number(snapshot.affordableOffers.length).toLocaleString('fa-IR');
+  }
+
+  if($('marketplaceReadinessActual')){
+    $('marketplaceReadinessActual').textContent='۰';
+  }
+
+  const readiness=$('marketplaceReadinessStatus');
+  if(readiness){
+    readiness.classList.remove('ready','review');
+
+    if(snapshot.affordableOffers.length>0){
+      readiness.classList.add('ready');
+      readiness.textContent="PREVIEW READY";
+    }else{
+      readiness.classList.add('review');
+      readiness.textContent="قفل";
+    }
+  }
+
+  if($('marketplaceReadinessReason')){
+    $('marketplaceReadinessReason').textContent=
+      snapshot.affordableOffers.length>0
+        ?`${snapshot.affordableOffers.length.toLocaleString('fa-IR')} Offer با Shadow Balance قابل دسترس می‌بود، اما Redemption واقعی غیرفعال است.`
+        :"Shadow Balance فعلی برای Preview خرید هیچ Offer کافی نیست؛ سیستم پیشنهاد رانندگی بیشتر نمی‌دهد.";
+  }
+
+  const grid=$('shadowOfferGrid');
+  if(!grid)return;
+
+  grid.innerHTML=MARKET_OFFERS.map(o=>{
+    const affordable=snapshot.projectedBalance>=Number(o.cost||0);
+
+    return `<div class="offer shadow-offer">
+      <div class="shadow-offer-status ${affordable?'affordable':'locked'}">
+        ${affordable?'قابل دسترس در Shadow':'فعلاً در Shadow قفل'}
+      </div>
+
+      <div class="offerTop">
+        <div class="offerIcon">${o.icon}</div>
+        <span class="offerCat">${o.partner}</span>
+      </div>
+
+      <h4>${o.title}</h4>
+      <p>${o.description}</p>
+
+      <div class="offerBottom">
+        <div class="offerCost">${o.cost} SC</div>
+        <button
+          class="shadow-preview-btn ${affordable?'affordable':'locked'}"
+          type="button"
+          disabled
+        >
+          ${affordable?'Preview قابل دسترس':'Preview قفل'}
+        </button>
+      </div>
+
+      <div class="shadow-offer-lock-note">
+        خرید و Voucher واقعی تا فعال‌شدن Production Wallet انجام نمی‌شود.
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderMarketplace(){
+  renderShadowMarketplace();
   const p=normalizeProfile(driverProfile);
   $('marketCoins').textContent=p.coins;
 
@@ -15295,6 +15635,7 @@ $('clearShadowLedgerBtn')?.addEventListener('click',()=>{
   shadowRewardLedgerLastDecision=null;
   renderShadowRewardLedger();
   renderShadowLedgerDebug(null);
+  renderShadowMarketplace();
 });
 
 $('clearTrustedTripsBtn')?.addEventListener('click',()=>{
@@ -15304,6 +15645,7 @@ $('clearTrustedTripsBtn')?.addEventListener('click',()=>{
   shadowRewardLedgerLastDecision=null;
   renderTrustedRealTrips();
   renderShadowLedgerDebug(null);
+  renderShadowMarketplace();
 });
 
 $('resetProfile').onclick=()=>{
@@ -15350,7 +15692,10 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       },80);
     }
     if(name==='rewards'){
-      try{ renderMarketplace(); }catch(e){}
+      try{
+        renderMarketplace();
+        renderShadowMarketplace();
+      }catch(e){}
     }
     if(name==='profile'){
       try{ renderTrustedRealTrips(); }catch(e){}
