@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۹ محاسبه مجدد واقعی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰ یکپارچگی مسیریابی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1005,7 +1005,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                       <option value="speeding">تست سرعت غیرمجاز</option>
                       <option value="mixed">رانندگی ترکیبی</option>
                       <option value="gpsJump">تست اختلال GPS</option>
-                      <option value="offRoute">تست خروج از مسیر</option>
+                      <option value="offRoute">تست خروج از مسیر — فقط روی خیابان معتبر</option>
                       <option value="fraudTest">تست موقعیت مکانی جعلی</option>
                     </select>
                   </div>
@@ -1506,6 +1506,14 @@ let rerouteState={
 };
 let tripJourneyDistanceM=0;
 let tripJourneyDurationS=0;
+let offRouteTestState={
+  preparing:false,
+  ready:false,
+  point:null,
+  roadName:"",
+  snapDistance:null,
+  error:""
+};
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -2568,9 +2576,25 @@ function closeTripReadiness(){
 async function startDrivingConfirmed(){
   const ok=await updateTripReadiness();
   if(!ok)return;
+
+  const isOffRouteTest=$('scenario')?.value==="offRoute";
+  if(isOffRouteTest){
+    $('readyStartDrive').disabled=true;
+    $('readyStartDrive').textContent="در حال آماده‌سازی تست...";
+    await prepareOffRouteRoadTest();
+    $('readyStartDrive').disabled=false;
+    $('readyStartDrive').textContent="شروع رانندگی";
+
+    if(!offRouteTestState.ready){
+      setReadyCheck(
+        'readyRouteCheck','warn',
+        'برای تست خروج از مسیر، خیابان مجاور معتبر پیدا نشد؛ نقطه غیرواقعی ساخته نمی‌شود.'
+      );
+    }
+  }
+
   closeTripReadiness();
 
-  // These calls are triggered by a real user gesture.
   if(voiceGuidanceEnabled)unlockTTS();
   requestScreenWakeLock();
 
@@ -2628,6 +2652,151 @@ function toggleVoiceGuidance(){
   }
 }
 
+
+function bearingDeg(a,b){
+  const p1=a[0]*Math.PI/180,p2=b[0]*Math.PI/180;
+  const dl=(b[1]-a[1])*Math.PI/180;
+  const y=Math.sin(dl)*Math.cos(p2);
+  const x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function destinationPoint(origin,bearing,meters){
+  const R=6371000;
+  const br=bearing*Math.PI/180;
+  const lat1=origin[0]*Math.PI/180;
+  const lon1=origin[1]*Math.PI/180;
+  const ad=meters/R;
+  const lat2=Math.asin(
+    Math.sin(lat1)*Math.cos(ad)+Math.cos(lat1)*Math.sin(ad)*Math.cos(br)
+  );
+  const lon2=lon1+Math.atan2(
+    Math.sin(br)*Math.sin(ad)*Math.cos(lat1),
+    Math.cos(ad)-Math.sin(lat1)*Math.sin(lat2)
+  );
+  return [lat2*180/Math.PI,lon2*180/Math.PI];
+}
+function routeBearingNear(p){
+  const a=interpolateOnRoute(clamp(p-.008,0,1));
+  const b=interpolateOnRoute(clamp(p+.008,0,1));
+  return bearingDeg(a,b);
+}
+async function fetchJsonWithTimeout(url,timeoutMs=7500){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const res=await fetch(url,{signal:controller.signal});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+async function snapToDrivableRoad(pos,{maxSnapM=90,number=3}={}){
+  if(!Array.isArray(pos)||pos.length<2)throw new Error("invalid GPS point");
+  const lon=Number(pos[1]).toFixed(6),lat=Number(pos[0]).toFixed(6);
+  const url=`https://router.project-osrm.org/nearest/v1/driving/${lon},${lat}?number=${number}`;
+  const data=await fetchJsonWithTimeout(url,6500);
+  const points=(data?.waypoints||[])
+    .map(w=>({
+      point:[Number(w.location?.[1]),Number(w.location?.[0])],
+      distance:Number(w.distance),
+      name:String(w.name||"").trim(),
+      hint:w.hint||null
+    }))
+    .filter(x=>Number.isFinite(x.point[0])&&Number.isFinite(x.point[1])&&Number.isFinite(x.distance))
+    .filter(x=>x.distance<=maxSnapM)
+    .sort((a,b)=>{
+      // Prefer a named road when distances are close, otherwise nearest.
+      const nameBonusA=a.name?18:0,nameBonusB=b.name?18:0;
+      return (a.distance-nameBonusA)-(b.distance-nameBonusB);
+    });
+  return points[0]||null;
+}
+function validateRouteCandidate(route,snappedStart,destination){
+  if(!route || !route.geometry?.coordinates?.length)return{ok:false,reason:"هندسه مسیر معتبر نیست"};
+  const coords=routeToCoords(route);
+  if(coords.length<2)return{ok:false,reason:"مسیر بیش از حد کوتاه است"};
+  const distance=Number(route.distance||0),duration=Number(route.duration||0);
+  if(distance<20 || duration<3)return{ok:false,reason:"مسیر غیرمنطقی است"};
+
+  const startGap=hav(coords[0],snappedStart);
+  const endGap=hav(coords[coords.length-1],[destination.lat,destination.lng]);
+  if(startGap>45)return{ok:false,reason:"شروع مسیر با خیابان تثبیت‌شده همخوان نیست"};
+  if(endGap>250)return{ok:false,reason:"مسیر به محدوده مقصد نمی‌رسد"};
+
+  const straight=Math.max(50,hav(snappedStart,[destination.lat,destination.lng]));
+  if(distance>straight*7+2500)return{ok:false,reason:"طول مسیر نسبت به مقصد غیرعادی است"};
+
+  const steps=(route.legs||[]).flatMap(l=>l.steps||[]);
+  const forbidden=steps.some(s=>["walking","cycling"].includes(String(s.mode||"").toLowerCase()));
+  if(forbidden)return{ok:false,reason:"حالت حرکت غیرخودرویی در مسیر دیده شد"};
+
+  return{ok:true,reason:""};
+}
+function chooseBestValidatedRoute(routes,snappedStart,destination){
+  const valid=(routes||[])
+    .map(r=>({route:r,check:validateRouteCandidate(r,snappedStart,destination)}))
+    .filter(x=>x.check.ok)
+    .sort((a,b)=>{
+      // Duration is primary. Distance only breaks close ties.
+      const da=Number(a.route.duration||Infinity),db=Number(b.route.duration||Infinity);
+      if(Math.abs(da-db)>45)return da-db;
+      return Number(a.route.distance||Infinity)-Number(b.route.distance||Infinity);
+    });
+  return valid[0]?.route||null;
+}
+async function prepareOffRouteRoadTest(){
+  offRouteTestState={preparing:true,ready:false,point:null,roadName:"",snapDistance:null,error:""};
+  if($('scenario')?.value!=="offRoute")return;
+
+  try{
+    if(navigator.onLine===false)throw new Error("offline");
+    const p=.34;
+    const base=interpolateOnRoute(p);
+    const heading=routeBearingNear(p);
+    const candidates=[];
+    const bearings=[heading+90,heading-90,heading+60,heading-60];
+    const distances=[90,130,180,230];
+
+    for(const d of distances){
+      for(const br of bearings){
+        const probe=destinationPoint(base,(br+360)%360,d);
+        try{
+          const snap=await snapToDrivableRoad(probe,{maxSnapM:55,number:3});
+          if(!snap)continue;
+          const separation=hav(base,snap.point);
+          if(separation<55 || separation>360)continue;
+          candidates.push({...snap,separation});
+        }catch(e){}
+      }
+    }
+
+    candidates.sort((a,b)=>{
+      const namedA=a.name?1:0,namedB=b.name?1:0;
+      if(namedA!==namedB)return namedB-namedA;
+      // Prefer a nearby parallel/adjacent street, not a distant network edge.
+      return Math.abs(a.separation-140)-Math.abs(b.separation-140);
+    });
+
+    const best=candidates[0];
+    if(!best)throw new Error("no nearby drivable road found");
+
+    offRouteTestState={
+      preparing:false,
+      ready:true,
+      point:best.point,
+      roadName:best.name||"خیابان قابل رانندگی مجاور",
+      snapDistance:best.distance,
+      error:""
+    };
+  }catch(e){
+    offRouteTestState={
+      preparing:false,ready:false,point:null,roadName:"",
+      snapDistance:null,error:String(e?.message||e)
+    };
+  }
+}
+
 function currentNavigationProgress(simProgress){
   const p=clamp(Number(simProgress||0),0,1);
   if(rerouteState.rerouted && rerouteState.newRouteStartSimP!=null){
@@ -2644,10 +2813,14 @@ function currentRoutePosition(simProgress){
 function simulatedOffRoutePosition(base,p){
   if(rerouteState.rerouted)return base;
   if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.30&&p<.43))return base;
-  // ~250–400 m visual departure in Tehran lat/lng scale.
-  const phase=(p-.30)/.13;
-  const swell=Math.sin(Math.PI*phase);
-  return [base[0]+0.0027*swell,base[1]-0.0032*swell];
+
+  // Never invent a raw point inside a park/building. The test point must have
+  // already been snapped to OSRM's DRIVING network.
+  if(offRouteTestState.ready && offRouteTestState.point){
+    return offRouteTestState.point;
+  }
+  // If no valid nearby drivable road can be found, do not fake an off-road point.
+  return base;
 }
 function showRerouteNotice(title,message,success=false){
   const box=$('rerouteBanner');
@@ -2662,22 +2835,21 @@ function showRerouteNotice(title,message,success=false){
 }
 async function triggerReroute(pos,simProgress){
   if(rerouteState.active || rerouteState.rerouted)return;
-
   rerouteState.active=true;
   rerouteState.lastAt=t;
   rerouteState.count++;
 
-  showRerouteNotice("از مسیر خارج شدی","در حال محاسبه مسیر جدید...");
+  showRerouteNotice("از مسیر خارج شدی","در حال تثبیت موقعیت روی خیابان...");
   $('turnArrow').textContent="↻";
-  $('turnDistance').textContent="در حال محاسبه";
-  $('turnInstruction').textContent="مسیر جدید";
-  $('turnStreet').textContent="موقعیت فعلی تا مقصد";
+  $('turnDistance').textContent="در حال بررسی";
+  $('turnInstruction').textContent="محاسبه مسیر";
+  $('turnStreet').textContent="تثبیت موقعیت روی شبکه قابل رانندگی";
 
   if(navigator.onLine===false){
     rerouteState.active=false;
     showRerouteNotice(
       "اینترنت در دسترس نیست",
-      "مسیر فعلی حفظ شد. وقتی اتصال برگردد محاسبه مجدد دوباره انجام می‌شود."
+      "مسیر فعلی حفظ شد. محاسبه مجدد بعد از اتصال دوباره انجام می‌شود."
     );
     return;
   }
@@ -2691,32 +2863,41 @@ async function triggerReroute(pos,simProgress){
   );
   const durationBefore=oldRouteDuration*oldNavProgress;
 
-  const coords=`${Number(pos[1]).toFixed(6)},${Number(pos[0]).toFixed(6)};${navDestination.lng},${navDestination.lat}`;
-  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=false&overview=full&geometries=geojson&steps=true`;
-
   try{
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),9000);
-    const res=await fetch(url,{signal:controller.signal});
-    clearTimeout(timeout);
+    // CRITICAL: raw GPS is never sent directly as the new navigation origin.
+    const snapped=await snapToDrivableRoad(pos,{maxSnapM:90,number:3});
+    if(!snapped){
+      throw new Error("موقعیت هنوز روی یک مسیر قابل رانندگی با اطمینان کافی تثبیت نشده");
+    }
 
-    if(!res.ok)throw new Error(`route service ${res.status}`);
-    const data=await res.json();
-    const route=data?.routes?.[0];
-    if(!route)throw new Error("no reroute returned");
+    showRerouteNotice(
+      "موقعیت تثبیت شد",
+      snapped.name
+        ? `${Math.round(snapped.distance).toLocaleString('fa-IR')} متر تا ${snapped.name} • محاسبه مسیر...`
+        : `${Math.round(snapped.distance).toLocaleString('fa-IR')} متر تا شبکه قابل رانندگی • محاسبه مسیر...`
+    );
+
+    const startLon=Number(snapped.point[1]).toFixed(6);
+    const startLat=Number(snapped.point[0]).toFixed(6);
+    const coords=`${startLon},${startLat};${navDestination.lng},${navDestination.lat}`;
+
+    // Alternatives are requested, then locally validated before one is selected.
+    const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=true&continue_straight=true&radiuses=35;180`;
+    const data=await fetchJsonWithTimeout(url,9000);
+    const route=chooseBestValidatedRoute(data?.routes||[],snapped.point,navDestination);
+
+    if(!route){
+      throw new Error("هیچ مسیر خودرویی معتبر از موقعیت تثبیت‌شده پیدا نشد");
+    }
 
     const newCoords=routeToCoords(route);
-    if(!Array.isArray(newCoords) || newCoords.length<2)throw new Error("invalid reroute geometry");
-
-    // Replace ONLY the future route. The driven track remains visible.
     routeCoords=newCoords;
     routeDistanceM=Number(route.distance||totalDistance(routeCoords));
     routeDurationS=Number(route.duration||0);
-    routeAlternatives=[route];
-    selectedRouteIndex=0;
+    routeAlternatives=(data.routes||[]).filter(r=>validateRouteCandidate(r,snapped.point,navDestination).ok);
+    selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
 
-    // Keep a realistic whole-trip estimate for history/summary.
     tripJourneyDistanceM=Math.max(
       travelledBefore + routeDistanceM,
       tripJourneyDistanceM||0
@@ -2732,16 +2913,14 @@ async function triggerReroute(pos,simProgress){
     rerouteState.offSince=null;
     rerouteState.active=false;
 
-    // Replace route geometry on map; do not clear driven track.
     routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
     routeAltLayers=[];
     if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
     routeLine=L.polyline(routeCoords,{
-      color:'#2f6df6',
-      weight:6,
-      opacity:.97
+      color:'#2f6df6',weight:6,opacity:.97
     }).addTo(map);
 
+    renderRouteAlternatives();
     renderNavMarkers();
     updateRouteSummary();
     resetTurnByTurn();
@@ -2749,15 +2928,13 @@ async function triggerReroute(pos,simProgress){
 
     try{
       map.fitBounds(routeLine.getBounds(),{
-        padding:[55,55],
-        animate:true,
-        duration:.45
+        padding:[55,55],animate:true,duration:.45
       });
     }catch(e){}
 
     showRerouteNotice(
       "مسیر جدید آماده شد",
-      `مسیر جدید ${formatKm(routeDistanceM)} • حدود ${formatDurationFa(routeDurationS)}`,
+      `${snapped.name?snapped.name+" • ":""}${formatKm(routeDistanceM)} • حدود ${formatDurationFa(routeDurationS)}`,
       true
     );
 
@@ -2765,39 +2942,29 @@ async function triggerReroute(pos,simProgress){
       coachVoice("مسیر جدید آماده شد. راهنمای مسیر به‌روزرسانی شد.");
     }
   }catch(e){
-    console.warn("Real reroute failed:",e);
+    console.warn("Navigation integrity rejected reroute:",e);
     rerouteState.active=false;
     rerouteState.offSince=null;
     showRerouteNotice(
-      "محاسبه مسیر جدید انجام نشد",
+      "مسیر جدید تأیید نشد",
       navigator.onLine===false
-        ?"اتصال اینترنت قطع شد؛ مسیر فعلی حفظ می‌شود."
-        :"سرویس مسیر پاسخ نداد؛ مسیر فعلی حفظ می‌شود."
+        ?"اتصال اینترنت قطع است؛ مسیر فعلی حفظ می‌شود."
+        : `${String(e?.message||"مسیر معتبر پیدا نشد")}. مسیر فعلی حذف نمی‌شود.`
     );
   }
 }
 function handleOffRoute(s,pos){
-  // GPS uncertainty is NOT treated as off-route. Only a confident deviation triggers rerouting.
+  // Weak/uncertain GPS must never create a new route.
   if(rerouteState.rerouted){
     rerouteState.offSince=null;
     return;
   }
-  const confidentDeviation=!!s.offRoute && s.gps<=35 && s.match>=70;
+  const testHasValidRoad=$('scenario')?.value!=="offRoute" || offRouteTestState.ready;
+  const confidentDeviation=!!s.offRoute && testHasValidRoad && s.gps<=35 && s.match>=70;
   if(confidentDeviation){
     if(rerouteState.offSince==null)rerouteState.offSince=t;
     if(t-rerouteState.offSince>=1.25 && !rerouteState.active && t-rerouteState.lastAt>4){
       triggerReroute(pos,s.p);
-    }
-  }else{
-    rerouteState.offSince=null;
-  }
-}function handleOffRoute(s,pos){
-  // GPS uncertainty is NOT treated as off-route. Only a confident deviation triggers rerouting.
-  const confidentDeviation=!!s.offRoute && s.gps<=35 && s.match>=70;
-  if(confidentDeviation){
-    if(rerouteState.offSince==null)rerouteState.offSince=t;
-    if(t-rerouteState.offSince>=1.25 && !rerouteState.active && t-rerouteState.lastAt>4){
-      triggerReroute(pos);
     }
   }else{
     rerouteState.offSince=null;
@@ -2908,6 +3075,7 @@ function reset(full=true,keepRoute=false){
   rerouteState.newRouteTravelledBeforeM=0;
   tripJourneyDistanceM=0;
   tripJourneyDurationS=0;
+  offRouteTestState={preparing:false,ready:false,point:null,roadName:"",snapDistance:null,error:""};
   resetSafetyCoach();
   releaseScreenWakeLock();
   closeTripReadiness();
