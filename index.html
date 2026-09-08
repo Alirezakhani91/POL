@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۲ هسته کیفیت مسیر</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۳ Map Matching واقعی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -741,6 +741,16 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   border:1px solid #5e4a20;color:#d8b86e;font-size:8px;line-height:1.7
 }
 
+
+.real-gps-badge.matched{
+  background:rgba(9,31,27,.95);
+  border-color:#24725d
+}
+.real-gps-badge.matched .gps-live-dot{
+  background:#2dd4bf;
+  box-shadow:0 0 0 4px rgba(45,212,191,.12)
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1149,7 +1159,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div id="realGpsBadge" class="real-gps-badge">
                 <span class="gps-live-dot"></span>
                 <div>
-                  <small>GPS واقعی</small>
+                  <small id="realGpsBadgeLabel">GPS واقعی</small>
                   <b id="realGpsBadgeText">در انتظار موقعیت</b>
                 </div>
               </div>
@@ -1625,7 +1635,19 @@ let realGpsState={
   matchedPoint:null,
   offRouteSince:null,
   lastRerouteAt:0,
-  track:[]
+  track:[],
+  traceBuffer:[],
+  networkMatch:{
+    inFlight:false,
+    lastRequestAt:0,
+    lastSuccessAt:0,
+    point:null,
+    confidence:0,
+    matchedRatio:0,
+    alternativesCount:0,
+    error:"",
+    source:"none"
+  }
 };
 let pendingRealGpsFix=null;
 const ROUTING_ENGINE={
@@ -1982,6 +2004,132 @@ function classifyRouteOption(route,index){
   }
   return{title:"مسیر جایگزین",badge:"گزینه معتبر",detail:"مسیر متفاوت قابل رانندگی"};
 }
+
+async function routingProviderMapMatch(trace){
+  if(!Array.isArray(trace)||trace.length<3){
+    throw new Error("برای Map Matching حداقل ۳ نقطه لازم است");
+  }
+
+  if(ROUTING_ENGINE.id==="osrm-demo"){
+    const clean=trace.slice(-8);
+    const coords=clean.map(x=>`${Number(x.point[1]).toFixed(6)},${Number(x.point[0]).toFixed(6)}`).join(';');
+    const radiuses=clean.map(x=>Math.round(clamp(Number(x.accuracy||20),5,50))).join(';');
+    const timestamps=clean.map(x=>Math.floor(Number(x.timestamp||Date.now())/1000)).join(';');
+
+    const url=
+      `https://router.project-osrm.org/match/v1/driving/${coords}`+
+      `?overview=false&steps=false&geometries=geojson&tidy=true`+
+      `&radiuses=${radiuses}&timestamps=${timestamps}`;
+
+    const data=await fetchJsonWithTimeout(url,8000);
+
+    if(data?.code!=="Ok" || !Array.isArray(data.tracepoints)){
+      throw new Error(data?.code==="NoMatch"?"GPS Trace روی شبکه خیابان Match نشد":"پاسخ Map Matching معتبر نبود");
+    }
+
+    const usable=data.tracepoints.filter(Boolean);
+    if(!usable.length)throw new Error("هیچ Tracepoint معتبری برنگشت");
+
+    const last=[...data.tracepoints].reverse().find(Boolean);
+    const matchingIndex=Number(last?.matchings_index||0);
+    const matching=data.matchings?.[matchingIndex];
+    const confidence=Number(matching?.confidence||0);
+
+    const matchedRatio=usable.length/data.tracepoints.length;
+    const alternativesCount=Number(last?.alternatives_count||0);
+
+    if(!Array.isArray(last.location)||last.location.length<2){
+      throw new Error("مختصات Map-Matched معتبر نیست");
+    }
+
+    return{
+      point:[Number(last.location[1]),Number(last.location[0])],
+      confidence:clamp(confidence,0,1),
+      matchedRatio:clamp(matchedRatio,0,1),
+      alternativesCount,
+      source:"osrm-match"
+    };
+  }
+
+  throw new Error("Map Matching provider is not configured");
+}
+function appendGpsTracePoint(point,accuracy,timestamp){
+  const item={
+    point:[Number(point[0]),Number(point[1])],
+    accuracy:Number(accuracy||999),
+    timestamp:Number(timestamp||Date.now())
+  };
+
+  const prev=realGpsState.traceBuffer.at(-1);
+  if(prev){
+    const moved=hav(prev.point,item.point);
+    const dt=item.timestamp-prev.timestamp;
+    // Avoid filling the trace with duplicates while stationary.
+    if(moved<2.5 && dt<3000)return;
+  }
+
+  realGpsState.traceBuffer.push(item);
+  if(realGpsState.traceBuffer.length>10)realGpsState.traceBuffer.shift();
+}
+async function refreshNetworkMapMatch(){
+  const state=realGpsState.networkMatch;
+  if(!realGpsState.active || !isRealGpsMode())return;
+  if(state.inFlight)return;
+  if(realGpsState.traceBuffer.length<3)return;
+
+  const now=Date.now();
+  if(now-state.lastRequestAt<6500)return;
+
+  state.inFlight=true;
+  state.lastRequestAt=now;
+
+  try{
+    const result=await routingProviderMapMatch(realGpsState.traceBuffer);
+    state.point=result.point;
+    state.confidence=result.confidence;
+    state.matchedRatio=result.matchedRatio;
+    state.alternativesCount=result.alternativesCount;
+    state.lastSuccessAt=Date.now();
+    state.error="";
+    state.source=result.source;
+  }catch(e){
+    state.error=String(e?.message||e);
+  }finally{
+    state.inFlight=false;
+  }
+}
+function trustedNetworkMatch(){
+  const m=realGpsState.networkMatch;
+  if(!m.point)return null;
+  if(Date.now()-m.lastSuccessAt>12000)return null;
+  if(m.confidence<.58)return null;
+  if(m.matchedRatio<.65)return null;
+  if(m.alternativesCount>2)return null;
+
+  const raw=[realGpsState.lat,realGpsState.lng];
+  if(!Number.isFinite(raw[0])||!Number.isFinite(raw[1]))return null;
+
+  const rawGap=hav(raw,m.point);
+  const allowedGap=Math.max(75,Number(realGpsState.accuracy||20)*3);
+  if(rawGap>allowedGap)return null;
+
+  return m;
+}
+function resetNetworkMapMatch(){
+  realGpsState.traceBuffer=[];
+  realGpsState.networkMatch={
+    inFlight:false,
+    lastRequestAt:0,
+    lastSuccessAt:0,
+    point:null,
+    confidence:0,
+    matchedRatio:0,
+    alternativesCount:0,
+    error:"",
+    source:"none"
+  };
+}
+
 async function routingProviderRequest(originPoint,destinationPoint,{alternatives=true,bearing=null}={}){
   // Provider boundary: all navigation route requests should eventually pass
   // through this function. v2.2 uses OSRM Demo; a traffic-aware Iran provider
@@ -2034,7 +2182,7 @@ function updateRoutingDataDisclosure(){
   if($('routingDataText'))$('routingDataText').textContent=
     ROUTING_ENGINE.liveTraffic
       ?"زمان مسیر بر اساس داده ترافیک زنده محاسبه می‌شود."
-      :"در نسخه آزمایشی، ترافیک لحظه‌ای هنوز در ETA لحاظ نمی‌شود؛ مسیرها فقط پس از اعتبارسنجی شبکه خودرویی نمایش داده می‌شوند.";
+      :"در نسخه آزمایشی، ترافیک لحظه‌ای هنوز در ETA لحاظ نمی‌شود؛ مسیر و GPS واقعی قبل از تصمیم‌های حساس روی شبکه خودرویی اعتبارسنجی می‌شوند.";
 }
 
 function routeToCoords(route){
@@ -2965,7 +3113,7 @@ async function startDrivingConfirmed(){
       if(acc<=35){
         setReadyCheck(
           'readyRealGpsCheck','good',
-          `GPS آماده است • دقت ${Math.round(acc).toLocaleString('fa-IR')} متر • فاصله از مسیر ${Math.round(match.distance).toLocaleString('fa-IR')} متر`
+          `GPS آماده است • دقت ${Math.round(acc).toLocaleString('fa-IR')} متر. Map Matching پس از دریافت چند نقطه حرکت فعال می‌شود.`
         );
       }else{
         setReadyCheck(
@@ -3157,6 +3305,8 @@ function stopRealGps(){
   }
   realGpsState.watchId=null;
   document.body.classList.remove('real-gps-active');
+  $('realGpsBadge')?.classList.remove('matched','warn','bad');
+  if($('realGpsBadgeLabel'))$('realGpsBadgeLabel').textContent="GPS واقعی";
 }
 function realGpsFailure(err){
   const msg=err?.code===1?"دسترسی Location داده نشده":
@@ -3169,34 +3319,68 @@ async function processRealGps(position){
   if(!realGpsState.active||!isRealGpsMode())return;
 
   const c=position.coords;
-  const point=[Number(c.latitude),Number(c.longitude)];
+  const rawPoint=[Number(c.latitude),Number(c.longitude)];
   const stamp=Number(position.timestamp||Date.now());
   const accuracy=Number(c.accuracy||999);
-  const speed=gpsSpeedKmh(c,point,stamp);
+  const speed=gpsSpeedKmh(c,rawPoint,stamp);
   const heading=Number.isFinite(c.heading)
     ?Number(c.heading)
-    :(realGpsState.previousPoint?bearingDeg(realGpsState.previousPoint,point):null);
+    :(realGpsState.previousPoint?bearingDeg(realGpsState.previousPoint,rawPoint):null);
 
-  const match=matchRealPointToRoute(point);
-  const confidence=gpsRouteConfidence(accuracy,match.distance);
-
-  realGpsState.previousPoint=realGpsState.lat!=null?[realGpsState.lat,realGpsState.lng]:point;
+  realGpsState.previousPoint=realGpsState.lat!=null?[realGpsState.lat,realGpsState.lng]:rawPoint;
   realGpsState.previousTimestamp=realGpsState.timestamp||stamp;
-  realGpsState.lat=point[0];realGpsState.lng=point[1];
+  realGpsState.lat=rawPoint[0];
+  realGpsState.lng=rawPoint[1];
   realGpsState.accuracy=accuracy;
   realGpsState.speedKmh=speed;
   realGpsState.heading=heading;
   realGpsState.timestamp=stamp;
   realGpsState.firstFix=true;
-  realGpsState.distanceFromRoute=match.distance;
-  realGpsState.matchedPoint=match.point;
 
-  // Small GPS jumps must not move trip progress backwards.
-  if(match.progress>=realGpsState.routeProgress-.02){
-    realGpsState.routeProgress=Math.max(realGpsState.routeProgress,match.progress);
+  // Build a short trace and refresh network matching in the background.
+  if(accuracy<=55){
+    appendGpsTracePoint(rawPoint,accuracy,stamp);
+    refreshNetworkMapMatch();
   }
 
-  const displayPoint=accuracy<=35?point:(match.point||point);
+  const trusted=trustedNetworkMatch();
+  const decisionPoint=trusted?.point||rawPoint;
+
+  // Distance to ACTIVE route is calculated from the road-matched point when
+  // confidence is sufficient. This matters on parallel roads and ramps.
+  const routeMatch=matchRealPointToRoute(decisionPoint);
+  const rawRouteMatch=matchRealPointToRoute(rawPoint);
+
+  realGpsState.distanceFromRoute=routeMatch.distance;
+  realGpsState.matchedPoint=decisionPoint;
+
+  const combinedConfidence=trusted
+    ?Math.round(clamp(
+        trusted.confidence*70 +
+        trusted.matchedRatio*20 +
+        Math.max(0,10-Math.min(10,trusted.alternativesCount*4)),
+        0,100
+      ))
+    :gpsRouteConfidence(accuracy,rawRouteMatch.distance);
+
+  // Route progress may advance, but GPS jitter must not rewind it.
+  if(routeMatch.progress>=realGpsState.routeProgress-.02){
+    realGpsState.routeProgress=Math.max(realGpsState.routeProgress,routeMatch.progress);
+  }
+
+  // Display hierarchy:
+  // 1) trusted road-matched point
+  // 2) raw high-quality GPS
+  // 3) local projection to active route
+  let displayPoint;
+  if(trusted){
+    displayPoint=trusted.point;
+  }else if(accuracy<=25){
+    displayPoint=rawPoint;
+  }else{
+    displayPoint=rawRouteMatch.point||rawPoint;
+  }
+
   if(carMarker)carMarker.setLatLng(displayPoint);
   realGpsState.track.push(displayPoint);
   if(realGpsState.track.length>1500)realGpsState.track.shift();
@@ -3204,39 +3388,68 @@ async function processRealGps(position){
 
   try{map.panTo(displayPoint,{animate:true,duration:.25})}catch(e){}
 
-  // Turn-by-turn is based on REAL route progress.
   updateTurnByTurn(realGpsState.routeProgress);
 
-  // Current GPS speed is real. Speed LIMIT is deliberately not shown here,
-  // because prototype segment limits are simulated and must never be presented
-  // as authoritative road data.
+  // Only current speed is authoritative in this prototype.
   if($('driveCurrentSpeed'))$('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
   if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
   if($('speedSign'))$('speedSign').textContent="--";
   $('speedAlertBanner')?.classList.remove('show');
 
+  // Re-route decision requires:
+  // - usable GPS
+  // - actual movement
+  // - meaningful distance from active route
+  // - either trusted network match OR a much stricter raw-GPS fallback
   const threshold=Math.max(55,accuracy*1.8);
-  const confidentlyOff=
-    accuracy<=30 &&
-    confidence>=70 &&
+
+  const trustedOffRoute=
+    !!trusted &&
+    combinedConfidence>=68 &&
     speed>=5 &&
-    match.distance>threshold;
+    routeMatch.distance>threshold;
+
+  const strictRawFallback=
+    !trusted &&
+    accuracy<=18 &&
+    speed>=8 &&
+    rawRouteMatch.distance>Math.max(80,accuracy*2.5);
+
+  const confidentlyOff=trustedOffRoute||strictRawFallback;
 
   if(confidentlyOff){
     if(realGpsState.offRouteSince==null)realGpsState.offRouteSince=Date.now();
-    const sustained=Date.now()-realGpsState.offRouteSince>=4000;
+
+    // Network-matched deviation can act sooner; raw-GPS-only requires longer.
+    const minDuration=trusted?4000:6500;
+    const sustained=Date.now()-realGpsState.offRouteSince>=minDuration;
     const cooldown=Date.now()-realGpsState.lastRerouteAt>=15000;
+
     if(sustained&&cooldown&&!rerouteState.active){
       realGpsState.lastRerouteAt=Date.now();
-      await triggerRealGpsReroute(point);
+      await triggerRealGpsReroute(decisionPoint);
     }
   }else{
     realGpsState.offRouteSince=null;
   }
 
-  if(accuracy<=20)setRealGpsBadge("good",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
-  else if(accuracy<=35)setRealGpsBadge("warn",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
-  else setRealGpsBadge("bad",`GPS ضعیف • ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+  // Compact driving status. No extra distracting card is added.
+  const badge=$('realGpsBadge');
+  badge?.classList.remove('matched');
+
+  if(trusted){
+    badge?.classList.add('matched');
+    if($('realGpsBadgeLabel'))$('realGpsBadgeLabel').textContent="روی خیابان";
+    setRealGpsBadge(
+      "good",
+      `اطمینان ${combinedConfidence.toLocaleString('fa-IR')}٪`
+    );
+  }else{
+    if($('realGpsBadgeLabel'))$('realGpsBadgeLabel').textContent="GPS واقعی";
+    if(accuracy<=20)setRealGpsBadge("good",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    else if(accuracy<=35)setRealGpsBadge("warn",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    else setRealGpsBadge("bad",`GPS ضعیف • ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+  }
 }
 function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
@@ -3249,6 +3462,7 @@ function startRealGps(){
   realGpsState.track=[];
   realGpsState.previousPoint=null;
   realGpsState.previousTimestamp=null;
+  resetNetworkMapMatch();
   document.body.classList.add('real-gps-active');
   setRealGpsBadge("warn","در انتظار موقعیت");
 
@@ -3309,6 +3523,8 @@ async function triggerRealGpsReroute(rawPoint){
     rerouteState.active=false;
     realGpsState.routeProgress=0;
     realGpsState.offRouteSince=null;
+    resetNetworkMapMatch();
+    appendGpsTracePoint(snapped.point,Math.min(25,Number(realGpsState.accuracy||25)),Date.now());
 
     routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
     routeAltLayers=[];
@@ -3358,6 +3574,8 @@ function buildRealGpsNavigationResult(){
     plannedDurationMin:Math.max(1,Math.round(Number(routeDurationS||0)/60)),
     rerouteCount:rerouteState.count||0,
     gpsAccuracyM:Math.round(Number(realGpsState.accuracy||0)),
+    mapMatchConfidence:Math.round(Number(realGpsState.networkMatch.confidence||0)*100),
+    mapMatchRatio:Math.round(Number(realGpsState.networkMatch.matchedRatio||0)*100),
     rewardEligibility:"REVIEW",
     dataIntegrity:null,
     fraudRisk:null,
@@ -5006,7 +5224,7 @@ setTimeout(loadRoute,1000);
       }
       document.getElementById('summaryWhy').textContent=
         r.navigationOnly
-          ? `این سفر با GPS واقعی اجرا شد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود و ${Number(r.rerouteCount||0).toLocaleString('fa-IR')} بار محاسبه مجدد مسیر انجام شد. امتیاز رفتاری عمداً محاسبه نشد چون Sensorهای واقعی رانندگی هنوز به نسخه وب متصل نیستند.`
+          ? `این سفر با GPS واقعی اجرا شد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود، اطمینان آخر Map Matching ${Number(r.mapMatchConfidence||0).toLocaleString('fa-IR')}٪ و ${Number(r.rerouteCount||0).toLocaleString('fa-IR')} بار محاسبه مجدد مسیر انجام شد. امتیاز رفتاری عمداً محاسبه نشد چون Sensorهای واقعی رانندگی هنوز به نسخه وب متصل نیستند.`
           : r.topRiskEvent
             ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
             : `مسیر ${formatKm(routeDistanceM)} بود و رفتار پرریسک معتبری ثبت نشد. همین الگوی رانندگی را حفظ کن.`;
