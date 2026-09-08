@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۲ Route Selection Experience</title>
+<title>POL | نسخه ۵.۳ Turn-by-Turn Professional</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4477,6 +4477,153 @@ body.route-selection-mode #mapRecentWrap{
   }
 }
 
+
+/* ============================================================
+   v5.3 TURN-BY-TURN PROFESSIONAL
+   ============================================================ */
+
+.turn-meta-row{
+  display:none;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:5px;
+}
+.turn-meta-row.show{
+  display:flex;
+}
+.turn-meta-badge{
+  display:none;
+  width:auto;
+  max-width:180px;
+  padding:3px 6px;
+  border-radius:999px;
+  font-size:6.5px;
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  background:rgba(148,163,184,.10);
+  border:1px solid rgba(148,163,184,.10);
+  color:#a8b8c9;
+}
+.turn-meta-badge.show{
+  display:inline-flex;
+}
+.turn-meta-badge.exit{
+  background:rgba(37,99,235,.18);
+  border-color:rgba(59,130,246,.20);
+  color:#9ec9ff;
+  font-weight:850;
+}
+.turn-meta-badge.ref{
+  background:rgba(255,255,255,.06);
+  color:#d4dde8;
+}
+.turn-meta-badge.destination{
+  max-width:250px;
+  background:rgba(16,185,129,.10);
+  border-color:rgba(16,185,129,.14);
+  color:#9de5c6;
+}
+
+body.driving-mode .turn-meta-row{
+  margin-top:4px!important;
+}
+
+body.driving-mode .turn-meta-badge{
+  font-size:6.4px!important;
+  padding:3px 6px!important;
+}
+
+/* Second maneuver becomes a true compact navigation instruction. */
+body.driving-mode .next-turn-preview.show{
+  grid-template-columns:auto 24px minmax(0,1fr) auto!important;
+}
+.next-turn-preview>em{
+  display:none;
+  font-style:normal;
+  font-size:6.5px;
+  color:#8fa2b6;
+  white-space:nowrap;
+}
+.next-turn-preview.show>em{
+  display:block;
+}
+body.driving-mode .next-turn-preview>em{
+  color:#91a5ba!important;
+  font-size:6.5px!important;
+}
+
+/* Lane guidance: recommended lanes dominate, invalid lanes recede. */
+body.driving-mode .lane-guidance.show{
+  grid-template-columns:auto minmax(0,1fr)!important;
+  gap:7px!important;
+}
+body.driving-mode .lane-guidance-items{
+  gap:3px!important;
+  overflow:hidden!important;
+}
+body.driving-mode .lane-pill{
+  width:30px!important;
+  min-width:30px!important;
+  height:30px!important;
+  border-radius:9px!important;
+  font-size:17px!important;
+  transition:none!important;
+}
+body.driving-mode .lane-pill.valid{
+  background:#236fd3!important;
+  border-color:#5aa6f3!important;
+  color:#fff!important;
+  box-shadow:0 6px 16px rgba(35,111,211,.18)!important;
+  opacity:1!important;
+}
+body.driving-mode .lane-pill.invalid{
+  background:rgba(148,163,184,.055)!important;
+  border-color:rgba(148,163,184,.07)!important;
+  color:#667789!important;
+  opacity:.42!important;
+}
+
+/* Maneuver-specific visual language. */
+body.driving-mode #turnCard.maneuver-roundabout .turn-arrow{
+  border-radius:50%!important;
+  background:#18304b!important;
+}
+body.driving-mode #turnCard.maneuver-ramp .turn-arrow,
+body.driving-mode #turnCard.maneuver-fork .turn-arrow,
+body.driving-mode #turnCard.maneuver-merge .turn-arrow{
+  background:#192c42!important;
+}
+body.driving-mode #turnCard.maneuver-uturn .turn-arrow{
+  background:#3b2414!important;
+  color:#fde3ad!important;
+}
+body.driving-mode #turnCard.maneuver-arrive .turn-arrow{
+  background:#143722!important;
+  color:#9be3b5!important;
+}
+
+/* NOW stage: stronger but still not a screen takeover. */
+body.driving-mode #turnCard.guidance-now .turn-distance{
+  color:#b7ddff!important;
+}
+body.driving-mode #turnCard.guidance-now .turn-arrow{
+  box-shadow:0 0 0 2px rgba(77,163,255,.13)!important;
+}
+
+@media(max-width:390px){
+  .turn-meta-badge.destination{
+    max-width:170px;
+  }
+  body.driving-mode .lane-pill{
+    width:27px!important;
+    min-width:27px!important;
+    height:27px!important;
+    font-size:15px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5077,6 +5224,13 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div id="turnDistance" class="turn-distance">آماده حرکت</div>
                   <div id="turnInstruction" class="turn-instruction">مسیر را انتخاب کن</div>
                   <div id="turnStreet" class="turn-street">راهنمای پیچ‌به‌پیچ اینجا نمایش داده می‌شود</div>
+
+                  <div id="turnMetaRow" class="turn-meta-row">
+                    <span id="turnExitBadge" class="turn-meta-badge exit">خروجی --</span>
+                    <span id="turnRoadRefBadge" class="turn-meta-badge ref">--</span>
+                    <span id="turnDestinationBadge" class="turn-meta-badge destination">--</span>
+                  </div>
+
                   <div class="turn-approach-rail">
                     <div id="turnApproachFill" class="turn-approach-fill"></div>
                   </div>
@@ -5085,10 +5239,11 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                     <span>بعدی</span>
                     <b id="nextTurnArrow">↑</b>
                     <strong id="nextTurnText">—</strong>
+                    <em id="nextTurnDistance">--</em>
                   </div>
 
                   <div id="laneGuidance" class="lane-guidance">
-                    <span class="lane-guidance-label">لاین مناسب</span>
+                    <span class="lane-guidance-label">لاین‌های پیشنهادی</span>
                     <div id="laneGuidanceItems" class="lane-guidance-items"></div>
                   </div>
                 </div>
@@ -5240,9 +5395,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.2</span>
+              <span class="lab-version-chip">v5.3</span>
               <div>
-                <b>Route Selection Experience</b>
+                <b>Turn-by-Turn Professional</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -7227,54 +7382,158 @@ function renderRouteAlternatives(){
   try{routeLine?.bringToFront()}catch(e){}
 }
 
-function maneuverArrow(modifier,type){
-  const m=(modifier||"").toLowerCase(),t=(type||"").toLowerCase();
-  if(t==="roundabout" || t==="rotary")return "↻";
-  if(t==="arrive")return "●";
-  if(t==="depart")return "↑";
-  if(m.includes("sharp right"))return "↱";
-  if(m.includes("slight right"))return "↗";
-  if(m==="right")return "→";
-  if(m.includes("sharp left"))return "↰";
-  if(m.includes("slight left"))return "↖";
-  if(m==="left")return "←";
-  if(m.includes("uturn"))return "↶";
-  if(m==="straight")return "↑";
-  return "↑";
+function normalizedManeuverType(type){
+  const t=String(type||"").toLowerCase().trim();
+
+  if(t==="roundabout turn")return"roundabout";
+  if(t==="rotary")return"roundabout";
+  return t;
 }
+
+function persianOrdinal(n){
+  const map={
+    1:"اول",2:"دوم",3:"سوم",4:"چهارم",5:"پنجم",6:"ششم",
+    7:"هفتم",8:"هشتم",9:"نهم",10:"دهم",11:"یازدهم",12:"دوازدهم"
+  };
+  return map[Number(n)] || Number(n).toLocaleString('fa-IR');
+}
+
+function maneuverArrow(modifier,type){
+  const m=String(modifier||"").toLowerCase();
+  const t=normalizedManeuverType(type);
+
+  if(t==="roundabout")return"↻";
+  if(t==="arrive")return"●";
+  if(t==="depart")return"↑";
+
+  if(m.includes("uturn"))return"↶";
+
+  if(t==="fork"){
+    return m.includes("left")?"↖":"↗";
+  }
+
+  if(t==="merge"){
+    return m.includes("left")?"⇖":"⇗";
+  }
+
+  if(t==="on ramp" || t==="off ramp"){
+    return m.includes("left")?"↖":"↗";
+  }
+
+  if(t==="end of road"){
+    if(m.includes("left"))return"←";
+    if(m.includes("right"))return"→";
+  }
+
+  if(m.includes("sharp right"))return"↱";
+  if(m.includes("slight right"))return"↗";
+  if(m==="right")return"→";
+
+  if(m.includes("sharp left"))return"↰";
+  if(m.includes("slight left"))return"↖";
+  if(m==="left")return"←";
+
+  if(m==="straight")return"↑";
+  return"↑";
+}
+
 function maneuverText(step){
   const man=step?.maneuver||{};
-  const type=(man.type||"").toLowerCase();
-  const mod=(man.modifier||"").toLowerCase();
-  const street=(step.name||"").trim();
+  const type=normalizedManeuverType(man.type);
+  const mod=String(man.modifier||"").toLowerCase();
+  const street=String(step?.name||"").trim();
 
   let action="مستقیم ادامه بده";
-  if(type==="depart") action="حرکت را شروع کن";
-  else if(type==="arrive") action="به مقصد می‌رسی";
-  else if(type==="roundabout" || type==="rotary"){
-    const ex=man.exit?` و از خروجی ${Number(man.exit).toLocaleString('fa-IR')} خارج شو`:"";
-    action=`وارد میدان شو${ex}`;
-  }else if(type==="merge") action=mod.includes("left")?"از سمت چپ وارد مسیر شو":"از سمت راست وارد مسیر شو";
-  else if(type==="fork") action=mod.includes("left")?"در دو راهی سمت چپ را بگیر":"در دو راهی سمت راست را بگیر";
-  else if(type==="on ramp") action=mod.includes("left")?"از رمپ سمت چپ وارد شو":"از رمپ سمت راست وارد شو";
-  else if(type==="off ramp") action=mod.includes("left")?"از خروجی سمت چپ خارج شو":"از خروجی سمت راست خارج شو";
-  else if(type==="turn" || type==="continue" || type==="new name" || type==="end of road"){
-    if(mod.includes("sharp right"))action="به تندی به راست بپیچ";
+
+  if(type==="depart"){
+    action="حرکت را شروع کن";
+  }else if(type==="arrive"){
+    action="به مقصد می‌رسی";
+  }else if(type==="roundabout"){
+    const exit=Number(man.exit||0);
+
+    action=exit>0
+      ?`وارد میدان شو و خروجی ${persianOrdinal(exit)} را بگیر`
+      :"وارد میدان شو";
+  }else if(type==="merge"){
+    if(mod.includes("left"))action="از سمت چپ با مسیر یکی شو";
+    else if(mod.includes("right"))action="از سمت راست با مسیر یکی شو";
+    else action="با مسیر اصلی یکی شو";
+  }else if(type==="fork"){
+    if(mod.includes("left"))action="در دو راهی مسیر سمت چپ را بگیر";
+    else if(mod.includes("right"))action="در دو راهی مسیر سمت راست را بگیر";
+    else action="در دو راهی مسیر مناسب را ادامه بده";
+  }else if(type==="on ramp"){
+    if(mod.includes("left"))action="از رمپ سمت چپ وارد شو";
+    else if(mod.includes("right"))action="از رمپ سمت راست وارد شو";
+    else action="وارد رمپ شو";
+  }else if(type==="off ramp"){
+    if(mod.includes("left"))action="از خروجی سمت چپ خارج شو";
+    else if(mod.includes("right"))action="از خروجی سمت راست خارج شو";
+    else action="از خروجی خارج شو";
+  }else if(type==="end of road"){
+    if(mod.includes("left"))action="در انتهای مسیر به چپ بپیچ";
+    else if(mod.includes("right"))action="در انتهای مسیر به راست بپیچ";
+    else action="در انتهای مسیر بپیچ";
+  }else if(
+    type==="turn" ||
+    type==="continue" ||
+    type==="new name"
+  ){
+    if(mod.includes("uturn"))action="دور بزن";
+    else if(mod.includes("sharp right"))action="به تندی به راست بپیچ";
     else if(mod.includes("slight right"))action="کمی به راست متمایل شو";
     else if(mod==="right")action="به راست بپیچ";
     else if(mod.includes("sharp left"))action="به تندی به چپ بپیچ";
     else if(mod.includes("slight left"))action="کمی به چپ متمایل شو";
     else if(mod==="left")action="به چپ بپیچ";
-    else if(mod.includes("uturn"))action="دور بزن";
     else action="مستقیم ادامه بده";
   }
 
   return{
     action,
-    street:street || (type==="arrive" ? navDestination.label : "مسیر فعلی"),
+    street:street || (
+      type==="arrive"
+        ?navDestination.label
+        :"مسیر فعلی"
+    ),
     arrow:maneuverArrow(mod,type)
   };
 }
+
+function maneuverMetaFromRawStep(step){
+  const man=step?.maneuver||{};
+  const type=normalizedManeuverType(man.type);
+
+  const exitNumber=Number(man.exit||0);
+
+  const roadRef=String(
+    step?.ref ||
+    step?.exits ||
+    ""
+  ).trim();
+
+  const destination=String(
+    step?.destinations ||
+    step?.destination ||
+    ""
+  ).trim();
+
+  const rotaryName=String(
+    step?.rotary_name ||
+    ""
+  ).trim();
+
+  return{
+    type,
+    exitNumber:Number.isFinite(exitNumber)&&exitNumber>0?exitNumber:null,
+    roadRef:roadRef||null,
+    destination:destination||null,
+    rotaryName:rotaryName||null,
+    drivingSide:String(step?.driving_side||"").toLowerCase()||null
+  };
+}
+
 
 function laneArrowFromIndications(indications=[]){
   const values=(Array.isArray(indications)?indications:[])
@@ -7289,55 +7548,126 @@ function laneArrowFromIndications(indications=[]){
   return"•";
 }
 function extractStepLaneGuidance(step){
-  const intersections=Array.isArray(step?.intersections)?step.intersections:[];
+  const intersections=Array.isArray(step?.intersections)
+    ?step.intersections
+    :[];
 
-  // OSRM only: use lane data that actually exists in the routing response.
-  // Never invent lane guidance.
-  for(const intersection of intersections){
-    const lanes=Array.isArray(intersection?.lanes)?intersection.lanes:null;
-    if(!lanes?.length)continue;
+  // OSRM only. We only display lane metadata present in the route response.
+  const candidates=[];
 
-    return lanes.map(lane=>({
+  intersections.forEach((intersection,index)=>{
+    const lanes=Array.isArray(intersection?.lanes)
+      ?intersection.lanes
+      :null;
+
+    if(!lanes?.length)return;
+
+    const mapped=lanes.map(lane=>({
       valid:lane?.valid===true,
-      indications:Array.isArray(lane?.indications)?lane.indications:[]
+      indications:Array.isArray(lane?.indications)
+        ?lane.indications
+        :[]
     }));
-  }
-  return[];
+
+    const validCount=mapped.filter(l=>l.valid).length;
+
+    candidates.push({
+      index,
+      lanes:mapped,
+      validCount
+    });
+  });
+
+  if(!candidates.length)return[];
+
+  // Prefer an intersection that explicitly marks at least one valid lane.
+  // Otherwise keep the first actual lane record rather than fabricating one.
+  const selected=
+    candidates.find(c=>c.validCount>0) ||
+    candidates[0];
+
+  return selected.lanes;
 }
+
 function followingNavigationStep(index){
   if(!navigationSteps.length)return null;
 
   for(let i=index+1;i<navigationSteps.length;i++){
     const step=navigationSteps[i];
     if(!step)continue;
-    if(step.type==="depart")continue;
+
+    const type=normalizedManeuverType(step.type);
+
+    if(type==="depart" || type==="notification")continue;
+
     return{step,index:i};
   }
+
   return null;
 }
+
+function secondManeuverDistance(next,second){
+  if(!next||!second)return null;
+
+  const d=
+    Number(second.step.atDistance||0)-
+    Number(next.step.atDistance||0);
+
+  return Number.isFinite(d)
+    ?Math.max(0,d)
+    :null;
+}
+
 function renderSecondTurn(next){
   const box=$('nextTurnPreview');
   if(!box)return;
 
   const second=followingNavigationStep(next?.index??-1);
+
+  const speed=currentGuidanceSpeedKmh();
+
   const secondPreviewLimit=
-    currentGuidanceSpeedKmh()>=70?2200:
-    currentGuidanceSpeedKmh()>=45?1800:
+    speed>=90?2600:
+    speed>=70?2200:
+    speed>=45?1800:
     1400;
+
+  const between=secondManeuverDistance(next,second);
 
   const shouldShow=
     !!next &&
     !!second &&
     next.distance<=secondPreviewLimit &&
-    second.step.type!=="arrive";
+    second.step.type!=="arrive" &&
+    Number.isFinite(Number(between)) &&
+    between<=1600;
 
   box.classList.toggle('show',shouldShow);
-  if(!shouldShow)return;
+
+  if(!shouldShow){
+    if($('nextTurnDistance'))$('nextTurnDistance').textContent="--";
+    return;
+  }
 
   $('nextTurnArrow').textContent=second.step.arrow||"↑";
+
+  const secondStreet=
+    second.step.street &&
+    second.step.street!=="مسیر فعلی"
+      ?` • ${second.step.street}`
+      :"";
+
   $('nextTurnText').textContent=
-    `${second.step.action}${second.step.street?` • ${second.step.street}`:""}`;
+    `${second.step.action}${secondStreet}`;
+
+  if($('nextTurnDistance')){
+    $('nextTurnDistance').textContent=
+      between<=15
+        ?"بلافاصله"
+        :distanceTextFa(between);
+  }
 }
+
 function renderLaneGuidance(step,distance){
   const box=$('laneGuidance');
   const items=$('laneGuidanceItems');
@@ -7370,6 +7700,64 @@ function renderLaneGuidance(step,distance){
     </span>
   `).join("");
 }
+function renderTurnMeta(step){
+  const row=$('turnMetaRow');
+  const exit=$('turnExitBadge');
+  const ref=$('turnRoadRefBadge');
+  const dest=$('turnDestinationBadge');
+
+  if(!row||!exit||!ref||!dest)return;
+
+  const exitText=step?.exitNumber
+    ?`خروجی ${persianOrdinal(step.exitNumber)}`
+    :"";
+
+  const refText=String(step?.roadRef||"").trim();
+  const destText=String(
+    step?.destination ||
+    step?.rotaryName ||
+    ""
+  ).trim();
+
+  exit.textContent=exitText||"--";
+  ref.textContent=refText||"--";
+  dest.textContent=destText||"--";
+
+  exit.classList.toggle('show',!!exitText);
+  ref.classList.toggle('show',!!refText);
+  dest.classList.toggle('show',!!destText);
+
+  row.classList.toggle(
+    'show',
+    !!exitText || !!refText || !!destText
+  );
+}
+
+function applyManeuverVisualClass(step){
+  const card=$('turnCard');
+  if(!card)return;
+
+  [
+    'maneuver-roundabout',
+    'maneuver-ramp',
+    'maneuver-fork',
+    'maneuver-merge',
+    'maneuver-uturn',
+    'maneuver-arrive'
+  ].forEach(c=>card.classList.remove(c));
+
+  const type=normalizedManeuverType(step?.type);
+  const mod=String(step?.modifier||"").toLowerCase();
+
+  if(type==="roundabout")card.classList.add('maneuver-roundabout');
+  else if(type==="on ramp"||type==="off ramp")card.classList.add('maneuver-ramp');
+  else if(type==="fork")card.classList.add('maneuver-fork');
+  else if(type==="merge")card.classList.add('maneuver-merge');
+  else if(type==="arrive")card.classList.add('maneuver-arrive');
+
+  if(mod.includes("uturn"))card.classList.add('maneuver-uturn');
+}
+
 function updateTurnContextEmphasis(distance){
   const card=$('turnCard');
   if(!card)return;
@@ -7385,17 +7773,34 @@ function buildNavigationSteps(route){
     raw.forEach((step,i)=>{
       const info=maneuverText(step);
       const loc=step?.maneuver?.location;
+      const meta=maneuverMetaFromRawStep(step);
+
       navigationSteps.push({
         index:i,
         atDistance:cumulative,
         stepDistance:Number(step.distance||0),
         duration:Number(step.duration||0),
-        type:step.maneuver?.type||"",
+        type:meta.type,
         modifier:step.maneuver?.modifier||"",
         action:info.action,
         street:info.street,
         arrow:info.arrow,
+
+        exitNumber:meta.exitNumber,
+        roadRef:meta.roadRef,
+        destination:meta.destination,
+        rotaryName:meta.rotaryName,
+        drivingSide:meta.drivingSide,
+
         lanes:extractStepLaneGuidance(step),
+
+        bearingBefore:Number.isFinite(Number(step?.maneuver?.bearing_before))
+          ?Number(step.maneuver.bearing_before)
+          :null,
+        bearingAfter:Number.isFinite(Number(step?.maneuver?.bearing_after))
+          ?Number(step.maneuver.bearing_after)
+          :null,
+
         location:Array.isArray(loc)&&loc.length>=2
           ?[Number(loc[1]),Number(loc[0])]
           :null
@@ -7450,24 +7855,54 @@ function currentGuidanceSpeedKmh(){
   return Number.isFinite(raw)?Math.max(0,raw):0;
 }
 
-function guidanceThresholds(speedKmh){
+function guidanceThresholds(speedKmh,step=null){
   const s=Math.max(0,Number(speedKmh||0));
 
-  // The faster the car moves, the more preparation distance the driver needs.
-  if(s>=90)return{prep:1250,approach:480,now:125};
-  if(s>=70)return{prep:1000,approach:390,now:105};
-  if(s>=50)return{prep:800,approach:310,now:85};
-  if(s>=30)return{prep:600,approach:230,now:65};
-  return{prep:430,approach:170,now:45};
+  let base=
+    s>=90?{prep:1250,approach:480,now:125}:
+    s>=70?{prep:1000,approach:390,now:105}:
+    s>=50?{prep:800,approach:310,now:85}:
+    s>=30?{prep:600,approach:230,now:65}:
+    {prep:430,approach:170,now:45};
+
+  const type=normalizedManeuverType(step?.type);
+  const mod=String(step?.modifier||"").toLowerCase();
+
+  // Complex maneuvers need more preparation distance.
+  const complex=[
+    "roundabout",
+    "fork",
+    "merge",
+    "on ramp",
+    "off ramp"
+  ].includes(type);
+
+  if(complex){
+    base={
+      prep:Math.round(base.prep*1.16),
+      approach:Math.round(base.approach*1.10),
+      now:base.now
+    };
+  }
+
+  if(mod.includes("uturn")){
+    base={
+      prep:Math.round(base.prep*1.18),
+      approach:Math.round(base.approach*1.12),
+      now:Math.round(base.now*1.06)
+    };
+  }
+
+  return base;
 }
 
 function shouldVoiceAnnounceStep(step){
   if(!step)return false;
 
-  const type=String(step.type||"").toLowerCase();
+  const type=normalizedManeuverType(step.type);
   const modifier=String(step.modifier||"").toLowerCase();
 
-  if(["arrive","turn","roundabout","rotary","merge","fork","on ramp","off ramp","end of road"].includes(type)){
+  if(["arrive","turn","roundabout","merge","fork","on ramp","off ramp","end of road"].includes(type)){
     return true;
   }
 
@@ -7483,19 +7918,84 @@ function shouldVoiceAnnounceStep(step){
 
 function guidanceStreetSuffix(step){
   const street=String(step?.street||"").trim();
+
   if(!street || street==="مسیر فعلی")return"";
+
   return`، ${street}`;
+}
+
+function guidanceMetaVoiceSuffix(step){
+  const parts=[];
+
+  if(step?.roadRef){
+    parts.push(String(step.roadRef));
+  }
+
+  if(step?.destination){
+    parts.push(`به سمت ${String(step.destination)}`);
+  }
+
+  if(!parts.length)return"";
+
+  return`، ${parts.join("، ")}`;
+}
+
+function compoundSecondVoice(next){
+  const second=followingNavigationStep(next?.index??-1);
+  if(!second || second.step.type==="arrive")return"";
+
+  const between=secondManeuverDistance(next,second);
+
+  if(!Number.isFinite(Number(between)) || between>140)return"";
+
+  const street=guidanceStreetSuffix(second.step);
+
+  if(between<=25){
+    return`، سپس بلافاصله ${second.step.action}${street}`;
+  }
+
+  return`، سپس در ${distanceTextFa(between)} ${second.step.action}${street}`;
 }
 
 function guidanceVoiceText(stage,next){
   const step=next.step;
+  const type=normalizedManeuverType(step.type);
   const street=guidanceStreetSuffix(step);
+  const meta=guidanceMetaVoiceSuffix(step);
   const d=distanceTextFa(next.distance);
 
-  if(step.type==="arrive"){
+  if(type==="arrive"){
     if(stage==="prep")return`${d} تا مقصد مانده است`;
     if(stage==="approach")return`به مقصد نزدیک می‌شوی`;
     return`به مقصد رسیدی`;
+  }
+
+  if(type==="roundabout"){
+    const exit=step.exitNumber
+      ?` و خروجی ${persianOrdinal(step.exitNumber)} را بگیر`
+      :"";
+
+    if(stage==="prep"){
+      return`در ${d} وارد میدان شو${exit}${street}`;
+    }
+
+    if(stage==="approach"){
+      return`${d} دیگر، وارد میدان شو${exit}${street}`;
+    }
+
+    return`حالا وارد میدان شو${exit}${street}${compoundSecondVoice(next)}`;
+  }
+
+  if(type==="off ramp"){
+    if(stage==="prep")return`در ${d} آماده خروج شو، ${step.action}${meta}${street}`;
+    if(stage==="approach")return`${d} دیگر، ${step.action}${meta}${street}`;
+    return`حالا ${step.action}${meta}${street}${compoundSecondVoice(next)}`;
+  }
+
+  if(type==="on ramp" || type==="fork" || type==="merge"){
+    if(stage==="prep")return`در ${d}، ${step.action}${meta}${street}`;
+    if(stage==="approach")return`${d} دیگر، ${step.action}${meta}${street}`;
+    return`حالا ${step.action}${meta}${street}${compoundSecondVoice(next)}`;
   }
 
   if(stage==="prep"){
@@ -7506,11 +8006,11 @@ function guidanceVoiceText(stage,next){
     return`${d} دیگر، ${step.action}${street}`;
   }
 
-  return`حالا، ${step.action}${street}`;
+  return`حالا، ${step.action}${street}${compoundSecondVoice(next)}`;
 }
 
 function selectGuidanceStage(next,speedKmh){
-  const thresholds=guidanceThresholds(speedKmh);
+  const thresholds=guidanceThresholds(speedKmh,next?.step);
   const d=Number(next.distance||0);
 
   if(d<=thresholds.now)return"now";
@@ -7560,7 +8060,7 @@ function renderGuidanceDiagnostics(next,stage,speedKmh){
 
   if(txt){
     txt.textContent=next
-      ?`${next.step.action}${next.step.street?` • ${next.step.street}`:""}`
+      ?`${next.step.action}${next.step.street?` • ${next.step.street}`:""} • ${normalizedManeuverType(next.step.type)||"continue"}`
       :"هنوز Navigation شروع نشده است.";
   }
 }
@@ -7935,6 +8435,13 @@ function updateTurnByTurn(progress){
   if($('turnInstruction'))$('turnInstruction').textContent=progress>=.995?"به مقصد رسیدی":next.step.action;
   if($('turnStreet'))$('turnStreet').textContent=progress>=.995?navDestination.label:next.step.street;
 
+  renderTurnMeta(progress>=.995?null:next.step);
+  applyManeuverVisualClass(
+    progress>=.995
+      ?{type:"arrive",modifier:""}
+      :next.step
+  );
+
   renderSecondTurn(next);
   renderLaneGuidance(next.step,next.distance);
   updateTurnContextEmphasis(next.distance);
@@ -7962,10 +8469,21 @@ function resetTurnByTurn(){
   if($('routeProgressFill'))$('routeProgressFill').style.width="0%";
   $('arrivalBanner')?.classList.remove('show');
   $('nextTurnPreview')?.classList.remove('show');
+  if($('nextTurnDistance'))$('nextTurnDistance').textContent="--";
+
+  $('turnMetaRow')?.classList.remove('show');
+  ['turnExitBadge','turnRoadRefBadge','turnDestinationBadge'].forEach(id=>{
+    $(id)?.classList.remove('show');
+  });
+
   $('laneGuidance')?.classList.remove('show');
   if($('laneGuidanceItems'))$('laneGuidanceItems').innerHTML="";
   $('turnCard')?.classList.remove('turn-critical');
-  $('turnCard')?.classList.remove('guidance-prep','guidance-approach','guidance-now');
+  $('turnCard')?.classList.remove(
+    'guidance-prep','guidance-approach','guidance-now',
+    'maneuver-roundabout','maneuver-ramp','maneuver-fork',
+    'maneuver-merge','maneuver-uturn','maneuver-arrive'
+  );
   lastSpokenStepIndex=-1;
   resetSmartGuidance();
 }
@@ -14273,6 +14791,8 @@ async function processRealGps(position){
     if($('turnDistance'))$('turnDistance').textContent="رسیدی";
     if($('turnInstruction'))$('turnInstruction').textContent="به مقصد رسیدی";
     if($('turnStreet'))$('turnStreet').textContent=navDestination.label||"مقصد";
+    renderTurnMeta(null);
+    applyManeuverVisualClass({type:"arrive"});
     if(voiceGuidanceEnabled)coachVoice("به مقصد رسیدید.");
 
     setTimeout(()=>{
