@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۱ GPS واقعی</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۲ هسته کیفیت مسیر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -703,6 +703,44 @@ body.driving-mode.real-gps-active .real-gps-badge{display:flex}
 body.real-gps-active #safetyCoachPill{display:none!important}
 @media(max-width:430px){.real-gps-badge{left:7px;bottom:157px}}
 
+
+/* ===== v2.2 Route Quality Core ===== */
+.routing-data-note{
+  display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:9px 10px;
+  border-radius:12px;background:#101923;border:1px solid #2a3e58
+}
+.routing-data-dot{
+  width:8px;height:8px;border-radius:50%;background:#f59e0b;
+  margin-top:4px;flex:0 0 auto;box-shadow:0 0 0 4px rgba(245,158,11,.10)
+}
+.routing-data-note b{display:block;font-size:9px;color:#dbeafe}
+.routing-data-note span{display:block;font-size:8px;color:#8ea0b6;line-height:1.7;margin-top:2px}
+
+.route-failure-box{
+  display:none;margin-top:8px;padding:10px;border-radius:12px;
+  background:#1b1010;border:1px solid #713434
+}
+.route-failure-box.show{display:block}
+.route-failure-box b{display:block;font-size:10px;color:#fecaca}
+.route-failure-box span{display:block;font-size:8px;color:#d7a8a8;line-height:1.7;margin-top:3px}
+.route-failure-box button{
+  width:auto!important;min-height:35px!important;padding:5px 10px!important;
+  margin-top:7px;font-size:9px!important
+}
+
+.route-option-badge{
+  display:inline-block;margin-top:4px;padding:3px 6px;border-radius:999px;
+  background:#18283c;border:1px solid #2f4c70;color:#bfdbfe!important;
+  font-size:7px!important
+}
+.route-option-delta{color:#7f91a8!important;font-size:8px!important}
+.route-option.active .route-option-badge{background:#17396d;border-color:#356db0}
+
+.route-quality-warning{
+  margin-top:7px;padding:7px 8px;border-radius:10px;background:#18140c;
+  border:1px solid #5e4a20;color:#d8b86e;font-size:8px;line-height:1.7
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -997,6 +1035,11 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 </div>
                 <div id="routeOptions" class="route-options"></div>
                 <div id="oneRouteNote" class="one-route-note">برای این مبدأ و مقصد، مسیر جایگزین معناداری پیدا نشد؛ مسیر پیشنهادی موجود نمایش داده شده است.</div>
+                <div id="routeFailureBox" class="route-failure-box">
+                  <b>مسیر معتبر دریافت نشد</b>
+                  <span id="routeFailureText">سرویس مسیریابی پاسخ قابل اعتماد نداد.</span>
+                  <button id="retryRouteBtn">تلاش دوباره</button>
+                </div>
               </div>
 
               <div class="nav-voice-row">
@@ -1009,8 +1052,12 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <button id="voiceToggle" class="nav-voice-toggle">روشن</button>
                 </div>
               </div>
-              <div class="nav-mode-note">
-                جست‌وجوی مقصد و زمان مسیر در این نسخه از سرویس‌های عمومی نقشه برای Prototype استفاده می‌کند.
+              <div id="routingDataNote" class="routing-data-note">
+                <div class="routing-data-dot"></div>
+                <div>
+                  <b id="routingDataTitle">داده مسیر آزمایشی</b>
+                  <span id="routingDataText">ترافیک لحظه‌ای هنوز در ETA لحاظ نمی‌شود؛ مسیرها قبل از نمایش اعتبارسنجی می‌شوند.</span>
+                </div>
               </div>
 
               <details class="preset-fallback">
@@ -1581,6 +1628,20 @@ let realGpsState={
   track:[]
 };
 let pendingRealGpsFix=null;
+const ROUTING_ENGINE={
+  id:"osrm-demo",
+  label:"موتور آزمایشی",
+  liveTraffic:false,
+  productionReady:false
+};
+let routingEndpointState={
+  originSnap:null,
+  destinationSnap:null,
+  originAccessM:0,
+  destinationAccessM:0
+};
+let originAccessLine=null;
+let destinationAccessLine=null;
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -1791,6 +1852,191 @@ function renderNavMarkers(){
   originMarker=L.marker([navOrigin.lat,navOrigin.lng],{icon:startIcon,zIndexOffset:900}).addTo(map).bindTooltip("مبدأ");
   destinationMarker=L.marker([navDestination.lat,navDestination.lng],{icon:destIcon,zIndexOffset:900}).addTo(map).bindTooltip(navDestination.label||"مقصد");
 }
+
+function clearAccessLines(){
+  if(originAccessLine){
+    try{map.removeLayer(originAccessLine)}catch(e){}
+    originAccessLine=null;
+  }
+  if(destinationAccessLine){
+    try{map.removeLayer(destinationAccessLine)}catch(e){}
+    destinationAccessLine=null;
+  }
+}
+function renderEndpointAccessLines(){
+  clearAccessLines();
+  if(!routeCoords?.length)return;
+
+  const routeStart=routeCoords[0];
+  const routeEnd=routeCoords[routeCoords.length-1];
+  const rawOrigin=[navOrigin.lat,navOrigin.lng];
+  const rawDest=[navDestination.lat,navDestination.lng];
+
+  const startGap=hav(rawOrigin,routeStart);
+  const endGap=hav(rawDest,routeEnd);
+
+  if(startGap>18){
+    originAccessLine=L.polyline([rawOrigin,routeStart],{
+      color:'#94a3b8',weight:2,opacity:.55,dashArray:'3 7'
+    }).addTo(map);
+  }
+  if(endGap>18){
+    destinationAccessLine=L.polyline([routeEnd,rawDest],{
+      color:'#94a3b8',weight:2,opacity:.55,dashArray:'3 7'
+    }).addTo(map);
+  }
+}
+async function snapRoutingEndpoint(point,role){
+  const maxSnapM=role==="origin"?160:280;
+  const snap=await snapToDrivableRoad(point,{maxSnapM,number:3});
+  if(!snap)return null;
+  return{
+    ...snap,
+    rawPoint:[point[0],point[1]],
+    accessDistance:hav(point,snap.point)
+  };
+}
+function routeStepStats(route){
+  const steps=(route?.legs||[]).flatMap(l=>l.steps||[]);
+  let turns=0,uturns=0,ramps=0;
+  steps.forEach(step=>{
+    const man=step?.maneuver||{};
+    const type=String(man.type||"").toLowerCase();
+    const mod=String(man.modifier||"").toLowerCase();
+    if(["turn","fork","end of road","roundabout","rotary"].includes(type))turns++;
+    if(mod.includes("uturn"))uturns++;
+    if(type.includes("ramp"))ramps++;
+  });
+  return{steps:steps.length,turns,uturns,ramps};
+}
+function sampleRoutePoints(route,count=14){
+  const coords=routeToCoords(route);
+  if(!coords.length)return[];
+  if(coords.length<=count)return coords;
+  const out=[];
+  for(let i=0;i<count;i++){
+    const idx=Math.round(i*(coords.length-1)/(count-1));
+    out.push(coords[idx]);
+  }
+  return out;
+}
+function averageNearestDistance(samples,route){
+  const coords=routeToCoords(route);
+  if(!samples.length||!coords.length)return Infinity;
+  const step=Math.max(1,Math.floor(coords.length/220));
+  let total=0;
+  for(const p of samples){
+    let best=Infinity;
+    for(let i=0;i<coords.length;i+=step){
+      best=Math.min(best,hav(p,coords[i]));
+    }
+    total+=best;
+  }
+  return total/samples.length;
+}
+function routesAreNearDuplicate(a,b){
+  const durA=Number(a.duration||0),durB=Number(b.duration||0);
+  const distA=Number(a.distance||0),distB=Number(b.distance||0);
+  if(Math.abs(durA-durB)>100)return false;
+  if(Math.abs(distA-distB)>900)return false;
+  const avg=averageNearestDistance(sampleRoutePoints(a,12),b);
+  return avg<75;
+}
+function dedupeRoutes(routes){
+  const out=[];
+  for(const r of routes){
+    if(!out.some(x=>routesAreNearDuplicate(x,r)))out.push(r);
+  }
+  return out;
+}
+function rankValidatedRoutes(routes){
+  const sorted=[...routes].sort((a,b)=>{
+    const da=Number(a.duration||Infinity),db=Number(b.duration||Infinity);
+    if(Math.abs(da-db)>35)return da-db;
+    const sa=routeStepStats(a),sb=routeStepStats(b);
+    if(sa.uturns!==sb.uturns)return sa.uturns-sb.uturns;
+    return Number(a.distance||Infinity)-Number(b.distance||Infinity);
+  });
+  sorted.forEach((r,i)=>{r.__qualityRank=i});
+  return sorted;
+}
+function classifyRouteOption(route,index){
+  if(routeAlternatives.length===1){
+    return{title:"مسیر پیشنهادی",badge:"تنها مسیر معتبر",detail:"مسیر جایگزین معناداری پیدا نشد"};
+  }
+
+  const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
+  const shortest=Math.min(...routeAlternatives.map(r=>Number(r.distance||Infinity)));
+  const isFast=Math.abs(Number(route.duration)-fastest)<15;
+  const isShort=Math.abs(Number(route.distance)-shortest)<120;
+
+  if(index===0){
+    return{
+      title:"مسیر پیشنهادی",
+      badge:isFast?"زمان کمتر در داده فعلی":"گزینه متعادل",
+      detail:isFast?"کمترین ETA بین مسیرهای معتبر":"انتخاب اول موتور مسیر"
+    };
+  }
+  if(isShort){
+    return{title:"مسیر کوتاه‌تر",badge:"مسافت کمتر",detail:"ممکن است زمان بیشتری نیاز داشته باشد"};
+  }
+  return{title:"مسیر جایگزین",badge:"گزینه معتبر",detail:"مسیر متفاوت قابل رانندگی"};
+}
+async function routingProviderRequest(originPoint,destinationPoint,{alternatives=true,bearing=null}={}){
+  // Provider boundary: all navigation route requests should eventually pass
+  // through this function. v2.2 uses OSRM Demo; a traffic-aware Iran provider
+  // can replace the adapter without rewriting the navigation UI/state machine.
+  if(ROUTING_ENGINE.id==="osrm-demo"){
+    const coords=`${originPoint[1]},${originPoint[0]};${destinationPoint[1]},${destinationPoint[0]}`;
+    let url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=${alternatives?"true":"false"}&overview=full&geometries=geojson&steps=true&continue_straight=true`;
+    if(Number.isFinite(bearing)){
+      url+=`&bearings=${Math.round(bearing)},55;`;
+    }
+    const data=await fetchJsonWithTimeout(url,10000);
+    return{
+      provider:ROUTING_ENGINE.id,
+      liveTraffic:false,
+      routes:data?.routes||[]
+    };
+  }
+  throw new Error("Routing provider is not configured");
+}
+function showRouteFailure(message){
+  routeAlternatives=[];
+  routeCoords=[];
+  routeDistanceM=0;
+  routeDurationS=0;
+  selectedRouteIndex=0;
+
+  if(routeLine){try{map.removeLayer(routeLine)}catch(e){};routeLine=null}
+  routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
+  routeAltLayers=[];
+  clearAccessLines();
+
+  $('routeOptions').innerHTML="";
+  $('oneRouteNote')?.classList.remove('show');
+  $('routeFailureBox')?.classList.add('show');
+  if($('routeFailureText'))$('routeFailureText').textContent=message;
+  if($('routeSummary'))$('routeSummary').classList.add('show');
+  if($('navDistance'))$('navDistance').textContent="--";
+  if($('navEta'))$('navEta').textContent="--";
+  if($('navArrival'))$('navArrival').textContent="--";
+  if($('start'))$('start').disabled=true;
+  $('status').textContent=message;
+}
+function hideRouteFailure(){
+  $('routeFailureBox')?.classList.remove('show');
+  if($('start'))$('start').disabled=false;
+}
+function updateRoutingDataDisclosure(){
+  if($('routingDataTitle'))$('routingDataTitle').textContent=
+    ROUTING_ENGINE.liveTraffic?"ترافیک زنده فعال":"ETA بدون ترافیک زنده";
+  if($('routingDataText'))$('routingDataText').textContent=
+    ROUTING_ENGINE.liveTraffic
+      ?"زمان مسیر بر اساس داده ترافیک زنده محاسبه می‌شود."
+      :"در نسخه آزمایشی، ترافیک لحظه‌ای هنوز در ETA لحاظ نمی‌شود؛ مسیرها فقط پس از اعتبارسنجی شبکه خودرویی نمایش داده می‌شوند.";
+}
+
 function routeToCoords(route){
   return route.geometry.coordinates.map(c=>[c[1],c[0]]);
 }
@@ -1949,14 +2195,29 @@ function resetTurnByTurn(){
 function renderRouteOptionCards(){
   const box=$('routeOptions');
   if(!box)return;
+
+  const baseDuration=routeAlternatives.length
+    ?Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)))
+    :0;
+
   box.innerHTML=routeAlternatives.slice(0,3).map((r,i)=>{
-    const only=routeAlternatives.length===1;
-    const label=only?"مسیر پیشنهادی موجود":i===0?"پیشنهاد اول":i===1?"مسیر جایگزین":"مسیر دیگر";
+    const info=classifyRouteOption(r,i);
+    const delta=Math.max(0,Math.round((Number(r.duration||0)-baseDuration)/60));
+    const deltaText=delta>0?` • ${delta.toLocaleString('fa-IR')} دقیقه بیشتر`:"";
+    const stats=routeStepStats(r);
+    const extra=stats.uturns>0?` • ${stats.uturns.toLocaleString('fa-IR')} دوربرگردان`:"";
+
     return `<button class="route-option ${i===selectedRouteIndex?'active':''}" onclick="selectRouteAlternative(${i})">
-      <div><b>${label}</b><br><span>${formatKm(r.distance)} • ${only?'مسیر جایگزین مناسب پیدا نشد':i===0?'پیشنهاد سریع‌تر':'گزینه جایگزین'}</span></div>
+      <div>
+        <b>${info.title}</b><br>
+        <span>${formatKm(r.distance)}${deltaText}</span><br>
+        <span class="route-option-badge">${info.badge}</span>
+        ${extra?`<span class="route-option-delta">${extra}</span>`:""}
+      </div>
       <span class="route-option-time">${formatDurationFa(r.duration)}</span>
     </button>`;
   }).join('');
+
   $('oneRouteNote')?.classList.toggle('show',routeAlternatives.length===1);
 }
 function updateRouteSummary(){
@@ -1988,6 +2249,8 @@ function selectRouteAlternative(index){
 
   renderRouteAlternatives();
   renderNavMarkers();
+  renderEndpointAccessLines();
+  hideRouteFailure();
   updateRouteSummary();
   fixMapSize(true);
 
@@ -2096,42 +2359,82 @@ function useCurrentLocation(){
 async function loadRoute(){
   reset(false);
   updateNavLabels();
-  $('status').textContent="در حال محاسبه مسیرهای پیشنهادی...";
-
-  const coords=`${navOrigin.lng},${navOrigin.lat};${navDestination.lng},${navDestination.lat}`;
-  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=true`;
+  updateRoutingDataDisclosure();
+  hideRouteFailure();
+  $('status').textContent="در حال تثبیت مبدأ و مقصد روی شبکه خودرویی...";
 
   try{
-    const res=await fetch(url);
-    if(!res.ok)throw new Error("route service error");
-    const data=await res.json();
-    routeAlternatives=(data.routes||[]).slice(0,3);
-    if(!routeAlternatives.length)throw new Error("no route");
-    selectedRouteIndex=0;
-    selectRouteAlternative(0);
-    $('status').textContent=`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر پیشنهادی آماده است.`;
-  }catch(e){
-    // Fallback route between selected origin and destination.
-    const a=[navOrigin.lat,navOrigin.lng],b=[navDestination.lat,navDestination.lng];
-    routeCoords=[];
-    for(let n=0;n<=80;n++){
-      const q=n/80;
-      const bend=Math.sin(q*Math.PI)*0.008;
-      routeCoords.push([
-        a[0]+(b[0]-a[0])*q+bend*.35,
-        a[1]+(b[1]-a[1])*q+bend
-      ]);
+    if(navigator.onLine===false){
+      throw new Error("برای دریافت مسیر جدید اتصال اینترنت لازم است.");
     }
-    routeDistanceM=totalDistance(routeCoords);
-    routeDurationS=Math.max(600,routeDistanceM/9);
-    routeAlternatives=[{
-      distance:routeDistanceM,
-      duration:routeDurationS,
-      geometry:{coordinates:routeCoords.map(x=>[x[1],x[0]])}
-    }];
+
+    const rawOrigin=[Number(navOrigin.lat),Number(navOrigin.lng)];
+    const rawDestination=[Number(navDestination.lat),Number(navDestination.lng)];
+
+    const [originSnap,destinationSnap]=await Promise.all([
+      snapRoutingEndpoint(rawOrigin,"origin"),
+      snapRoutingEndpoint(rawDestination,"destination")
+    ]);
+
+    if(!originSnap){
+      throw new Error("مبدأ به مسیر قابل رانندگی مطمئن متصل نشد.");
+    }
+    if(!destinationSnap){
+      throw new Error("برای مقصد، دسترسی خودرویی قابل اعتماد پیدا نشد.");
+    }
+
+    routingEndpointState={
+      originSnap,
+      destinationSnap,
+      originAccessM:originSnap.accessDistance,
+      destinationAccessM:destinationSnap.accessDistance
+    };
+
+    $('status').textContent="در حال محاسبه و اعتبارسنجی مسیرهای پیشنهادی...";
+
+    const response=await routingProviderRequest(
+      originSnap.point,
+      destinationSnap.point,
+      {alternatives:true}
+    );
+
+    // Only validated candidates are allowed into the UI.
+    let candidates=(response.routes||[]).filter(r=>
+      validateRouteCandidate(
+        r,
+        originSnap.point,
+        {lat:destinationSnap.point[0],lng:destinationSnap.point[1]}
+      ).ok
+    );
+
+    candidates=dedupeRoutes(candidates);
+    candidates=rankValidatedRoutes(candidates).slice(0,3);
+
+    if(!candidates.length){
+      throw new Error("هیچ مسیر خودرویی معتبر بین این مبدأ و مقصد تأیید نشد.");
+    }
+
+    routeAlternatives=candidates;
     selectedRouteIndex=0;
     selectRouteAlternative(0);
-    $('status').textContent="سرویس مسیر پاسخ نداد؛ مسیر آزمایشی جایگزین ساخته شد.";
+
+    const accessWarnings=[];
+    if(originSnap.accessDistance>80){
+      accessWarnings.push(`مبدأ حدود ${Math.round(originSnap.accessDistance).toLocaleString('fa-IR')} متر با خیابان قابل رانندگی فاصله دارد`);
+    }
+    if(destinationSnap.accessDistance>80){
+      accessWarnings.push(`دسترسی خودرویی مقصد حدود ${Math.round(destinationSnap.accessDistance).toLocaleString('fa-IR')} متر با نقطه مقصد فاصله دارد`);
+    }
+
+    $('status').textContent=
+      `${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر آماده است`+
+      (accessWarnings.length?` • ${accessWarnings.join(" • ")}`:".");
+
+  }catch(e){
+    console.warn("Trusted route load failed:",e);
+    showRouteFailure(
+      `${String(e?.message||"مسیر معتبر دریافت نشد")} مسیر ساختگی نمایش داده نمی‌شود.`
+    );
   }
 }
 
@@ -2966,18 +3269,38 @@ async function triggerRealGpsReroute(rawPoint){
     if(!snapped)throw new Error("موقعیت روی خیابان قابل رانندگی تثبیت نشد");
 
     showRerouteNotice("موقعیت تثبیت شد","در حال محاسبه مسیر جدید...");
-    const slon=Number(snapped.point[1]).toFixed(6);
-    const slat=Number(snapped.point[0]).toFixed(6);
-    const q=`${slon},${slat};${navDestination.lng},${navDestination.lat}`;
-    const url=`https://router.project-osrm.org/route/v1/driving/${q}?alternatives=true&overview=full&geometries=geojson&steps=true&continue_straight=true&radiuses=40;180`;
-    const data=await fetchJsonWithTimeout(url,9000);
-    const route=chooseBestValidatedRoute(data?.routes||[],snapped.point,navDestination);
+
+    const destinationSnap=await snapRoutingEndpoint(
+      [Number(navDestination.lat),Number(navDestination.lng)],
+      "destination"
+    );
+    if(!destinationSnap)throw new Error("دسترسی خودرویی مقصد تأیید نشد");
+
+    const response=await routingProviderRequest(
+      snapped.point,
+      destinationSnap.point,
+      {
+        alternatives:true,
+        bearing:Number.isFinite(realGpsState.heading)?realGpsState.heading:null
+      }
+    );
+
+    const validCandidates=rankValidatedRoutes(dedupeRoutes(
+      (response.routes||[]).filter(r=>
+        validateRouteCandidate(
+          r,
+          snapped.point,
+          {lat:destinationSnap.point[0],lng:destinationSnap.point[1]}
+        ).ok
+      )
+    ));
+    const route=validCandidates[0];
     if(!route)throw new Error("مسیر خودرویی معتبر پیدا نشد");
 
     routeCoords=routeToCoords(route);
     routeDistanceM=Number(route.distance||totalDistance(routeCoords));
     routeDurationS=Number(route.duration||0);
-    routeAlternatives=(data.routes||[]).filter(r=>validateRouteCandidate(r,snapped.point,navDestination).ok);
+    routeAlternatives=validCandidates.slice(0,3);
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
 
@@ -2994,6 +3317,7 @@ async function triggerRealGpsReroute(rawPoint){
 
     renderRouteAlternatives();
     renderNavMarkers();
+    renderEndpointAccessLines();
     updateRouteSummary();
     resetTurnByTurn();
 
@@ -3328,14 +3652,27 @@ async function triggerReroute(pos,simProgress){
         : `${Math.round(snapped.distance).toLocaleString('fa-IR')} متر تا شبکه قابل رانندگی • محاسبه مسیر...`
     );
 
-    const startLon=Number(snapped.point[1]).toFixed(6);
-    const startLat=Number(snapped.point[0]).toFixed(6);
-    const coords=`${startLon},${startLat};${navDestination.lng},${navDestination.lat}`;
+    const destinationSnap=await snapRoutingEndpoint(
+      [Number(navDestination.lat),Number(navDestination.lng)],
+      "destination"
+    );
+    if(!destinationSnap)throw new Error("دسترسی خودرویی مقصد تأیید نشد");
 
-    // Alternatives are requested, then locally validated before one is selected.
-    const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=true&continue_straight=true&radiuses=35;180`;
-    const data=await fetchJsonWithTimeout(url,9000);
-    const route=chooseBestValidatedRoute(data?.routes||[],snapped.point,navDestination);
+    const response=await routingProviderRequest(
+      snapped.point,
+      destinationSnap.point,
+      {alternatives:true}
+    );
+    const validCandidates=rankValidatedRoutes(dedupeRoutes(
+      (response.routes||[]).filter(r=>
+        validateRouteCandidate(
+          r,
+          snapped.point,
+          {lat:destinationSnap.point[0],lng:destinationSnap.point[1]}
+        ).ok
+      )
+    ));
+    const route=validCandidates[0];
 
     if(!route){
       throw new Error("هیچ مسیر خودرویی معتبر از موقعیت تثبیت‌شده پیدا نشد");
@@ -3345,7 +3682,7 @@ async function triggerReroute(pos,simProgress){
     routeCoords=newCoords;
     routeDistanceM=Number(route.distance||totalDistance(routeCoords));
     routeDurationS=Number(route.duration||0);
-    routeAlternatives=(data.routes||[]).filter(r=>validateRouteCandidate(r,snapped.point,navDestination).ok);
+    routeAlternatives=validCandidates.slice(0,3);
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
 
@@ -3373,6 +3710,7 @@ async function triggerReroute(pos,simProgress){
 
     renderRouteAlternatives();
     renderNavMarkers();
+    renderEndpointAccessLines();
     updateRouteSummary();
     resetTurnByTurn();
     updateTurnByTurn(0);
@@ -4525,6 +4863,9 @@ $('driveVoiceBtn').onclick=()=>{
 $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
 };
+$('retryRouteBtn').onclick=()=>loadRoute();
+updateRoutingDataDisclosure();
+
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
   $('scenario').disabled=real;
