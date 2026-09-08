@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۸.۱ Map Interaction Hotfix</title>
+<title>POL | نسخه ۳.۹ Smart Guidance Engine</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2542,6 +2542,64 @@ body.driving-mode.map-manual-explore #map:active{
   cursor:grabbing!important;
 }
 
+
+/* ===== v3.9 Smart Guidance Engine ===== */
+.lab-version-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:10px 0 0;
+  padding:9px 10px;
+  border-radius:12px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.lab-version-row b{display:block;font-size:10px}
+.lab-version-row small{display:block;margin-top:2px;font-size:8px;color:#8496ac}
+.lab-version-chip{
+  flex:0 0 auto;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#2563eb;
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+}
+.guidance-debug-box{
+  border-color:rgba(96,165,250,.22)!important;
+}
+.guidance-debug-box .eligibilityStatus.prep{
+  background:#172334;
+  border-color:#3b526f;
+  color:#bfdbfe;
+}
+.guidance-debug-box .eligibilityStatus.approach{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.guidance-debug-box .eligibilityStatus.now{
+  background:#17396d;
+  border-color:#3b82f6;
+  color:#dbeafe;
+}
+
+/* Visual hierarchy follows the same three-stage guidance model. */
+body.driving-mode #turnCard.guidance-prep{
+  border-color:rgba(96,165,250,.20)!important;
+}
+body.driving-mode #turnCard.guidance-approach{
+  border-color:rgba(245,158,11,.34)!important;
+  box-shadow:0 20px 48px rgba(2,8,23,.34),0 0 0 2px rgba(245,158,11,.06)!important;
+}
+body.driving-mode #turnCard.guidance-now{
+  border-color:rgba(59,130,246,.48)!important;
+  box-shadow:0 22px 54px rgba(2,8,23,.40),0 0 0 3px rgba(37,99,235,.10)!important;
+}
+body.driving-mode #turnCard.guidance-now .turn-arrow{
+  transform:scale(1.06);
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3261,6 +3319,30 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
           <details id="tripAdvanced" class="section-card advanced-details">
             <summary>جزئیات فنی سفر</summary>
 
+            <div class="lab-version-row">
+              <span class="lab-version-chip">v3.9</span>
+              <div>
+                <b>Smart Guidance Engine</b>
+                <small>نسخه در حال اجرا روی همین صفحه</small>
+              </div>
+            </div>
+
+            <div class="eligibilityBox guidance-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Guidance Engine</b>
+                  <div class="small">فقط آزمایشگاه — زمان‌بندی Voice و مانور بعدی</div>
+                </div>
+                <div id="guidanceDebugStage" class="eligibilityStatus review">در انتظار</div>
+              </div>
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="guidanceDebugDistance">--</b><span>فاصله تا مانور</span></div>
+                <div class="eligibilityCell"><b id="guidanceDebugSpeed">--</b><span>سرعت مبنا</span></div>
+                <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
+              </div>
+              <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
             <div class="eligibilityBox temporal-debug-box">
               <div class="eligibilityHead">
                 <div>
@@ -3745,6 +3827,14 @@ let destinationSearchCache=[];
 let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
+let smartGuidanceState={
+  steps:{},
+  activeStepIndex:null,
+  lastVoiceAt:0,
+  lastStage:null,
+  lastText:"",
+  lastDistance:Infinity
+};
 let rerouteGhostLine=null;
 
 let rerouteState={
@@ -4493,10 +4583,15 @@ function renderSecondTurn(next){
   if(!box)return;
 
   const second=followingNavigationStep(next?.index??-1);
+  const secondPreviewLimit=
+    currentGuidanceSpeedKmh()>=70?2200:
+    currentGuidanceSpeedKmh()>=45?1800:
+    1400;
+
   const shouldShow=
     !!next &&
     !!second &&
-    next.distance<=1800 &&
+    next.distance<=secondPreviewLimit &&
     second.step.type!=="arrive";
 
   box.classList.toggle('show',shouldShow);
@@ -4516,10 +4611,15 @@ function renderLaneGuidance(step,distance){
 
   // Lane information is useful only close enough to the maneuver,
   // and only if OSRM actually supplied valid lane metadata.
+  const laneDistanceLimit=
+    currentGuidanceSpeedKmh()>=80?950:
+    currentGuidanceSpeedKmh()>=50?800:
+    650;
+
   const shouldShow=
     lanes.length>=2 &&
     validCount>=1 &&
-    distance<=700;
+    distance<=laneDistanceLimit;
 
   box.classList.toggle('show',shouldShow);
   if(!shouldShow){
@@ -4570,6 +4670,7 @@ function buildNavigationSteps(route){
   // IMPORTANT: No synthetic Turn-by-Turn fallback.
   // Missing route instructions are a navigation-integrity failure.
   lastSpokenStepIndex=-1;
+  resetSmartGuidance();
 }
 function distanceTextFa(m){
   m=Math.max(0,Number(m||0));
@@ -4586,12 +4687,196 @@ function nextNavigationStep(travelled){
   const last=navigationSteps[navigationSteps.length-1];
   return {step:{...last,action:"به مقصد می‌رسی",street:navDestination.label,arrow:"●"},index:navigationSteps.length-1,distance:Math.max(0,routeDistanceM-travelled)};
 }
-function speakGuidance(text,index,distance){
-  if(!voiceGuidanceEnabled)return;
-  if(index===lastSpokenStepIndex)return;
-  if(distance>450)return;
-  lastSpokenStepIndex=index;
-  speakPersian(text,{interrupt:true,rate:.95});
+function resetSmartGuidance(){
+  smartGuidanceState={
+    steps:{},
+    activeStepIndex:null,
+    lastVoiceAt:0,
+    lastStage:null,
+    lastText:"",
+    lastDistance:Infinity
+  };
+  renderGuidanceDiagnostics(null,null,null);
+}
+
+function currentGuidanceSpeedKmh(){
+  if(isRealGpsMode() && realGpsState?.firstFix){
+    return Math.max(0,Number(realGpsState.speedKmh||0));
+  }
+
+  const latest=rows?.length?rows[rows.length-1]:null;
+  if(latest && Number.isFinite(Number(latest.speed))){
+    return Math.max(0,Number(latest.speed));
+  }
+
+  const raw=Number($('speed')?.textContent||0);
+  return Number.isFinite(raw)?Math.max(0,raw):0;
+}
+
+function guidanceThresholds(speedKmh){
+  const s=Math.max(0,Number(speedKmh||0));
+
+  // The faster the car moves, the more preparation distance the driver needs.
+  if(s>=90)return{prep:1250,approach:480,now:125};
+  if(s>=70)return{prep:1000,approach:390,now:105};
+  if(s>=50)return{prep:800,approach:310,now:85};
+  if(s>=30)return{prep:600,approach:230,now:65};
+  return{prep:430,approach:170,now:45};
+}
+
+function shouldVoiceAnnounceStep(step){
+  if(!step)return false;
+
+  const type=String(step.type||"").toLowerCase();
+  const modifier=String(step.modifier||"").toLowerCase();
+
+  if(["arrive","turn","roundabout","rotary","merge","fork","on ramp","off ramp","end of road"].includes(type)){
+    return true;
+  }
+
+  if(modifier.includes("uturn"))return true;
+
+  // Avoid speaking every tiny "continue/new name" geometry step.
+  if(type==="continue" || type==="new name"){
+    return modifier && modifier!=="straight";
+  }
+
+  return false;
+}
+
+function guidanceStreetSuffix(step){
+  const street=String(step?.street||"").trim();
+  if(!street || street==="مسیر فعلی")return"";
+  return`، ${street}`;
+}
+
+function guidanceVoiceText(stage,next){
+  const step=next.step;
+  const street=guidanceStreetSuffix(step);
+  const d=distanceTextFa(next.distance);
+
+  if(step.type==="arrive"){
+    if(stage==="prep")return`${d} تا مقصد مانده است`;
+    if(stage==="approach")return`به مقصد نزدیک می‌شوی`;
+    return`به مقصد رسیدی`;
+  }
+
+  if(stage==="prep"){
+    return`در ${d}، ${step.action}${street}`;
+  }
+
+  if(stage==="approach"){
+    return`${d} دیگر، ${step.action}${street}`;
+  }
+
+  return`حالا، ${step.action}${street}`;
+}
+
+function selectGuidanceStage(next,speedKmh){
+  const thresholds=guidanceThresholds(speedKmh);
+  const d=Number(next.distance||0);
+
+  if(d<=thresholds.now)return"now";
+  if(d<=thresholds.approach)return"approach";
+  if(d<=thresholds.prep)return"prep";
+  return null;
+}
+
+function guidanceStageLabel(stage){
+  if(stage==="now")return"حالا";
+  if(stage==="approach")return"نزدیک";
+  if(stage==="prep")return"آماده‌سازی";
+  return"در انتظار";
+}
+
+function setTurnGuidanceStage(stage){
+  const card=$('turnCard');
+  if(!card)return;
+
+  card.classList.remove('guidance-prep','guidance-approach','guidance-now');
+  if(stage)card.classList.add(`guidance-${stage}`);
+}
+
+function renderGuidanceDiagnostics(next,stage,speedKmh){
+  const status=$('guidanceDebugStage');
+  const distance=$('guidanceDebugDistance');
+  const speed=$('guidanceDebugSpeed');
+  const step=$('guidanceDebugStep');
+  const txt=$('guidanceDebugText');
+
+  if(status){
+    status.classList.remove('prep','approach','now','review');
+    if(stage){
+      status.classList.add(stage);
+      status.textContent=guidanceStageLabel(stage);
+    }else{
+      status.classList.add('review');
+      status.textContent="در انتظار";
+    }
+  }
+
+  if(distance)distance.textContent=next?distanceTextFa(next.distance):"--";
+  if(speed)speed.textContent=Number.isFinite(Number(speedKmh))
+    ?`${Math.round(Number(speedKmh)).toLocaleString('fa-IR')} km/h`
+    :"--";
+  if(step)step.textContent=next?(next.index+1).toLocaleString('fa-IR'):"--";
+
+  if(txt){
+    txt.textContent=next
+      ?`${next.step.action}${next.step.street?` • ${next.step.street}`:""}`
+      :"هنوز Navigation شروع نشده است.";
+  }
+}
+
+function maybeVibrateForManeuver(stage){
+  if(stage!=="now" || !navigator.vibrate)return;
+  try{navigator.vibrate(45)}catch(e){}
+}
+
+function processSmartGuidance(next){
+  if(!next)return;
+
+  const speedKmh=currentGuidanceSpeedKmh();
+  const stage=selectGuidanceStage(next,speedKmh);
+
+  setTurnGuidanceStage(stage);
+  renderGuidanceDiagnostics(next,stage,speedKmh);
+
+  smartGuidanceState.activeStepIndex=next.index;
+  smartGuidanceState.lastStage=stage;
+  smartGuidanceState.lastDistance=Number(next.distance||0);
+
+  if(!stage || !voiceGuidanceEnabled || !shouldVoiceAnnounceStep(next.step))return;
+
+  const key=String(next.index);
+  const state=smartGuidanceState.steps[key] ||= {
+    prep:false,
+    approach:false,
+    now:false
+  };
+
+  if(state[stage])return;
+
+  const now=Date.now();
+  const elapsed=now-Number(smartGuidanceState.lastVoiceAt||0);
+
+  // "NOW" is safety-critical navigation information and may interrupt.
+  // Earlier stages are deliberately rate-limited to avoid chatter.
+  if(stage!=="now" && elapsed<2400)return;
+
+  const text=guidanceVoiceText(stage,next);
+
+  state[stage]=true;
+  smartGuidanceState.lastVoiceAt=now;
+  smartGuidanceState.lastText=text;
+  lastSpokenStepIndex=next.index;
+
+  speakPersian(text,{
+    interrupt:stage==="now",
+    rate:stage==="now"?.91:.94
+  });
+
+  maybeVibrateForManeuver(stage);
 }
 function updateTurnByTurn(progress){
   const travelled=routeDistanceM*clamp(progress,0,1);
@@ -4615,8 +4900,10 @@ function updateTurnByTurn(progress){
   updateTurnContextEmphasis(next.distance);
 
   if(progress<.995){
-    const voiceText=`${distanceTextFa(next.distance)} دیگر، ${next.step.action}${next.step.street?`، ${next.step.street}`:""}`;
-    speakGuidance(voiceText,next.index,next.distance);
+    processSmartGuidance(next);
+  }else{
+    setTurnGuidanceStage("now");
+    renderGuidanceDiagnostics(next,"now",currentGuidanceSpeedKmh());
   }
 
   const banner=$('arrivalBanner');
@@ -4636,7 +4923,9 @@ function resetTurnByTurn(){
   $('laneGuidance')?.classList.remove('show');
   if($('laneGuidanceItems'))$('laneGuidanceItems').innerHTML="";
   $('turnCard')?.classList.remove('turn-critical');
+  $('turnCard')?.classList.remove('guidance-prep','guidance-approach','guidance-now');
   lastSpokenStepIndex=-1;
+  resetSmartGuidance();
 }
 
 
