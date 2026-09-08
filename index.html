@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۶.۱ اصلاح صدا</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۷ تحلیل راننده</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -514,6 +514,90 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
 .voice-ok{color:#86efac!important}
 .voice-warn{color:#fde68a!important}
 .voice-bad{color:#fecaca!important}
+
+
+/* ===== v1.7 Driver Insights ===== */
+.insights-overview{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px
+}
+.insight-stat{
+  background:#121d2a;border:1px solid #2b3d55;border-radius:14px;padding:10px;text-align:center
+}
+.insight-stat b{display:block;font-size:18px}
+.insight-stat span{display:block;font-size:8px;color:#91a0b5;margin-top:3px;line-height:1.5}
+.insight-stat.good{border-color:#28543c;background:#0f1a15}
+.insight-stat.warn{border-color:#665019;background:#19150c}
+.insight-stat.info{border-color:#2c4f78;background:#0e1722}
+
+.driver-trend-chart{
+  width:100%;height:180px;background:#0c131c;border:1px solid #26364a;
+  border-radius:14px;margin-top:9px
+}
+.trend-caption{
+  margin-top:8px;padding:9px 10px;border-radius:12px;background:#0d1726;
+  border:1px solid #1e3a5f;font-size:9px;line-height:1.8;color:#bfdbfe
+}
+
+.pattern-card{
+  margin-top:9px;padding:12px;border-radius:15px;background:#101923;border:1px solid #2b3c51
+}
+.pattern-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.pattern-head b{font-size:12px}
+.pattern-tag{
+  padding:5px 8px;border-radius:999px;background:#19283a;border:1px solid #2f4d70;
+  color:#bfdbfe;font-size:8px;white-space:nowrap
+}
+.pattern-card p{margin:6px 0 0;font-size:9px;color:#9dadc1;line-height:1.8}
+.pattern-meter{height:8px;background:#0b1118;border-radius:999px;overflow:hidden;margin-top:9px}
+.pattern-meter>div{height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa)}
+
+.next-focus{
+  display:grid;grid-template-columns:38px 1fr;gap:9px;align-items:start;
+  padding:11px;border-radius:14px;background:#111b27;border:1px solid #2c425e
+}
+.next-focus-icon{
+  width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+  background:#1d4ed8;color:#fff;font-size:18px
+}
+.next-focus b{display:block;font-size:11px}
+.next-focus span{display:block;font-size:9px;color:#a4b2c4;line-height:1.8;margin-top:3px}
+
+.modern-history{display:grid;gap:8px;margin-top:9px}
+.trip-card-modern{
+  background:#101923;border:1px solid #27364a;border-radius:15px;padding:11px
+}
+.trip-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.trip-route{font-size:11px;font-weight:900;line-height:1.7}
+.trip-date{font-size:8px;color:#7f91a8;margin-top:2px}
+.trip-score-modern{font-size:24px;font-weight:900}
+.trip-details-modern{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px
+}
+.trip-details-modern>div{
+  background:#162231;border-radius:10px;padding:7px;text-align:center
+}
+.trip-details-modern b{display:block;font-size:11px}
+.trip-details-modern span{display:block;font-size:7px;color:#91a0b5;margin-top:2px}
+.trip-bottom-note{
+  display:flex;justify-content:space-between;gap:8px;align-items:center;
+  margin-top:8px;font-size:8px;color:#8fa0b4
+}
+.trip-focus-chip{
+  padding:4px 7px;border-radius:999px;background:#19283a;color:#bfdbfe;border:1px solid #2b4668;
+  white-space:nowrap
+}
+
+.summary-comparison{
+  margin-top:9px;padding:10px;border-radius:13px;background:#101923;border:1px solid #2b3d55
+}
+.summary-comparison b{display:block;font-size:10px}
+.summary-comparison span{display:block;font-size:9px;color:#a3b2c4;line-height:1.8;margin-top:3px}
+
+@media(max-width:430px){
+  .insights-overview{grid-template-columns:1fr 1fr 1fr}
+  .insight-stat{padding:8px 5px}
+  .trip-details-modern{grid-template-columns:repeat(3,1fr)}
+}
 
 </style>
 
@@ -1082,24 +1166,77 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h3>مهارت‌های رانندگی</h3><small>میانگین سفرهای اخیر</small></div>
+        <div class="section-head"><h3>روند رانندگی</h3><small>آخرین سفرهای معتبر</small></div>
+
+        <div class="insights-overview">
+          <div class="insight-stat info"><b id="insightRecentAvg">--</b><span>میانگین ۵ سفر اخیر</span></div>
+          <div class="insight-stat good"><b id="insightBestScore">--</b><span>بهترین امتیاز</span></div>
+          <div class="insight-stat"><b id="insightConsistency">--</b><span>ثبات رانندگی</span></div>
+        </div>
+
+        <canvas id="driverTrendChart" class="driver-trend-chart" width="900" height="180"></canvas>
+        <div id="driverTrendCaption" class="trend-caption">با ثبت سفرهای بیشتر، روند رانندگی اینجا تحلیل می‌شود.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>الگوی رانندگی</h3><small>میانگین سفرهای اخیر</small></div>
+
         <div class="skill-mobile">
           <div class="skillRow"><div class="skillHead"><span>سرعت</span><span id="pSpeedN">--</span></div><div class="bar"><div id="pSpeedBar"></div></div></div>
           <div class="skillRow"><div class="skillHead"><span>ترمز</span><span id="pBrakeN">--</span></div><div class="bar"><div id="pBrakeBar"></div></div></div>
           <div class="skillRow"><div class="skillHead"><span>شتاب</span><span id="pAccelN">--</span></div><div class="bar"><div id="pAccelBar"></div></div></div>
           <div class="skillRow"><div class="skillHead"><span>پیچ</span><span id="pCornerN">--</span></div><div class="bar"><div id="pCornerBar"></div></div></div>
         </div>
+
+        <div id="recurringPatternCard" class="pattern-card">
+          <div class="pattern-head">
+            <b id="recurringPatternTitle">در حال شناخت الگو</b>
+            <span id="recurringPatternTag" class="pattern-tag">داده ناکافی</span>
+          </div>
+          <p id="recurringPatternText">برای تشخیص الگوی تکرارشونده، چند سفر معتبر لازم است.</p>
+          <div class="pattern-meter"><div id="recurringPatternMeter" style="width:0%"></div></div>
+        </div>
+
         <div id="learningInsight" class="insight">پس از ثبت سفرهای معتبر، الگوی رانندگی اینجا تحلیل می‌شود.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>تمرکز بعدی</h3><small>فقط یک پیشنهاد کاربردی</small></div>
+        <div class="next-focus">
+          <div id="nextFocusIcon" class="next-focus-icon">◎</div>
+          <div>
+            <b id="nextFocusTitle">هنوز داده کافی نیست</b>
+            <span id="nextFocusText">پس از چند سفر معتبر، مهم‌ترین اقدام پیشنهادی اینجا نمایش داده می‌شود.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>مأموریت شخصی</h3><small>بر اساس رفتار واقعی</small></div>
+        <div id="calibrationCard" class="calibrationCard">
+          <div class="calibrationTitle">دوره شناخت راننده</div>
+          <div id="calibrationText" class="calibrationText">برای ساخت مأموریت شخصی، حداقل ۳ سفر معتبر لازم است.</div>
+        </div>
+        <div class="missionCard">
+          <div id="missionTitle" class="missionTitle">در انتظار داده بیشتر</div>
+          <div id="missionDesc" class="missionDesc">پس از شناخت الگو، مأموریت شخصی ساخته می‌شود.</div>
+          <div class="missionProgress"><div id="missionBar" style="width:0%"></div></div>
+          <div class="missionMeta">
+            <span id="missionProgressText">۰ از ۳</span>
+            <span id="missionReward">پاداش: --</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>آخرین سفرها</h3><small>خلاصه قابل‌فهم</small></div>
+        <div id="modernHistoryList" class="modern-history"><div class="small">هنوز سفری ذخیره نشده است.</div></div>
+        <div id="historyList" class="historyList" style="display:none"></div>
       </div>
 
       <div class="section-card">
         <div class="section-head"><h3>نشان‌ها</h3><small>دستاوردهای ایمنی</small></div>
         <div id="achievementGrid" class="achievementGrid"></div>
-      </div>
-
-      <div class="section-card">
-        <div class="section-head"><h3>آخرین سفرها</h3></div>
-        <div id="historyList" class="historyList"><div class="small">هنوز سفری ذخیره نشده است.</div></div>
       </div>
 
       <div class="profileActions">
@@ -1133,6 +1270,11 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     <div id="summaryCoach" class="summary-coach">
       <b>دستیار ایمنی</b>
       <span>بعد از سفر، بازخورد کوتاه و کاربردی اینجا نمایش داده می‌شود.</span>
+    </div>
+
+    <div id="summaryComparison" class="summary-comparison">
+      <b>مقایسه با سفرهای قبلی</b>
+      <span>بعد از پایان سفر، عملکرد این سفر با میانگین اخیر مقایسه می‌شود.</span>
     </div>
 
     <div class="summary-actions">
@@ -1275,6 +1417,13 @@ function normalizeProfile(p){
   const e=emptyProfile();
   const n={...e,...(p||{})};
   n.trips=Array.isArray(n.trips)?n.trips:[];
+  n.trips=n.trips.map(t=>({
+    ...t,
+    originLabel:t.originLabel||"",
+    destinationLabel:t.destinationLabel||"",
+    routeKm:Number(t.routeKm||0),
+    plannedDurationMin:Number(t.plannedDurationMin||0)
+  }));
   n.walletTx=Array.isArray(n.walletTx)?n.walletTx:[];
   n.redemptions=Array.isArray(n.redemptions)?n.redemptions:[];
   n.auditTrips=Array.isArray(n.auditTrips)?n.auditTrips:[];
@@ -2515,6 +2664,9 @@ function buildScore(){
     avgContextRisk:Number(avgContext.toFixed(2)),
     topRiskEvent:top?top.title:null,
     routeKm:Number((routeDistanceM/1000).toFixed(1)),
+    originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
+    destinationLabel:(navDestination&&navDestination.label)||"مقصد",
+    plannedDurationMin:Math.max(1,Math.round((routeDurationS||0)/60)),
     coachAlerts:{
       speed:safetyCoach.counts.speed||0,
       brake:safetyCoach.counts.brake||0,
@@ -2825,15 +2977,238 @@ function renderGamification(){
   renderMarketplace();
 }
 
+
+function driverComponentLabel(key){
+  return{
+    speedScore:"سرعت",
+    brakeScore:"ترمز",
+    accelScore:"شتاب",
+    cornerScore:"پیچ"
+  }[key]||key;
+}
+function componentAction(key){
+  return{
+    speedScore:{
+      icon:"↟",
+      title:"سرعت را زودتر با مسیر هماهنگ کن",
+      text:"وقتی حد مجاز تغییر می‌کند، قبل از ورود به بخش جدید سرعت را تنظیم کن؛ نه بعد از عبور از تابلو."
+    },
+    brakeScore:{
+      icon:"◫",
+      title:"فاصله طولی را کمی بیشتر کن",
+      text:"فاصله بیشتر با خودروی جلویی، نیاز به ترمز ناگهانی را کمتر می‌کند و رانندگی روان‌تری می‌سازد."
+    },
+    accelScore:{
+      icon:"↗",
+      title:"شروع حرکت را نرم‌تر کن",
+      text:"فشار تدریجی روی پدال گاز، کنترل بهتر و رانندگی یکنواخت‌تری ایجاد می‌کند."
+    },
+    cornerScore:{
+      icon:"↪",
+      title:"پیش از پیچ سرعت را کم کن",
+      text:"کاهش سرعت قبل از ورود به پیچ بهتر از اصلاح سرعت در میانه پیچ است."
+    }
+  }[key]||{icon:"◎",title:"همین روند را ادامه بده",text:"الگوی فعلی پایدار است؛ روی حفظ کیفیت رانندگی تمرکز کن."};
+}
+function scoreConsistency(trips){
+  const vals=trips.slice(-5).map(t=>Number(t.score||0));
+  if(vals.length<2)return null;
+  const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const variance=vals.reduce((s,v)=>s+(v-mean)**2,0)/vals.length;
+  const sd=Math.sqrt(variance);
+  if(sd<=3)return{label:"خیلی پایدار",value:96};
+  if(sd<=6)return{label:"پایدار",value:86};
+  if(sd<=10)return{label:"متوسط",value:72};
+  return{label:"نوسانی",value:55};
+}
+function weakestForTrip(tr){
+  return[
+    ["speedScore",Number(tr.speedScore??100)],
+    ["brakeScore",Number(tr.brakeScore??100)],
+    ["accelScore",Number(tr.accelScore??100)],
+    ["cornerScore",Number(tr.cornerScore??100)]
+  ].sort((a,b)=>a[1]-b[1])[0];
+}
+function recurringWeakness(trips){
+  const recent=trips.slice(-5);
+  if(recent.length<3)return null;
+  const keys=["speedScore","brakeScore","accelScore","cornerScore"];
+  const avgs=keys.map(k=>[
+    k,
+    recent.reduce((s,t)=>s+Number(t[k]??100),0)/recent.length
+  ]).sort((a,b)=>a[1]-b[1]);
+  const weakest=avgs[0];
+  const times=recent.filter(t=>weakestForTrip(t)[0]===weakest[0]).length;
+  return{
+    key:weakest[0],
+    score:Math.round(weakest[1]),
+    times,
+    total:recent.length,
+    strength:Math.round(times/recent.length*100)
+  };
+}
+function drawDriverTrend(trips){
+  const canvas=$('driverTrendChart');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const cssW=canvas.clientWidth||320,cssH=180;
+  canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=cssW,H=cssH;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#0c131c";ctx.fillRect(0,0,W,H);
+
+  const data=trips.slice(-10);
+  ctx.font='9px Vazirmatn';
+  [60,80,100].forEach(v=>{
+    const y=H-22-(v-50)/50*(H-42);
+    ctx.strokeStyle="#213248";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(W-10,y);ctx.stroke();
+    ctx.fillStyle="#718299";ctx.fillText(v.toLocaleString('fa-IR'),5,y+3);
+  });
+
+  if(!data.length)return;
+  const pts=data.map((t,i)=>{
+    const x=30+(data.length===1?0:(i/(data.length-1)))*(W-45);
+    const score=Number(t.score||0);
+    const y=H-22-(clamp(score,50,100)-50)/50*(H-42);
+    return{x,y,score};
+  });
+
+  ctx.strokeStyle="#60a5fa";ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";
+  ctx.beginPath();
+  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.stroke();
+
+  pts.forEach((p,i)=>{
+    ctx.fillStyle=i===pts.length-1?"#ffffff":"#60a5fa";
+    ctx.beginPath();ctx.arc(p.x,p.y,i===pts.length-1?5:3.5,0,Math.PI*2);ctx.fill();
+  });
+}
+function renderDriverInsights(p){
+  const trips=p.trips||[];
+  const recent=trips.slice(-5);
+
+  if($('insightRecentAvg')){
+    $('insightRecentAvg').textContent=recent.length
+      ? Math.round(recent.reduce((s,t)=>s+Number(t.score||0),0)/recent.length).toLocaleString('fa-IR')
+      :"--";
+  }
+  if($('insightBestScore')){
+    $('insightBestScore').textContent=trips.length
+      ? Math.max(...trips.map(t=>Number(t.score||0))).toLocaleString('fa-IR')
+      :"--";
+  }
+  const consistency=scoreConsistency(trips);
+  if($('insightConsistency'))$('insightConsistency').textContent=consistency?consistency.label:"--";
+
+  drawDriverTrend(trips);
+
+  if($('driverTrendCaption')){
+    if(trips.length<3){
+      $('driverTrendCaption').textContent="برای تشخیص یک روند واقعی، حداقل ۳ سفر معتبر لازم است.";
+    }else{
+      const first=trips.slice(-6,-3);
+      const last=trips.slice(-3);
+      const lastAvg=Math.round(last.reduce((s,t)=>s+Number(t.score||0),0)/last.length);
+      if(first.length){
+        const firstAvg=Math.round(first.reduce((s,t)=>s+Number(t.score||0),0)/first.length);
+        const diff=lastAvg-firstAvg;
+        $('driverTrendCaption').textContent=
+          diff>2
+            ? `میانگین ۳ سفر اخیر ${Math.abs(diff).toLocaleString('fa-IR')} امتیاز بهتر از ۳ سفر قبل است.`
+            : diff<-2
+              ? `میانگین ۳ سفر اخیر ${Math.abs(diff).toLocaleString('fa-IR')} امتیاز پایین‌تر است؛ الگوی تکرارشونده را بررسی کن.`
+              : "امتیاز سفرهای اخیر نسبتاً پایدار است؛ تمرکز بعدی روی کیفیت همان رفتار پرتکرار است.";
+      }else{
+        $('driverTrendCaption').textContent=`میانگین ۳ سفر اخیر ${lastAvg.toLocaleString('fa-IR')} است.`;
+      }
+    }
+  }
+
+  const recurring=recurringWeakness(trips);
+  if(recurring){
+    const label=driverComponentLabel(recurring.key);
+    $('recurringPatternTitle').textContent=`بیشترین فرصت بهبود: ${label}`;
+    $('recurringPatternTag').textContent=`${recurring.times.toLocaleString('fa-IR')} از ${recurring.total.toLocaleString('fa-IR')} سفر`;
+    $('recurringPatternText').textContent=
+      `در سفرهای اخیر، «${label}» بیشتر از سایر مؤلفه‌ها به‌عنوان نقطه قابل‌بهبود تکرار شده است. میانگین این شاخص ${recurring.score.toLocaleString('fa-IR')} است.`;
+    $('recurringPatternMeter').style.width=clamp(recurring.strength,0,100)+'%';
+
+    const action=componentAction(recurring.key);
+    $('nextFocusIcon').textContent=action.icon;
+    $('nextFocusTitle').textContent=action.title;
+    $('nextFocusText').textContent=action.text;
+  }else{
+    $('recurringPatternTitle').textContent="در حال شناخت الگو";
+    $('recurringPatternTag').textContent="داده ناکافی";
+    $('recurringPatternText').textContent="برای تشخیص الگوی تکرارشونده، حداقل ۳ سفر معتبر لازم است.";
+    $('recurringPatternMeter').style.width="0%";
+    $('nextFocusIcon').textContent="◎";
+    $('nextFocusTitle').textContent="هنوز داده کافی نیست";
+    $('nextFocusText').textContent="پس از چند سفر معتبر، فقط یک پیشنهاد روشن و کاربردی اینجا نمایش داده می‌شود.";
+  }
+
+  renderModernTripHistory(trips);
+}
+function renderModernTripHistory(trips){
+  const box=$('modernHistoryList');
+  if(!box)return;
+  if(!trips.length){
+    box.innerHTML='<div class="small">هنوز سفری ذخیره نشده است.</div>';
+    return;
+  }
+  const rev=trips.slice().reverse().slice(0,10);
+  box.innerHTML=rev.map((tr,i)=>{
+    const weak=weakestForTrip(tr);
+    const route=(tr.originLabel&&tr.destinationLabel)
+      ? `${tr.originLabel} تا ${tr.destinationLabel}`
+      : `سفر ${(trips.length-i).toLocaleString('fa-IR')}`;
+    const date=faDateTime(new Date(tr.savedAt||Date.now()));
+    const conf=Number(tr.tripConfidence||0);
+    const compliance=Number(tr.speedCompliance??0);
+    return `<div class="trip-card-modern">
+      <div class="trip-card-head">
+        <div>
+          <div class="trip-route">${route}</div>
+          <div class="trip-date">${date}</div>
+        </div>
+        <div class="trip-score-modern">${Number(tr.score||0).toLocaleString('fa-IR')}</div>
+      </div>
+      <div class="trip-details-modern">
+        <div><b>${compliance.toLocaleString('fa-IR')}٪</b><span>رعایت سرعت</span></div>
+        <div><b>${conf.toLocaleString('fa-IR')}٪</b><span>اعتبار سفر</span></div>
+        <div><b>${Number(tr.routeKm||0).toLocaleString('fa-IR',{maximumFractionDigits:1})}</b><span>کیلومتر</span></div>
+      </div>
+      <div class="trip-bottom-note">
+        <span>${tr.plannedDurationMin?`زمان مسیر: ${Number(tr.plannedDurationMin).toLocaleString('fa-IR')} دقیقه`:"سفر ثبت‌شده"}</span>
+        <span class="trip-focus-chip">تمرکز: ${driverComponentLabel(weak[0])}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function tripComparisonText(current,p){
+  const previous=(p.trips||[]).filter(t=>(t.savedAt||0)!==(current.savedAt||0)).slice(-3);
+  if(!previous.length)return"این اولین مبنای مقایسه است؛ چند سفر دیگر برای تحلیل روند لازم است.";
+  const avgScore=Math.round(previous.reduce((s,t)=>s+Number(t.score||0),0)/previous.length);
+  const diff=Number(current.score||0)-avgScore;
+  const weak=weakestForTrip(current);
+  if(diff>=4)return`این سفر ${diff.toLocaleString('fa-IR')} امتیاز بهتر از میانگین سفرهای اخیر بود. برای حفظ روند، روی «${driverComponentLabel(weak[0])}» تمرکز کن.`;
+  if(diff<=-4)return`این سفر ${Math.abs(diff).toLocaleString('fa-IR')} امتیاز پایین‌تر از میانگین اخیر بود. مهم‌ترین فرصت بهبود این سفر «${driverComponentLabel(weak[0])}» است.`;
+  return`این سفر نزدیک به میانگین سفرهای اخیر بود. مهم‌ترین فرصت بهبود همچنان «${driverComponentLabel(weak[0])}» است.`;
+}
+
 function renderProfile(){
   const p=driverProfile,trips=p.trips||[];
+  renderDriverInsights(p);
   $('pTrips').textContent=trips.length;
   $('pStreak').textContent=p.safeStreak||0;
 
   const calibrationNeeded=Math.max(0,3-trips.length);
   if(calibrationNeeded>0){
     $('calibrationCard').style.display='block';
-    $('calibrationText').textContent=`Calibration: ${trips.length} / 3 سفر معتبر ثبت شده. ${calibrationNeeded} سفر دیگر برای ساخت Mission شخصی لازم است.`;
+    $('calibrationText').textContent=`${trips.length.toLocaleString('fa-IR')} از ۳ سفر معتبر ثبت شده؛ ${calibrationNeeded.toLocaleString('fa-IR')} سفر دیگر برای ساخت مأموریت شخصی لازم است.`;
   }else{
     $('calibrationCard').style.display='none';
   }
@@ -2843,12 +3218,12 @@ function renderProfile(){
     ['Speed','Brake','Accel','Corner'].forEach(k=>{
       $('p'+k+'N').textContent='--';$('p'+k+'Bar').style.width='0%';
     });
-    $('learningInsight').textContent='بعد از اولین سفر معتبر، Learning Engine شروع به ساخت Baseline می‌کند.';
+    $('learningInsight').textContent='بعد از اولین سفر معتبر، سیستم یادگیری شروع به ساخت الگوی اولیه می‌کند.';
     $('calibrationCard').style.display='block';
-    $('calibrationText').textContent='برای ساخت Mission شخصی، حداقل ۳ سفر معتبر لازم است.';
-    $('missionTitle').textContent='در انتظار Calibration';
-    $('missionDesc').textContent='ابتدا ۳ سفر معتبر ثبت کن تا سیستم Baseline اولیه بسازد.';
-    $('missionBar').style.width='0%';$('missionProgressText').textContent='۰ از ۳';$('missionReward').textContent='Reward: --';
+    $('calibrationText').textContent='برای ساخت مأموریت شخصی، حداقل ۳ سفر معتبر لازم است.';
+    $('missionTitle').textContent='در حال شناخت راننده';
+    $('missionDesc').textContent='ابتدا ۳ سفر معتبر ثبت کن تا سیستم الگوی اولیه بسازد.';
+    $('missionBar').style.width='0%';$('missionProgressText').textContent='۰ از ۳';$('missionReward').textContent='پاداش: --';
     $('historyList').innerHTML='<div class="small">هنوز سفری در پروفایل ذخیره نشده است.</div>';
     renderGamification();
     return;
@@ -2858,7 +3233,7 @@ function renderProfile(){
   $('pAvg').textContent=avgScore;
 
   const recent=trips.slice(-3), previous=trips.slice(-6,-3);
-  let improve='Baseline';
+  let improve='الگوی اولیه';
   let improveClass='trendFlat';
   if(previous.length){
     const d=Math.round(avg(recent,'score')-avg(previous,'score'));
@@ -2882,8 +3257,8 @@ function renderProfile(){
   const weakest=compVals[0];
 
   let learning=trips.length<3
-    ? `این هنوز Baseline اولیه است. فعلاً «${componentLabel(weakest[0])}» پایین‌ترین مؤلفه دیده شده، اما برای نتیجه‌گیری حداقل ۳ سفر معتبر لازم است. `
-    : `Baseline اولیه نشان می‌دهد بیشترین فرصت بهبود تکرارشونده در «${componentLabel(weakest[0])}» است (${weakest[1]}). `;
+    ? `این هنوز الگوی اولیه است. فعلاً «${componentLabel(weakest[0])}» پایین‌ترین مؤلفه دیده شده، اما برای نتیجه‌گیری حداقل ۳ سفر معتبر لازم است. `
+    : `الگوی اولیه نشان می‌دهد بیشترین فرصت بهبود تکرارشونده در «${componentLabel(weakest[0])}» است (${weakest[1]}). `;
   if(trips.length>=4){
     const first=Math.round(avg(trips.slice(0,Math.min(3,trips.length)),'score'));
     const last=Math.round(avg(trips.slice(-3),'score'));
@@ -2912,13 +3287,13 @@ function renderProfile(){
     const pct=100*m.successTrips/Math.max(1,m.targetTrips);
     $('missionBar').style.width=clamp(pct,0,100)+'%';
     $('missionProgressText').textContent=`${Number(m.successTrips).toLocaleString('fa-IR')} از ${Number(m.targetTrips).toLocaleString('fa-IR')}`;
-    $('missionReward').textContent=`Reward: ${m.reward} SafeCoins`;
+    $('missionReward').textContent=`پاداش: ${Number(m.reward).toLocaleString('fa-IR')} سکه ایمن`;
   }else{
     $('missionTitle').textContent='در حال یادگیری راننده';
-    $('missionDesc').textContent='پس از تکمیل ۳ سفر معتبر، Mission شخصی بر اساس الگوی واقعی رانندگی ساخته می‌شود.';
+    $('missionDesc').textContent='پس از تکمیل ۳ سفر معتبر، مأموریت شخصی بر اساس الگوی واقعی رانندگی ساخته می‌شود.';
     $('missionBar').style.width=(Math.min(3,trips.length)/3*100)+'%';
     $('missionProgressText').textContent=`${Math.min(3,trips.length).toLocaleString('fa-IR')} از ۳`;
-    $('missionReward').textContent='Reward: بعد از Calibration';
+    $('missionReward').textContent='پاداش: بعد از دوره شناخت';
   }
 
   $('historyList').innerHTML=trips.slice(-8).reverse().map((tr,i)=>{
@@ -3178,6 +3553,10 @@ setTimeout(loadRoute,1000);
       if(document.getElementById('summaryCoach')){
         document.getElementById('summaryCoach').innerHTML=
           `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
+      }
+      if(document.getElementById('summaryComparison')){
+        document.getElementById('summaryComparison').innerHTML=
+          `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
       const sheet=document.getElementById('tripSummarySheet');
       sheet.classList.add('open');
