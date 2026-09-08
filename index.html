@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰.۱ اصلاح تست خروج</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۰.۲ اصلاح وضعیت تست خروج</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2112,7 +2112,7 @@ function simulatedState(time,dur){
   if(sc==="offRoute"){
     // Real navigation deviation simulation: good GPS, but vehicle leaves the planned route.
     speed=m.limit-7+2*Math.sin(time/4);
-    if(p>.30&&p<.43){
+    if(p>.29&&p<.48){
       offRoute=true;
       gps=6;
       match=92;
@@ -3108,7 +3108,21 @@ function start(){
 }
 function startCoreDrive(){
   if(!routeCoords.length){loadRoute().then(()=>start());return}
+
+  // IMPORTANT:
+  // Trip readiness prepares a validated off-route point BEFORE reset().
+  // reset() clears transient simulation state, so preserve that prepared
+  // road point across reset or the off-route scenario silently disappears.
+  const preparedOffRouteState =
+    $('scenario')?.value==="offRoute" && offRouteTestState.ready
+      ? {...offRouteTestState}
+      : null;
+
   reset(false,true);
+
+  if(preparedOffRouteState){
+    offRouteTestState={...preparedOffRouteState};
+  }
 
   tripJourneyDistanceM=Number(routeDistanceM||0);
   tripJourneyDurationS=Number(routeDurationS||0);
@@ -3116,6 +3130,8 @@ function startCoreDrive(){
   rerouteState.offSince=null;
   rerouteState.active=false;
   rerouteState.rerouted=false;
+  rerouteState.lastAt=-999;
+  rerouteState.count=0;
   rerouteState.newRouteStartSimP=null;
   rerouteState.newRouteTravelledBeforeM=0;
 
