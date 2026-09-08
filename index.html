@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۲ Mapped Speed Limit Layer</title>
+<title>POL | نسخه ۴.۳ Confidence-Aware Safety Score</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2710,6 +2710,89 @@ body.real-gps-active #currentSpeedGauge.over{
   color:#fff!important;
 }
 
+
+/* ===== v4.3 Confidence-Aware Safety Score ===== */
+.safety-score-debug-box{
+  border-color:rgba(37,99,235,.22)!important;
+}
+.safety-score-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.safety-score-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.safety-score-debug-box .eligibilityStatus.bad{
+  background:#441717;
+  border-color:#7d3030;
+  color:#fecaca;
+}
+
+.summary-safety-breakdown{
+  display:none;
+  margin-top:11px;
+  padding:11px;
+  border-radius:14px;
+  background:#101923;
+  border:1px solid #2b4058;
+}
+.summary-safety-breakdown.show{display:block}
+.summary-safety-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+}
+.summary-safety-head b{
+  display:block;
+  font-size:10px;
+}
+.summary-safety-head span{
+  display:block;
+  margin-top:2px;
+  color:#8fa0b6;
+  font-size:8px;
+}
+.summary-score-scope{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#172334;
+  border:1px solid #3b526f;
+  color:#bfdbfe;
+  font-size:7px;
+  white-space:nowrap;
+}
+.summary-safety-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:9px;
+}
+.summary-safety-grid>div{
+  padding:8px;
+  border-radius:11px;
+  background:#172334;
+  text-align:center;
+}
+.summary-safety-grid b{
+  display:block;
+  font-size:18px;
+}
+.summary-safety-grid span{
+  display:block;
+  margin-top:2px;
+  font-size:8px;
+  color:#8fa0b6;
+}
+.summary-score.insufficient{
+  font-size:26px!important;
+  line-height:1.35!important;
+  padding:16px 0 6px;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3434,9 +3517,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.2</span>
+              <span class="lab-version-chip">v4.3</span>
               <div>
-                <b>Mapped Speed Limit Layer</b>
+                <b>Confidence-Aware Safety Score</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -3455,6 +3538,32 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox safety-score-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Confidence-Aware Safety Score</b>
+                  <div class="small">ترمز / شتاب / پیچ • نرمال‌شده بر اساس طول سفر • Speed فعلاً خارج از Score</div>
+                </div>
+                <div id="safetyScoreDebugStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="safetyScoreDebugValue">--</b><span>Safety Score</span></div>
+                <div class="eligibilityCell"><b id="safetyScoreDebugConfidence">--</b><span>Score Confidence</span></div>
+                <div class="eligibilityCell"><b id="safetyScoreDebugExposure">--</b><span>Exposure km</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="safetyScoreDebugBrake">--</b><span>ترمز</span></div>
+                <div class="eligibilityCell"><b id="safetyScoreDebugAccel">--</b><span>شتاب</span></div>
+                <div class="eligibilityCell"><b id="safetyScoreDebugCorner">--</b><span>پیچ</span></div>
+              </div>
+
+              <div id="safetyScoreDebugText" class="reasonList">
+                بعد از جمع‌شدن داده کافی، Score قابل‌اعتماد می‌شود.
+              </div>
             </div>
 
             <div class="eligibilityBox mapped-speed-debug-box">
@@ -3908,6 +4017,22 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       <div class="summary-item"><b id="summaryCompliance">--</b><span>رعایت سرعت</span></div>
     </div>
 
+    <div id="summarySafetyBreakdown" class="summary-safety-breakdown">
+      <div class="summary-safety-head">
+        <div>
+          <b>جزئیات امتیاز</b>
+          <span id="summaryScoreConfidence">Confidence: --</span>
+        </div>
+        <div id="summaryScoreScope" class="summary-score-scope">Speed خارج از امتیاز</div>
+      </div>
+
+      <div class="summary-safety-grid">
+        <div><b id="summaryBrakeScore">--</b><span>ترمز</span></div>
+        <div><b id="summaryAccelScore">--</b><span>شتاب</span></div>
+        <div><b id="summaryCornerScore">--</b><span>پیچ</span></div>
+      </div>
+    </div>
+
     <div id="summaryWhy" class="summary-why">پس از پایان سفر، مهم‌ترین نکته اینجا نمایش داده می‌شود.</div>
     <div id="summaryCoach" class="summary-coach">
       <b>دستیار ایمنی</b>
@@ -4076,6 +4201,20 @@ let mappedSpeedState={
   overspeedEvents:[],
   activeOverspeedSince:null,
   lastOverspeedAlertAt:0
+};
+
+
+let confidenceSafetyScoreState={
+  status:"idle",
+  score:null,
+  confidence:0,
+  exposureKm:0,
+  durationS:0,
+  brakeScore:null,
+  accelScore:null,
+  cornerScore:null,
+  eventBurden:{brake:0,accel:0,corner:0},
+  evidence:""
 };
 
 let realTelemetryState={
@@ -6316,6 +6455,7 @@ function saveRecentDestination(dest){
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
   resetRealTelemetry();
+resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
 renderRecentDestinations();
 }
@@ -10077,40 +10217,298 @@ function flushRealTelemetryEvents(){
   renderRealTelemetryDiagnostics();
 }
 
-function realTelemetryComponentScores(){
-  const events=realTelemetryState.events;
 
-  let brakePenalty=0;
-  let accelPenalty=0;
-  let cornerPenalty=0;
+function realTelemetryActualDistanceM(){
+  const pts=Array.isArray(realGpsState?.track)
+    ?realGpsState.track.filter(p=>Array.isArray(p)&&p.length>=2)
+    :[];
 
-  events.forEach(e=>{
-    const base=
-      e.sev==="critical"?13:
-      e.sev==="severe"?7:2.5;
+  if(pts.length<2)return 0;
 
-    const confidenceWeight=
-      clamp(Number(e.confidence||70)/100,.55,1);
+  let total=0;
 
-    const penalty=base*confidenceWeight;
+  for(let i=1;i<pts.length;i++){
+    const d=hav(pts[i-1],pts[i]);
 
-    if(e.type==="brake")brakePenalty+=penalty;
-    if(e.type==="accel")accelPenalty+=penalty;
-    if(e.type==="corner")cornerPenalty+=penalty;
+    // Reject impossible GPS jumps from exposure distance.
+    if(Number.isFinite(d)&&d>=0&&d<=350){
+      total+=d;
+    }
+  }
+
+  return total;
+}
+
+function realTelemetryDurationS(){
+  if(!realTelemetryState.startedAt)return 0;
+  return Math.max(0,(Date.now()-Number(realTelemetryState.startedAt))/1000);
+}
+
+function safetyEventSeverityWeight(sev){
+  if(sev==="critical")return 6;
+  if(sev==="severe")return 3;
+  return 1;
+}
+
+function safetyEventDurationFactor(event){
+  const durationMs=Math.max(
+    0,
+    Number(event?.endAt||event?.startAt||0)-
+    Number(event?.startAt||0)
+  );
+
+  const seconds=durationMs/1000;
+
+  // Sustained harsh behavior matters, but do not let one long noisy
+  // event dominate the whole score.
+  return clamp(.75+seconds*.35,.75,2.25);
+}
+
+function safetyEventPeakFactor(type,peak){
+  const p=Math.abs(Number(peak||0));
+
+  const base=
+    type==="brake"?2.7:
+    type==="accel"?2.7:
+    2.8;
+
+  if(!Number.isFinite(p)||p<=base)return 1;
+
+  return clamp(1+(p-base)/(base*1.8),1,1.65);
+}
+
+function safetyEventConfidenceFactor(confidence){
+  return clamp(Number(confidence||0)/100,.55,1);
+}
+
+function calculateExposureNormalizedSafetyScore(){
+  flushRealTelemetryEvents();
+
+  const events=realTelemetryState.events||[];
+  const rows=realTelemetryState.rows||[];
+
+  const distanceM=realTelemetryActualDistanceM();
+  const exposureKm=distanceM/1000;
+  const durationS=realTelemetryDurationS();
+
+  const avgSampleConfidence=rows.length
+    ?rows.reduce((sum,r)=>sum+Number(r.confidence||0),0)/rows.length
+    :0;
+
+  const validRatio=
+    realTelemetryState.validSamples/
+    Math.max(
+      1,
+      realTelemetryState.validSamples+
+      realTelemetryState.rejectedSamples
+    );
+
+  // Exposure evidence: longer trips are more representative.
+  const distanceEvidence=clamp(exposureKm/3,0,1);
+  const durationEvidence=clamp(durationS/300,0,1);
+  const sampleEvidence=clamp(realTelemetryState.validSamples/25,0,1);
+
+  const evidenceScore=
+    distanceEvidence*.44+
+    durationEvidence*.34+
+    sampleEvidence*.22;
+
+  let scoreConfidence=clamp(
+    Math.round(
+      avgSampleConfidence*.50+
+      validRatio*100*.22+
+      evidenceScore*100*.28
+    ),
+    0,
+    96
+  );
+
+  // If GPS-derived exposure is unavailable, use a conservative route-based
+  // fallback only for normalization, never to increase confidence.
+  const normalizationKm=Math.max(
+    5,
+    exposureKm>0?exposureKm:Number(routeDistanceM||0)/1000
+  );
+
+  const burden={
+    brake:0,
+    accel:0,
+    corner:0
+  };
+
+  events.forEach(event=>{
+    const type=event.type;
+
+    if(!(type in burden))return;
+
+    const weighted=
+      safetyEventSeverityWeight(event.sev)*
+      safetyEventDurationFactor(event)*
+      safetyEventPeakFactor(type,event.peak)*
+      safetyEventConfidenceFactor(event.confidence);
+
+    burden[type]+=weighted;
   });
 
+  // Normalize to a common 10km exposure.
+  const burdenPer10Km={
+    brake:burden.brake*10/normalizationKm,
+    accel:burden.accel*10/normalizationKm,
+    corner:burden.corner*10/normalizationKm
+  };
+
+  const brakeScore=clamp(
+    Math.round(100-burdenPer10Km.brake*2.35),
+    0,100
+  );
+
+  const accelScore=clamp(
+    Math.round(100-burdenPer10Km.accel*2.05),
+    0,100
+  );
+
+  const cornerScore=clamp(
+    Math.round(100-burdenPer10Km.corner*2.35),
+    0,100
+  );
+
+  const safetyScore=Math.round(
+    brakeScore*.40+
+    accelScore*.20+
+    cornerScore*.40
+  );
+
+  const hardInsufficient=
+    realTelemetryState.validSamples<8 ||
+    durationS<20 ||
+    distanceM<120 ||
+    avgSampleConfidence<45;
+
+  let status="reliable";
+
+  if(hardInsufficient){
+    status="insufficient";
+    scoreConfidence=Math.min(scoreConfidence,44);
+  }else if(
+    scoreConfidence<70 ||
+    exposureKm<1 ||
+    durationS<60
+  ){
+    status="preliminary";
+  }
+
+  const evidence=
+    status==="insufficient"
+      ?"داده کافی برای یک امتیاز منصفانه جمع نشده است."
+      :status==="preliminary"
+        ?"امتیاز اولیه است؛ سفر طولانی‌تر و GPS پایدارتر Confidence را افزایش می‌دهد."
+        :"داده این سفر برای تحلیل رفتاری پایه کافی است.";
+
+  confidenceSafetyScoreState={
+    status,
+    score:status==="insufficient"?null:safetyScore,
+    confidence:scoreConfidence,
+    exposureKm,
+    durationS,
+    brakeScore,
+    accelScore,
+    cornerScore,
+    eventBurden:burdenPer10Km,
+    evidence
+  };
+
+  renderConfidenceSafetyScoreDiagnostics();
+  return confidenceSafetyScoreState;
+}
+
+function renderConfidenceSafetyScoreDiagnostics(){
+  const s=confidenceSafetyScoreState;
+
+  const value=$('safetyScoreDebugValue');
+  const conf=$('safetyScoreDebugConfidence');
+  const exposure=$('safetyScoreDebugExposure');
+  const brake=$('safetyScoreDebugBrake');
+  const accel=$('safetyScoreDebugAccel');
+  const corner=$('safetyScoreDebugCorner');
+  const txt=$('safetyScoreDebugText');
+  const status=$('safetyScoreDebugStatus');
+
+  if(value)value.textContent=s.score==null
+    ?"—"
+    :Number(s.score).toLocaleString('fa-IR');
+
+  if(conf)conf.textContent=
+    `${Math.round(Number(s.confidence||0)).toLocaleString('fa-IR')}٪`;
+
+  if(exposure)exposure.textContent=
+    Number(s.exposureKm||0).toFixed(2);
+
+  if(brake)brake.textContent=s.brakeScore==null
+    ?"—"
+    :Number(s.brakeScore).toLocaleString('fa-IR');
+
+  if(accel)accel.textContent=s.accelScore==null
+    ?"—"
+    :Number(s.accelScore).toLocaleString('fa-IR');
+
+  if(corner)corner.textContent=s.cornerScore==null
+    ?"—"
+    :Number(s.cornerScore).toLocaleString('fa-IR');
+
+  if(txt)txt.textContent=s.evidence||
+    "بعد از جمع‌شدن داده کافی، Score قابل‌اعتماد می‌شود.";
+
+  if(status){
+    status.classList.remove('good','warn','bad','review');
+
+    if(s.status==="reliable"){
+      status.classList.add('good');
+      status.textContent="قابل اتکا";
+    }else if(s.status==="preliminary"){
+      status.classList.add('warn');
+      status.textContent="اولیه";
+    }else if(s.status==="insufficient"){
+      status.classList.add('bad');
+      status.textContent="داده ناکافی";
+    }else{
+      status.classList.add('review');
+      status.textContent="در انتظار";
+    }
+  }
+}
+
+function resetConfidenceSafetyScore(){
+  confidenceSafetyScoreState={
+    status:"idle",
+    score:null,
+    confidence:0,
+    exposureKm:0,
+    durationS:0,
+    brakeScore:null,
+    accelScore:null,
+    cornerScore:null,
+    eventBurden:{brake:0,accel:0,corner:0},
+    evidence:""
+  };
+
+  renderConfidenceSafetyScoreDiagnostics();
+}
+
+function realTelemetryComponentScores(){
+  const s=calculateExposureNormalizedSafetyScore();
+
   return{
-    brakeScore:clamp(Math.round(100-brakePenalty*2.15),0,100),
-    accelScore:clamp(Math.round(100-accelPenalty*2.15),0,100),
-    cornerScore:clamp(Math.round(100-cornerPenalty*2.15),0,100)
+    brakeScore:s.brakeScore??100,
+    accelScore:s.accelScore??100,
+    cornerScore:s.cornerScore??100
   };
 }
 
 function buildRealTelemetryResult(){
   flushRealTelemetryEvents();
 
+  const scoreModel=calculateExposureNormalizedSafetyScore();
   const rows=realTelemetryState.rows;
-  const scores=realTelemetryComponentScores();
 
   const avgConfidence=rows.length
     ?rows.reduce((sum,r)=>sum+Number(r.confidence||0),0)/rows.length
@@ -10133,19 +10531,11 @@ function buildRealTelemetryResult(){
     100
   );
 
-  // This is intentionally NOT a full Safety Score:
-  // speed compliance is excluded until authoritative speed limits are connected.
-  const behaviorScore=Math.round(
-    scores.brakeScore*.38+
-    scores.accelScore*.24+
-    scores.cornerScore*.38
-  );
-
   const ranked=[
-    ["ترمز",scores.brakeScore],
-    ["شتاب",scores.accelScore],
-    ["پیچ",scores.cornerScore]
-  ].sort((a,b)=>a[1]-b[1]);
+    ["ترمز",scoreModel.brakeScore],
+    ["شتاب",scoreModel.accelScore],
+    ["پیچ",scoreModel.cornerScore]
+  ].sort((a,b)=>Number(a[1]??100)-Number(b[1]??100));
 
   const topEvent=[...realTelemetryState.events]
     .sort((a,b)=>{
@@ -10159,46 +10549,66 @@ function buildRealTelemetryResult(){
   lastTripResult={
     navigationOnly:false,
     telemetryOnly:true,
+    safetyScoreV1:true,
     navigationMode:"real-gps",
-    score:behaviorScore,
-    behaviorScore,
+
+    score:scoreModel.score,
+    behaviorScore:scoreModel.score,
+    scoreStatus:scoreModel.status,
+    scoreConfidence:scoreModel.confidence,
+    scoreEvidence:scoreModel.evidence,
+    scoreExposureKm:Number(scoreModel.exposureKm.toFixed(2)),
+    scoreDurationS:Math.round(scoreModel.durationS),
+
     speedScore:null,
     mappedSpeedCompliance:mappedCompliance,
     mappedSpeedCoverage:mappedCoverage,
     mappedSpeedEventCount:mappedSpeedState.overspeedEvents.length,
     mappedSpeedSource:"OpenStreetMap explicit maxspeed prototype",
-    brakeScore:scores.brakeScore,
-    accelScore:scores.accelScore,
-    cornerScore:scores.cornerScore,
+
+    brakeScore:scoreModel.brakeScore,
+    accelScore:scoreModel.accelScore,
+    cornerScore:scoreModel.cornerScore,
+
     tripConfidence,
     speedCompliance:null,
     maxExcess:null,
+
     topRiskEvent:topEvent?.title||null,
     weakestBehavior:ranked[0][0],
+
     telemetryEventCount:realTelemetryState.events.length,
     telemetryValidSamples:realTelemetryState.validSamples,
     telemetryRejectedSamples:realTelemetryState.rejectedSamples,
     deviceMotionPermission:realTelemetryState.motion.permission,
+
     routeKm:Number((Number(routeDistanceM||0)/1000).toFixed(1)),
     originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
     destinationLabel:(navDestination&&navDestination.label)||"مقصد",
     plannedDurationMin:Math.max(1,Math.round(Number(routeDurationS||0)/60)),
     rerouteCount:rerouteState.count||0,
+
     gpsAccuracyM:Math.round(Number(realGpsState.accuracy||0)),
     mapMatchConfidence:Math.round(Number(realGpsState.networkMatch.confidence||0)*100),
     mapMatchRatio:Math.round(Number(realGpsState.networkMatch.matchedRatio||0)*100),
+
     rewardEligibility:"REVIEW",
     dataIntegrity:null,
     fraudRisk:null,
     eligibilityConfidence:null,
     eligibilityReasons:[
-      "Behavior telemetry is experimental.",
-      "OSM mapped maxspeed is connected only as a prototype; authoritative speed limits are not connected yet.",
+      scoreModel.status==="insufficient"
+        ?"Insufficient driving exposure for a fair score."
+        :"Confidence-aware behavior score calculated.",
+      "Speed is excluded from the score.",
+      "OSM mapped maxspeed remains prototype-only.",
       "Rewards remain paused."
     ]
   };
 
-  persistTripToProfile(lastTripResult);
+  // Real telemetry scores are intentionally NOT persisted into the
+  // gamified driver profile yet. Otherwise an experimental score could
+  // change streaks, XP or mission logic.
 }
 
 function stopRealGps(){
@@ -10461,6 +10871,7 @@ function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
   resetRealTelemetry();
+  resetConfidenceSafetyScore();
   resetMappedSpeedTripStats();
   prefetchMappedSpeedLimits({force:false});
   realTelemetryState.active=true;
@@ -11242,6 +11653,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
+  resetConfidenceSafetyScore();
   resetMappedSpeedTripStats();
   pendingRealGpsFix=null;
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
@@ -12640,17 +13052,53 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const r=lastTripResult;
       const p=loadProfile();
       const lr=p.lastReward||{};
+
+      const safetyBreakdown=document.getElementById('summarySafetyBreakdown');
+
+      if(safetyBreakdown){
+        const showBreakdown=!!r.telemetryOnly;
+        safetyBreakdown.classList.toggle('show',showBreakdown);
+
+        if(showBreakdown){
+          document.getElementById('summaryScoreConfidence').textContent=
+            `Confidence: ${Number(r.scoreConfidence||0).toLocaleString('fa-IR')}٪`;
+
+          document.getElementById('summaryBrakeScore').textContent=
+            r.brakeScore==null?'—':Number(r.brakeScore).toLocaleString('fa-IR');
+
+          document.getElementById('summaryAccelScore').textContent=
+            r.accelScore==null?'—':Number(r.accelScore).toLocaleString('fa-IR');
+
+          document.getElementById('summaryCornerScore').textContent=
+            r.cornerScore==null?'—':Number(r.cornerScore).toLocaleString('fa-IR');
+
+          document.getElementById('summaryScoreScope').textContent=
+            r.scoreStatus==="insufficient"
+              ?'Score متوقف'
+              :'Speed خارج از Score';
+        }
+      }
       if(r.navigationOnly){
+        document.getElementById('summaryScore').classList.remove('insufficient');
         document.getElementById('summaryScore').textContent='—';
         document.getElementById('summaryCompliance').textContent='—';
         document.getElementById('summaryXp').textContent='—';
         document.getElementById('summaryCoins').textContent='—';
       }else if(r.telemetryOnly){
-        document.getElementById('summaryScore').textContent=fa(r.behaviorScore||0);
+        const scoreEl=document.getElementById('summaryScore');
+        scoreEl.classList.toggle('insufficient',r.scoreStatus==="insufficient");
+
+        if(r.scoreStatus==="insufficient"){
+          scoreEl.textContent='داده کافی نیست';
+        }else{
+          scoreEl.textContent=fa(r.score||0);
+        }
+
         document.getElementById('summaryCompliance').textContent='—';
         document.getElementById('summaryXp').textContent='—';
         document.getElementById('summaryCoins').textContent='—';
       }else{
+        document.getElementById('summaryScore').classList.remove('insufficient');
         document.getElementById('summaryScore').textContent=fa(r.score||0);
         document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
         document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
@@ -12661,8 +13109,16 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
         st.textContent='تست Navigation واقعی';
         st.className='summary-status review';
       }else if(r.telemetryOnly){
-        st.textContent='تحلیل رفتاری آزمایشی';
-        st.className='summary-status review';
+        if(r.scoreStatus==="reliable"){
+          st.textContent='امتیاز رفتاری قابل اتکا';
+          st.className='summary-status good';
+        }else if(r.scoreStatus==="preliminary"){
+          st.textContent='امتیاز اولیه';
+          st.className='summary-status review';
+        }else{
+          st.textContent='داده ناکافی';
+          st.className='summary-status bad';
+        }
       }else if(r.rewardEligibility==='ELIGIBLE'){
         st.textContent='مجاز برای پاداش'; st.className='summary-status good';
       }else if(r.rewardEligibility==='REVIEW'){
@@ -12675,9 +13131,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
           ? `این سفر با GPS واقعی اجرا شد، اما نمونه کافی برای تحلیل رفتاری معتبر ثبت نشد. دقت آخر GPS حدود ${Number(r.gpsAccuracyM||0).toLocaleString('fa-IR')} متر بود.`
           : r.telemetryOnly
             ? (
-              r.topRiskEvent
-                ? `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود. مهم‌ترین رویداد ثبت‌شده: ${r.topRiskEvent}. ${r.mappedSpeedCoverage!=null?`پوشش maxspeed نقشه ${Number(r.mappedSpeedCoverage).toLocaleString('fa-IR')}٪ و Compliance Preview ${Number(r.mappedSpeedCompliance??0).toLocaleString('fa-IR')}٪ بود. `:""}Speed هنوز وارد امتیاز نهایی نشده است.`
-                : `امتیاز رفتار آزمایشی ${Number(r.behaviorScore||0).toLocaleString('fa-IR')} بود و رویداد شدید معتبری ثبت نشد. ${r.mappedSpeedCoverage!=null?`پوشش maxspeed نقشه ${Number(r.mappedSpeedCoverage).toLocaleString('fa-IR')}٪ بود. `:""}Speed هنوز وارد امتیاز نهایی نشده است.`
+              r.scoreStatus==="insufficient"
+                ? `برای این سفر هنوز داده کافی برای ساخت یک امتیاز منصفانه وجود ندارد. حدود ${Number(r.scoreExposureKm||0).toLocaleString('fa-IR')} کیلومتر داده قابل استفاده و Confidence ${Number(r.scoreConfidence||0).toLocaleString('fa-IR')}٪ ثبت شد.`
+                : r.topRiskEvent
+                  ? `Safety Score ${Number(r.score||0).toLocaleString('fa-IR')} با Confidence ${Number(r.scoreConfidence||0).toLocaleString('fa-IR')}٪ محاسبه شد. مهم‌ترین فرصت بهبود: ${r.topRiskEvent}. امتیاز بر اساس طول سفر نرمال شده و Speed هنوز داخل Score نیست.`
+                  : `Safety Score ${Number(r.score||0).toLocaleString('fa-IR')} با Confidence ${Number(r.scoreConfidence||0).toLocaleString('fa-IR')}٪ محاسبه شد. رویداد شدید معتبری ثبت نشد و امتیاز بر اساس طول سفر نرمال شده است. Speed هنوز داخل Score نیست.`
             )
           : r.topRiskEvent
             ? `مسیر ${formatKm(routeDistanceM)} بود. مهم‌ترین فرصت بهبود این سفر: ${r.topRiskEvent}.`
@@ -12686,16 +13144,28 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
         document.getElementById('summaryCoach').innerHTML=r.navigationOnly
           ? `<b>داده واقعی</b><span>نمونه معتبر کافی برای تحلیل رفتاری ثبت نشد.</span>`
           : r.telemetryOnly
-            ? `<b>Telemetry واقعی</b><span>ترمز و شتاب از تغییر سرعت GPS و پیچ از تغییر Heading محاسبه شده‌اند. Device Motion فقط نقش تأیید کمکی دارد و محورهای گوشی فرض نشده‌اند.</span>`
+            ? (
+              r.scoreStatus==="insufficient"
+                ? `<b>داده ناکافی</b><span>سیستم به‌جای ساختن یک عدد ظاهراً دقیق، Score را متوقف کرده است. با ادامه رانندگی و GPS پایدارتر Confidence افزایش پیدا می‌کند.</span>`
+                : `<b>Safety Score واقعی</b><span>ترمز، شتاب و پیچ با Severity، Duration، Confidence و Exposure سفر وزن‌دهی شده‌اند. سفر طولانی‌تر صرفاً به خاطر طول بیشتر جریمه نمی‌شود.</span>`
+            )
             : `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
       }
       if(document.getElementById('summaryComparison')){
         document.getElementById('summaryComparison').innerHTML=r.navigationOnly
           ? `<b>وضعیت Navigation</b><span>این تست وارد پروفایل امتیازی راننده نمی‌شود.</span>`
           : r.telemetryOnly
-            ? `<b>محدوده این امتیاز</b><span>این Behavior Score فقط ترمز، شتاب و پیچ را پوشش می‌دهد. maxspeed فعلی از OSM فقط Preview است و هنوز منبع قانونی/Production محسوب نمی‌شود؛ Reward، SafeCoin، Streak و Mission متوقف هستند.</span>`
+            ? `<b>محدوده این امتیاز</b><span>Safety Score فعلی فقط ترمز، شتاب و پیچ را پوشش می‌دهد. Speed Limit فعلی OSM فقط Preview است و Reward / SafeCoin / Streak / Mission هنوز متوقف‌اند.</span>`
             : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
+      const rewardsBtn=document.getElementById('summaryRewards');
+      if(rewardsBtn){
+        rewardsBtn.disabled=!!r.telemetryOnly;
+        rewardsBtn.textContent=r.telemetryOnly
+          ?'پاداش هنوز فعال نیست'
+          :'دیدن پاداش‌ها';
+      }
+
       const sheet=document.getElementById('tripSummarySheet');
       sheet.classList.add('open');
       const card=sheet.querySelector('.summary-card');
