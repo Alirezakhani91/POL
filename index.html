@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۳ Turn-by-Turn Professional</title>
+<title>POL | نسخه ۵.۴ Reroute & Off-Route Intelligence</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4624,6 +4624,42 @@ body.driving-mode #turnCard.guidance-now .turn-arrow{
   }
 }
 
+
+/* ============================================================
+   v5.4 REROUTE & OFF-ROUTE INTELLIGENCE
+   ============================================================ */
+.reroute-banner.confirming::before{
+  border-color:#f59e0b!important;
+  border-top-color:transparent!important;
+}
+.reroute-banner.confirming{
+  border-color:rgba(245,158,11,.28)!important;
+  background:rgba(48,35,9,.94)!important;
+}
+.reroute-banner.recovered{
+  border-color:rgba(34,197,94,.23)!important;
+  background:rgba(13,49,27,.94)!important;
+}
+.reroute-banner.recovered::before{
+  animation:none!important;
+  border:0!important;
+  content:"✓"!important;
+  color:#86efac!important;
+  font-size:12px!important;
+  display:grid!important;
+  place-items:center!important;
+}
+.reroute-route-ghost{
+  pointer-events:none!important;
+}
+.leaflet-interactive.route-reroute-new{
+  filter:drop-shadow(0 0 5px rgba(59,130,246,.25));
+}
+body.driving-mode .map-route-choice-strip,
+body.driving-mode .route-selection-hint{
+  display:none!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5395,9 +5431,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.3</span>
+              <span class="lab-version-chip">v5.4</span>
               <div>
-                <b>Turn-by-Turn Professional</b>
+                <b>Reroute & Off-Route Intelligence</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6356,7 +6392,14 @@ let rerouteState={
   noticeTimer:null,
   rerouted:false,
   newRouteStartSimP:null,
-  newRouteTravelledBeforeM:0
+  newRouteTravelledBeforeM:0,
+
+  suspicionSince:null,
+  confirmationShown:false,
+  lastConfirmedDistance:0,
+  lastConfidence:0,
+  manualExploreBeforeReroute:false,
+  ghostCleanupTimer:null
 };
 let tripJourneyDistanceM=0;
 let tripJourneyDurationS=0;
@@ -7055,10 +7098,17 @@ function averageNearestDistance(samples,route){
 function routesAreNearDuplicate(a,b){
   const durA=Number(a.duration||0),durB=Number(b.duration||0);
   const distA=Number(a.distance||0),distB=Number(b.distance||0);
-  if(Math.abs(durA-durB)>100)return false;
-  if(Math.abs(distA-distB)>900)return false;
-  const avg=averageNearestDistance(sampleRoutePoints(a,12),b);
-  return avg<75;
+
+  // Keep legitimate alternatives. Only collapse routes that are truly
+  // almost the same in time, distance and geometry.
+  if(Math.abs(durA-durB)>45)return false;
+  if(Math.abs(distA-distB)>350)return false;
+
+  const aToB=averageNearestDistance(sampleRoutePoints(a,16),b);
+  const bToA=averageNearestDistance(sampleRoutePoints(b,16),a);
+  const symmetric=(aToB+bToA)/2;
+
+  return symmetric<35;
 }
 function dedupeRoutes(routes){
   const out=[];
@@ -7226,21 +7276,47 @@ function resetNetworkMapMatch(){
   };
 }
 
-async function routingProviderRequest(originPoint,destinationPoint,{alternatives=true,bearing=null}={}){
-  // Provider boundary: all navigation route requests should eventually pass
-  // through this function. v2.2 uses OSRM Demo; a traffic-aware Iran provider
-  // can replace the adapter without rewriting the navigation UI/state machine.
+async function routingProviderRequest(
+  originPoint,
+  destinationPoint,
+  {alternatives=true,bearing=null,maxAlternatives=3,continueStraight=null}={}
+){
   if(ROUTING_ENGINE.id==="osrm-demo"){
-    const coords=`${originPoint[1]},${originPoint[0]};${destinationPoint[1]},${destinationPoint[0]}`;
-    let url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=${alternatives?"true":"false"}&overview=full&geometries=geojson&steps=true&continue_straight=true`;
+    const coords=
+      `${originPoint[1]},${originPoint[0]};${destinationPoint[1]},${destinationPoint[0]}`;
+
+    const altParam=
+      alternatives
+        ?String(clamp(Number(maxAlternatives||3),1,3))
+        :"false";
+
+    let url=
+      `https://router.project-osrm.org/route/v1/driving/${coords}`+
+      `?alternatives=${altParam}`+
+      `&overview=full&geometries=geojson&steps=true`;
+
+    // Normal planning should not be over-constrained.
+    if(continueStraight===true){
+      url+=`&continue_straight=true`;
+    }else if(continueStraight===false){
+      url+=`&continue_straight=false`;
+    }
+
     if(Number.isFinite(bearing)){
       url+=`&bearings=${Math.round(bearing)},55;`;
     }
+
     const data=await fetchJsonWithTimeout(url,10000);
+
+    if(data?.code && data.code!=="Ok"){
+      throw new Error(`Routing provider: ${data.code}`);
+    }
+
     return{
       provider:ROUTING_ENGINE.id,
       liveTraffic:false,
-      routes:data?.routes||[]
+      requestedAlternatives:alternatives?Number(maxAlternatives||3):1,
+      routes:Array.isArray(data?.routes)?data.routes:[]
     };
   }
   throw new Error("Routing provider is not configured");
@@ -8965,7 +9041,15 @@ function renderRouteOptionCards(){
     </button>`;
   }).join('');
 
-  $('oneRouteNote')?.classList.toggle('show',routeAlternatives.length===1);
+  const oneRoute=$('oneRouteNote');
+  if(oneRoute){
+    oneRoute.classList.toggle('show',routeAlternatives.length===1);
+
+    if(routeAlternatives.length===1){
+      oneRoute.textContent=
+        "Provider برای این مبدأ و مقصد فقط یک مسیر معتبر برگرداند؛ مسیر جایگزین ساختگی نمایش داده نمی‌شود.";
+    }
+  }
   renderRouteDecision();
 }
 function updateRouteSummary(){
@@ -10850,7 +10934,11 @@ async function loadRoute(){
     const response=await routingProviderRequest(
       originSnap.point,
       destinationSnap.point,
-      {alternatives:true}
+      {
+        alternatives:true,
+        maxAlternatives:3,
+        continueStraight:null
+      }
     );
 
     // Only validated candidates are allowed into the UI.
@@ -10882,7 +10970,11 @@ async function loadRoute(){
     }
 
     $('status').textContent=
-      `${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر آماده است`+
+      (
+        routeAlternatives.length>1
+          ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر برای انتخاب آماده است`
+          :"فقط یک مسیر معتبر از Provider دریافت شد"
+      )+
       (accessWarnings.length?` • ${accessWarnings.join(" • ")}`:".");
 
   }catch(e){
@@ -14820,25 +14912,76 @@ async function processRealGps(position){
 
   $('speedAlertBanner')?.classList.remove('show');
 
-  // Re-route only after sustained, high-confidence deviation.
+  // v5.4: two-stage off-route confirmation.
+  // One noisy GPS fix is never enough to change the route.
   if(confidentlyOff){
+    const now=Date.now();
+
     if(realGpsState.offRouteSince==null){
-      realGpsState.offRouteSince=Date.now();
+      realGpsState.offRouteSince=now;
+      rerouteState.suspicionSince=now;
+      rerouteState.confirmationShown=false;
     }
 
-    const minDuration=trusted?4000:6500;
-    const sustained=Date.now()-realGpsState.offRouteSince>=minDuration;
-    const cooldown=Date.now()-realGpsState.lastRerouteAt>=15000;
+    rerouteState.lastConfirmedDistance=
+      Number(networkRouteMatch.distance||rawRouteMatch.distance||0);
 
-    if(sustained&&cooldown&&!rerouteState.active){
-      realGpsState.lastRerouteAt=Date.now();
+    rerouteState.lastConfidence=
+      Math.round(Number(temporal.confidence||0));
 
-      // Re-route starts from the trusted road point, never from a projection
-      // forced onto the old route.
+    const elapsed=
+      now-Number(realGpsState.offRouteSince||now);
+
+    if(elapsed>=1800 && !rerouteState.confirmationShown){
+      rerouteState.confirmationShown=true;
+
+      showRerouteNotice(
+        "در حال بررسی موقعیت",
+        "خروج از مسیر هنوز در حال تأیید است؛ مسیر فعلی حفظ می‌شود.",
+        false,
+        "confirming"
+      );
+    }
+
+    const minDuration=
+      trusted &&
+      Number(networkRouteMatch.distance||0)>=95 &&
+      Number(temporal.confidence||0)>=72
+        ?3200
+        :trusted
+          ?4500
+          :7000;
+
+    const sustained=elapsed>=minDuration;
+    const cooldown=
+      now-Number(realGpsState.lastRerouteAt||0)>=15000;
+
+    if(sustained && cooldown && !rerouteState.active){
+      realGpsState.lastRerouteAt=now;
+
+      // Re-route starts from a trusted road point, never raw GPS.
       await triggerRealGpsReroute(roadDecisionPoint);
     }
   }else{
+    const hadSuspicion=
+      realGpsState.offRouteSince!=null ||
+      rerouteState.confirmationShown;
+
     realGpsState.offRouteSince=null;
+    rerouteState.suspicionSince=null;
+
+    if(hadSuspicion && !rerouteState.active){
+      showRerouteNotice(
+        "مسیر تأیید شد",
+        "موقعیت دوباره با مسیر فعلی سازگار است.",
+        true,
+        "recovered"
+      );
+    }
+
+    rerouteState.confirmationShown=false;
+    rerouteState.lastConfirmedDistance=0;
+    rerouteState.lastConfidence=0;
   }
 
   const badge=$('realGpsBadge');
@@ -14891,6 +15034,11 @@ function startRealGps(){
   realGpsState.routeProgress=0;
   realGpsState.offRouteSince=null;
   realGpsState.lastRerouteAt=0;
+  rerouteState.suspicionSince=null;
+  rerouteState.confirmationShown=false;
+  rerouteState.lastConfirmedDistance=0;
+  rerouteState.lastConfidence=0;
+  rerouteState.manualExploreBeforeReroute=false;
   realGpsState.arrivalSince=null;
   realGpsState.arrived=false;
   realGpsState.track=[];
@@ -14910,7 +15058,12 @@ function startRealGps(){
 }
 async function triggerRealGpsReroute(rawPoint){
   if(rerouteState.active||navigator.onLine===false)return;
+
   rerouteState.active=true;
+  rerouteState.manualExploreBeforeReroute=
+    !!userManuallyMovedDrivingMap ||
+    !!manualExploreLock;
+
   beginRerouteVisual();
   showRerouteNotice("در حال اصلاح مسیر","تثبیت موقعیت روی خیابان...");
 
@@ -14918,7 +15071,7 @@ async function triggerRealGpsReroute(rawPoint){
     const snapped=await snapToDrivableRoad(rawPoint,{maxSnapM:100,number:3});
     if(!snapped)throw new Error("موقعیت روی خیابان قابل رانندگی تثبیت نشد");
 
-    showRerouteNotice("موقعیت تثبیت شد","در حال پیدا کردن بهترین مسیر معتبر فعلی...");
+    showRerouteNotice("موقعیت تثبیت شد","در حال پیدا کردن مسیر پیشنهادی معتبر جدید...");
 
     const destinationSnap=await snapRoutingEndpoint(
       [Number(navDestination.lat),Number(navDestination.lng)],
@@ -14931,7 +15084,9 @@ async function triggerRealGpsReroute(rawPoint){
       destinationSnap.point,
       {
         alternatives:true,
-        bearing:Number.isFinite(realGpsState.heading)?realGpsState.heading:null
+        maxAlternatives:3,
+        bearing:Number.isFinite(realGpsState.heading)?realGpsState.heading:null,
+        continueStraight:true
       }
     );
 
@@ -14951,7 +15106,7 @@ async function triggerRealGpsReroute(rawPoint){
     routeDistanceM=Number(route.distance||totalDistance(routeCoords));
     routeDurationS=Number(route.duration||0);
     routeAlternatives=validCandidates.slice(0,3);
-    selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
+    selectedRouteIndex=0;
     buildNavigationSteps(route);
     resetLiveEtaEngine({reroute:true});
     prefetchMappedSpeedLimits({force:true});
@@ -14971,11 +15126,12 @@ async function triggerRealGpsReroute(rawPoint){
     routeAltLayers=[];
     if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
     routeLine=L.polyline(routeCoords,{
-      color:'#2563eb',
-      weight:8,
-      opacity:.98,
+      color:'#236fd3',
+      weight:9,
+      opacity:1,
       lineCap:'round',
-      lineJoin:'round'
+      lineJoin:'round',
+      className:'route-reroute-new'
     }).addTo(map);
 
     renderRouteAlternatives();
@@ -14990,7 +15146,8 @@ async function triggerRealGpsReroute(rawPoint){
       if($('navArrival'))$('navArrival').textContent=formatArrivalFa(routeDurationS);
     }
 
-    endRerouteVisual();
+    // Keep the previous route as a faint ghost briefly, then remove it.
+    endRerouteVisual({delay:1300});
     syncNavigationAfterReroute();
 
     showRerouteNotice(
@@ -15002,6 +15159,8 @@ async function triggerRealGpsReroute(rawPoint){
     if(voiceGuidanceEnabled)coachVoice("مسیر جدید آماده شد.");
   }catch(e){
     rerouteState.active=false;
+    rerouteState.confirmationShown=false;
+    rerouteState.suspicionSince=null;
     realGpsState.offRouteSince=null;
     endRerouteVisual();
     showRerouteNotice(
@@ -15372,9 +15531,12 @@ function showRerouteNotice(title,message,success=false,state="loading"){
   $('rerouteTitle').textContent=title;
   $('rerouteText').textContent=message;
 
-  box.classList.remove('success','error');
+  box.classList.remove('success','error','confirming','recovered');
+
   if(success || state==="success")box.classList.add('success');
   else if(state==="error")box.classList.add('error');
+  else if(state==="confirming")box.classList.add('confirming');
+  else if(state==="recovered")box.classList.add('recovered');
 
   box.classList.add('show');
 
@@ -15383,9 +15545,13 @@ function showRerouteNotice(title,message,success=false,state="loading"){
   const duration=
     state==="loading"
       ?5200
-      :state==="error"
-        ?3600
-        :2200;
+      :state==="confirming"
+        ?2600
+        :state==="error"
+          ?3600
+          :state==="recovered"
+            ?1600
+            :2200;
 
   rerouteState.noticeTimer=setTimeout(()=>{
     if(!rerouteState.active)box.classList.remove('show');
@@ -15414,10 +15580,23 @@ function beginRerouteVisual(){
   }
 }
 
-function endRerouteVisual(){
-  if(rerouteGhostLine){
-    try{map.removeLayer(rerouteGhostLine)}catch(e){}
-    rerouteGhostLine=null;
+function endRerouteVisual({delay=0}={}){
+  if(rerouteState.ghostCleanupTimer){
+    clearTimeout(rerouteState.ghostCleanupTimer);
+    rerouteState.ghostCleanupTimer=null;
+  }
+
+  const cleanup=()=>{
+    if(rerouteGhostLine){
+      try{map.removeLayer(rerouteGhostLine)}catch(e){}
+      rerouteGhostLine=null;
+    }
+  };
+
+  if(delay>0){
+    rerouteState.ghostCleanupTimer=setTimeout(cleanup,delay);
+  }else{
+    cleanup();
   }
 }
 
@@ -15425,9 +15604,17 @@ function syncNavigationAfterReroute(){
   resetTurnByTurn();
 
   if(document.body.classList.contains('driving-mode')){
-    userManuallyMovedDrivingMap=false;
-    if(typeof recenterDrivingCamera==='function'){
-      setTimeout(()=>recenterDrivingCamera(),120);
+    if(!rerouteState.manualExploreBeforeReroute){
+      userManuallyMovedDrivingMap=false;
+
+      if(typeof recenterDrivingCamera==='function'){
+        setTimeout(()=>recenterDrivingCamera(),120);
+      }
+    }else{
+      // Never steal the viewport from an intentional manual explore.
+      userManuallyMovedDrivingMap=true;
+      manualExploreLock=true;
+      syncRecenterUi();
     }
   }
 
@@ -15435,6 +15622,8 @@ function syncNavigationAfterReroute(){
     if(routeLine)routeLine.bringToFront();
     if(carMarker)carMarker.setZIndexOffset?.(1200);
   }catch(e){}
+
+  rerouteState.manualExploreBeforeReroute=false;
 }
 
 async function triggerReroute(pos,simProgress){
@@ -15492,7 +15681,11 @@ async function triggerReroute(pos,simProgress){
     const response=await routingProviderRequest(
       snapped.point,
       destinationSnap.point,
-      {alternatives:true}
+      {
+        alternatives:true,
+        maxAlternatives:3,
+        continueStraight:true
+      }
     );
     const validCandidates=rankValidatedRoutes(dedupeRoutes(
       (response.routes||[]).filter(r=>
@@ -15514,7 +15707,7 @@ async function triggerReroute(pos,simProgress){
     routeDistanceM=Number(route.distance||totalDistance(routeCoords));
     routeDurationS=Number(route.duration||0);
     routeAlternatives=validCandidates.slice(0,3);
-    selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
+    selectedRouteIndex=0;
     buildNavigationSteps(route);
     resetLiveEtaEngine({reroute:true});
     prefetchMappedSpeedLimits({force:true});
@@ -15538,7 +15731,12 @@ async function triggerReroute(pos,simProgress){
     routeAltLayers=[];
     if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
     routeLine=L.polyline(routeCoords,{
-      color:'#2563eb',weight:8,opacity:.98,lineCap:'round',lineJoin:'round'
+      color:'#236fd3',
+      weight:9,
+      opacity:1,
+      lineCap:'round',
+      lineJoin:'round',
+      className:'route-reroute-new'
     }).addTo(map);
     try{routeLine.bringToFront()}catch(e){}
 
@@ -15549,11 +15747,15 @@ async function triggerReroute(pos,simProgress){
     resetTurnByTurn();
     updateTurnByTurn(0);
 
-    try{
-      map.fitBounds(routeLine.getBounds(),{
-        padding:[55,55],animate:true,duration:.45
-      });
-    }catch(e){}
+    if(!userManuallyMovedDrivingMap && !manualExploreLock){
+      try{
+        map.fitBounds(routeLine.getBounds(),{
+          padding:[55,55],
+          animate:true,
+          duration:.45
+        });
+      }catch(e){}
+    }
 
     showRerouteNotice(
       "مسیر جدید آماده شد",
