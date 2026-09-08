@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۱ Navigation UX Overhaul</title>
+<title>POL | نسخه ۵.۲ Route Selection Experience</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4104,6 +4104,379 @@ body.driving-mode #map .leaflet-control-zoom a{
   }
 }
 
+
+/* ============================================================
+   v5.2 ROUTE SELECTION EXPERIENCE
+   ============================================================ */
+
+/* Legacy map labels are permanently disabled.
+   Route chips + tappable route lines are the only selectors. */
+#routeAltLabels,
+.route-alt-labels,
+.route-alt-label{
+  display:none!important;
+  pointer-events:none!important;
+}
+
+/* Keep map fully interactive while selecting a route. */
+body.route-selection-mode #map{
+  cursor:grab!important;
+}
+body.route-selection-mode #map:active{
+  cursor:grabbing!important;
+}
+
+/* Floating controls move away from chips/sheet. */
+body.route-selection-mode #floatingMapControls{
+  top:74px!important;
+  right:10px!important;
+  bottom:auto!important;
+  gap:7px!important;
+}
+body.route-selection-mode #floatingMapControls>button{
+  width:43px!important;
+  min-width:43px!important;
+  height:43px!important;
+  min-height:43px!important;
+  border-radius:50%!important;
+  background:rgba(8,16,25,.92)!important;
+  color:#f3f7fb!important;
+  border:1px solid rgba(148,163,184,.14)!important;
+  box-shadow:0 9px 25px rgba(2,8,23,.22)!important;
+  backdrop-filter:blur(12px)!important;
+}
+
+/* Route selection hint: instructional but non-blocking. */
+.route-selection-hint{
+  display:none;
+}
+body.route-selection-mode .route-selection-hint{
+  position:absolute;
+  z-index:1130;
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+  display:block;
+  max-width:min(72vw,430px);
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(8,16,25,.88);
+  border:1px solid rgba(148,163,184,.11);
+  color:#a9bacd;
+  font-size:7px;
+  line-height:1.2;
+  white-space:nowrap;
+  pointer-events:none;
+  backdrop-filter:blur(11px);
+}
+
+/* Compact route cards are the primary selector. */
+body.route-selection-mode .map-route-choice-strip{
+  left:10px!important;
+  right:10px!important;
+  bottom:215px!important;
+  display:flex!important;
+  justify-content:center!important;
+  gap:7px!important;
+  padding:0 2px 5px!important;
+  overflow-x:auto!important;
+  pointer-events:auto!important;
+  scrollbar-width:none;
+  z-index:1210!important;
+}
+body.route-selection-mode .map-route-choice-strip::-webkit-scrollbar{
+  display:none;
+}
+
+body.route-selection-mode .map-route-choice-chip{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:142px!important;
+  max-width:210px!important;
+  min-height:64px!important;
+  padding:8px 10px!important;
+  border-radius:16px!important;
+  display:grid!important;
+  grid-template-columns:32px minmax(0,1fr)!important;
+  gap:8px!important;
+  align-items:center!important;
+  background:rgba(255,255,255,.97)!important;
+  color:#172033!important;
+  border:2px solid rgba(15,23,42,.07)!important;
+  box-shadow:0 10px 28px rgba(15,23,42,.16)!important;
+  backdrop-filter:blur(10px)!important;
+  text-align:right!important;
+  transform:none!important;
+}
+body.route-selection-mode .map-route-choice-chip.active{
+  background:#0e1a29!important;
+  color:#fff!important;
+  border-color:#3f8fe8!important;
+  box-shadow:
+    0 13px 32px rgba(15,23,42,.24),
+    0 0 0 2px rgba(63,143,232,.12)!important;
+}
+body.route-selection-mode .map-route-choice-chip:active{
+  transform:scale(.975)!important;
+}
+
+body.route-selection-mode .map-route-choice-chip .route-chip-number{
+  width:32px!important;
+  height:32px!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:11px!important;
+  background:#eef3f8!important;
+  color:#35506d!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+body.route-selection-mode .map-route-choice-chip.active .route-chip-number{
+  background:#236fd3!important;
+  color:#fff!important;
+}
+
+body.route-selection-mode .route-chip-copy{
+  min-width:0!important;
+}
+body.route-selection-mode .route-chip-copy b{
+  display:block!important;
+  font-size:14px!important;
+  line-height:1.1!important;
+  font-weight:950!important;
+  white-space:nowrap!important;
+}
+body.route-selection-mode .route-chip-copy span{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:7px!important;
+  line-height:1.35!important;
+  color:#64748b!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+body.route-selection-mode .map-route-choice-chip.active .route-chip-copy span{
+  color:#a9bed4!important;
+}
+.route-chip-meta{
+  display:flex!important;
+  gap:5px!important;
+  align-items:center!important;
+  margin-top:4px!important;
+}
+.route-chip-meta em{
+  font-style:normal!important;
+  padding:2px 5px!important;
+  border-radius:999px!important;
+  background:#edf2f7!important;
+  color:#51667d!important;
+  font-size:6.5px!important;
+  white-space:nowrap!important;
+}
+.map-route-choice-chip.active .route-chip-meta em{
+  background:#1c3047!important;
+  color:#b9cde2!important;
+}
+.route-chip-meta em.recommended{
+  background:#dff4e6!important;
+  color:#176235!important;
+}
+.map-route-choice-chip.active .route-chip-meta em.recommended{
+  background:#163826!important;
+  color:#8fe0aa!important;
+}
+
+/* Route summary sheet: one-glance decision, not a form. */
+body.route-selection-mode .map-route-sheet{
+  left:10px!important;
+  right:10px!important;
+  bottom:9px!important;
+  max-width:620px!important;
+  margin:0 auto!important;
+  padding:12px!important;
+  border-radius:21px!important;
+  background:rgba(8,16,25,.965)!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  box-shadow:0 20px 50px rgba(2,8,23,.33)!important;
+  backdrop-filter:blur(17px)!important;
+  z-index:1220!important;
+}
+body.route-selection-mode .map-route-sheet-main{
+  align-items:center!important;
+}
+body.route-selection-mode .map-route-sheet-main small{
+  font-size:7px!important;
+  color:#7db9f7!important;
+}
+body.route-selection-mode .map-route-sheet-main b{
+  max-width:440px!important;
+  font-size:13px!important;
+  line-height:1.4!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+body.route-selection-mode .map-route-close{
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  background:#172334!important;
+  color:#cbd5e1!important;
+  border:1px solid rgba(148,163,184,.12)!important;
+}
+
+body.route-selection-mode .map-route-primary{
+  display:grid!important;
+  grid-template-columns:1.2fr 1fr!important;
+  gap:9px!important;
+  align-items:end!important;
+  margin-top:7px!important;
+}
+body.route-selection-mode .map-route-eta-block b{
+  display:block!important;
+  font-size:29px!important;
+  line-height:1!important;
+  color:#69aff5!important;
+  font-weight:950!important;
+}
+body.route-selection-mode .map-route-eta-block span{
+  display:block!important;
+  margin-top:4px!important;
+  font-size:8px!important;
+  color:#b9c7d6!important;
+}
+body.route-selection-mode .map-route-secondary{
+  text-align:left!important;
+}
+body.route-selection-mode .map-route-secondary b{
+  display:block!important;
+  font-size:13px!important;
+}
+body.route-selection-mode .map-route-secondary span{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:6.5px!important;
+  line-height:1.35!important;
+  color:#8496aa!important;
+}
+
+body.route-selection-mode .map-route-reason{
+  margin-top:8px!important;
+  min-height:0!important;
+  padding:7px 8px!important;
+  border-radius:10px!important;
+  background:#101c29!important;
+  border:0!important;
+  color:#bcc9d6!important;
+  font-size:7.5px!important;
+  line-height:1.55!important;
+}
+
+body.route-selection-mode .map-route-actions{
+  display:grid!important;
+  grid-template-columns:.8fr 1fr 1.7fr!important;
+  gap:6px!important;
+  margin-top:8px!important;
+}
+body.route-selection-mode .map-route-actions button{
+  min-height:43px!important;
+  border-radius:12px!important;
+  font-size:9px!important;
+  font-weight:850!important;
+}
+body.route-selection-mode #mapRouteCompareBtn,
+body.route-selection-mode #mapRoutePreviewBtn{
+  background:#172334!important;
+  color:#c7d4e2!important;
+  border:1px solid rgba(148,163,184,.11)!important;
+}
+body.route-selection-mode #mapStartBtn{
+  background:#236fd3!important;
+  color:#fff!important;
+  border:1px solid #4c9df4!important;
+  box-shadow:0 9px 23px rgba(35,111,211,.24)!important;
+}
+
+/* Route line hierarchy:
+   selected route remains dominant; alternatives stay tappable. */
+body.route-selection-mode .leaflet-overlay-pane svg{
+  pointer-events:auto!important;
+}
+
+/* Search panels should not remain over route selection. */
+body.route-selection-mode #mapFirstSearchPanel,
+body.route-selection-mode #mapSearchResults,
+body.route-selection-mode #mapRecentWrap{
+  display:none!important;
+}
+
+@media(max-width:650px){
+  body.route-selection-mode .route-selection-hint{
+    top:8px;
+    max-width:78vw;
+    font-size:6.5px;
+  }
+
+  body.route-selection-mode .map-route-choice-strip{
+    left:7px!important;
+    right:7px!important;
+    bottom:207px!important;
+    justify-content:flex-start!important;
+    padding-bottom:4px!important;
+  }
+
+  body.route-selection-mode .map-route-choice-chip{
+    min-width:132px!important;
+    max-width:178px!important;
+    min-height:60px!important;
+    padding:7px 8px!important;
+  }
+
+  body.route-selection-mode .route-chip-copy b{
+    font-size:12px!important;
+  }
+
+  body.route-selection-mode .map-route-sheet{
+    left:7px!important;
+    right:7px!important;
+    bottom:7px!important;
+    padding:10px!important;
+    border-radius:18px!important;
+  }
+
+  body.route-selection-mode .map-route-eta-block b{
+    font-size:26px!important;
+  }
+
+  body.route-selection-mode .map-route-actions{
+    grid-template-columns:.75fr .95fr 1.65fr!important;
+  }
+
+  body.route-selection-mode #floatingMapControls{
+    top:62px!important;
+    right:7px!important;
+  }
+}
+
+@media(max-width:390px){
+  body.route-selection-mode .map-route-choice-strip{
+    bottom:204px!important;
+  }
+  body.route-selection-mode .map-route-choice-chip{
+    min-width:124px!important;
+  }
+  body.route-selection-mode .map-route-sheet-main b{
+    max-width:245px!important;
+  }
+  body.route-selection-mode .map-route-actions button{
+    font-size:8px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4655,6 +5028,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="mapRouteChoiceStrip" class="map-route-choice-strip"></div>
 
+              <div id="routeSelectionHint" class="route-selection-hint">
+                روی مسیر یا کارت بزن تا انتخاب شود
+              </div>
+
               <div id="mapRouteSheet" class="map-route-sheet">
                 <div class="map-route-sheet-main">
                   <div>
@@ -4678,8 +5055,8 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div id="mapRouteReason" class="map-route-reason">در حال بررسی مسیر...</div>
 
                 <div class="map-route-actions">
-                  <button id="mapRouteCompareBtn">مسیرها</button>
-                  <button id="mapRoutePreviewBtn">جزئیات</button>
+                  <button id="mapRouteCompareBtn">مقایسه</button>
+                  <button id="mapRoutePreviewBtn">جزئیات مسیر</button>
                   <button id="mapStartBtn" class="primary">بزن بریم</button>
                 </div>
               </div>
@@ -4863,9 +5240,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.1</span>
+              <span class="lab-version-chip">v5.2</span>
               <div>
-                <b>Navigation UX Overhaul</b>
+                <b>Route Selection Experience</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6763,18 +7140,91 @@ function updateRoutingDataDisclosure(){
 function routeToCoords(route){
   return route.geometry.coordinates.map(c=>[c[1],c[0]]);
 }
+
+function routeSelectionVisualMeta(route,index){
+  const fastest=Math.min(
+    ...routeAlternatives.map(r=>Number(r.duration||Infinity))
+  );
+  const deltaMin=Math.max(
+    0,
+    Math.round((Number(route.duration||0)-fastest)/60)
+  );
+
+  return{
+    deltaMin,
+    recommended:index===0,
+    eta:formatDurationFa(route.duration),
+    distance:formatKm(route.distance)
+  };
+}
+
+function fitAllRouteAlternatives({animate=true}={}){
+  const all=[];
+
+  routeAlternatives.slice(0,3).forEach(route=>{
+    routeToCoords(route).forEach(p=>all.push(p));
+  });
+
+  if(!all.length){
+    fitSelectedRouteForExploration({animate});
+    return;
+  }
+
+  try{
+    const bounds=L.latLngBounds(all);
+
+    map.fitBounds(bounds,{
+      paddingTopLeft:[56,84],
+      paddingBottomRight:[56,285],
+      animate,
+      duration:animate?.32:0
+    });
+  }catch(e){
+    fitSelectedRouteForExploration({animate});
+  }
+}
+
 function renderRouteAlternatives(){
-  routeAltLayers.forEach(l=>map.removeLayer(l));
+  routeAltLayers.forEach(l=>{
+    try{map.removeLayer(l)}catch(e){}
+  });
   routeAltLayers=[];
+
   routeAlternatives.forEach((r,i)=>{
     if(i===selectedRouteIndex)return;
-    const layer=L.polyline(routeToCoords(r),{color:'#94a3b8',weight:7,opacity:.62,lineCap:'round',lineJoin:'round'}).addTo(map);
-    layer.on('click',()=>{
+
+    const coords=routeToCoords(r);
+
+    // Wide invisible hit target for touch selection.
+    const hit=L.polyline(coords,{
+      color:'#000000',
+      weight:24,
+      opacity:.001,
+      lineCap:'round',
+      lineJoin:'round',
+      interactive:true
+    }).addTo(map);
+
+    const visual=L.polyline(coords,{
+      color:'#7f91a5',
+      weight:7,
+      opacity:.48,
+      lineCap:'round',
+      lineJoin:'round',
+      interactive:false
+    }).addTo(map);
+
+    hit.on('click',(e)=>{
+      try{L.DomEvent.stopPropagation(e)}catch(_){}
       selectRouteAlternative(i);
       renderMapRouteSheet();
+      renderCompactRouteChoices();
     });
-    routeAltLayers.push(layer);
+
+    routeAltLayers.push(hit,visual);
   });
+
+  try{routeLine?.bringToFront()}catch(e){}
 }
 
 function maneuverArrow(modifier,type){
@@ -8024,7 +8474,14 @@ function selectRouteAlternative(index){
   if(routeLine)map.removeLayer(routeLine);
   if(trackLine)map.removeLayer(trackLine);
   speedLayers.forEach(l=>map.removeLayer(l));speedLayers=[];
-  routeLine=L.polyline(routeCoords,{color:'#2563eb',weight:8,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(map);
+  routeLine=L.polyline(routeCoords,{
+    color:'#236fd3',
+    weight:9,
+    opacity:1,
+    lineCap:'round',
+    lineJoin:'round',
+    interactive:true
+  }).addTo(map);
   try{routeLine.bringToFront()}catch(e){}
   trackLine=L.polyline([],{color:'#ffffff',weight:2,opacity:.65,dashArray:'5 6'}).addTo(map);
 
@@ -9503,90 +9960,11 @@ function routeMidpointLatLng(route){
   return coords[Math.min(coords.length-1,Math.max(0,idx))];
 }
 function renderRouteAltLabels(){
-  const box=$('routeAltLabels');
-  if(!box)return;
-
-  box.innerHTML="";
-  if(!routeAlternatives.length || document.body.classList.contains('driving-mode'))return;
-
-  const mapSize=map.getSize();
-  const bottomReserved=$('mapRouteSheet')?.classList.contains('show')
-    ?Math.min(250,Math.round(mapSize.y*.32))
-    :80;
-
-  const placed=[];
-
-  routeAlternatives.slice(0,3).forEach((route,index)=>{
-    const coords=routeToCoords(route);
-    if(!coords.length)return;
-
-    const fractions=[.42,.56,.33,.66,.25,.74];
-    let best=null;
-    let bestScore=-Infinity;
-
-    for(const fraction of fractions){
-      const idx=Math.min(
-        coords.length-1,
-        Math.max(0,Math.round((coords.length-1)*fraction))
-      );
-
-      const ll=coords[idx];
-      const pt=map.latLngToContainerPoint(ll);
-
-      const marginX=70;
-      const marginTop=82;
-      const maxY=mapSize.y-bottomReserved;
-
-      if(
-        pt.x<marginX ||
-        pt.x>mapSize.x-marginX ||
-        pt.y<marginTop ||
-        pt.y>maxY
-      )continue;
-
-      let separation=999;
-      for(const prior of placed){
-        separation=Math.min(
-          separation,
-          Math.hypot(pt.x-prior.x,pt.y-prior.y)
-        );
-      }
-
-      const edgeScore=Math.min(
-        pt.x,
-        mapSize.x-pt.x,
-        pt.y,
-        maxY-pt.y
-      );
-
-      const score=Math.min(separation,220)+edgeScore*.35;
-
-      if(score>bestScore){
-        bestScore=score;
-        best={pt,ll};
-      }
-    }
-
-    if(!best)return;
-
-    placed.push({x:best.pt.x,y:best.pt.y});
-
-    const el=document.createElement('button');
-    el.type='button';
-    el.className=`route-alt-label ${index===selectedRouteIndex?'active':''}`;
-    el.style.left=`${best.pt.x}px`;
-    el.style.top=`${best.pt.y}px`;
-    el.textContent=`${(index+1).toLocaleString('fa-IR')} • ${formatDurationFa(route.duration)}`;
-
-    el.onclick=(ev)=>{
-      ev.stopPropagation();
-      selectRouteAlternative(index);
-      renderMapRouteSheet();
-    };
-
-    box.appendChild(el);
-  });
+  // v5.2: legacy on-map route labels are intentionally disabled.
+  // The compact route cards and tappable route polylines are the selectors.
+  clearRouteAltLabels();
 }
+
 function syncRouteAltLabelsSoon(){
   clearTimeout(syncRouteAltLabelsSoon._t);
   syncRouteAltLabelsSoon._t=setTimeout(renderRouteAltLabels,120);
@@ -9597,24 +9975,43 @@ function renderCompactRouteChoices(){
   const box=$('mapRouteChoiceStrip');
   if(!box)return;
 
-  if(!routeAlternatives.length || routeAlternatives.length===1){
+  if(!routeAlternatives.length){
     box.innerHTML="";
     box.classList.remove('show');
     return;
   }
 
-  const fastest=Math.min(...routeAlternatives.map(r=>Number(r.duration||Infinity)));
+  const fastest=Math.min(
+    ...routeAlternatives.map(r=>Number(r.duration||Infinity))
+  );
 
   box.innerHTML=routeAlternatives.slice(0,3).map((route,index)=>{
-    const delta=Math.max(0,Math.round((Number(route.duration||0)-fastest)/60));
+    const delta=Math.max(
+      0,
+      Math.round((Number(route.duration||0)-fastest)/60)
+    );
+
     const routeNo=(index+1).toLocaleString('fa-IR');
     const active=index===selectedRouteIndex;
+    const info=classifyRouteOption(route,index);
+    const deltaText=
+      delta>0
+        ?`+${delta.toLocaleString('fa-IR')} دقیقه`
+        :"کمترین ETA فعلی";
 
-    return `<button class="map-route-choice-chip ${active?'active':''}" data-compact-route="${index}">
+    return `<button
+      class="map-route-choice-chip ${active?'active':''}"
+      data-compact-route="${index}"
+      aria-label="انتخاب ${info.title}"
+    >
       <span class="route-chip-number">${routeNo}</span>
       <span class="route-chip-copy">
         <b>${formatDurationFa(route.duration)}</b>
-        <span>${index===0?'پیشنهادی':delta>0?`${delta.toLocaleString('fa-IR')} دقیقه بیشتر`:'جایگزین'}</span>
+        <span>${deltaText}</span>
+        <span class="route-chip-meta">
+          <em>${formatKm(route.distance)}</em>
+          ${index===0?'<em class="recommended">پیشنهادی</em>':`<em>${info.badge}</em>`}
+        </span>
       </span>
     </button>`;
   }).join("");
@@ -9623,11 +10020,23 @@ function renderCompactRouteChoices(){
 
   box.querySelectorAll('[data-compact-route]').forEach(btn=>{
     btn.onclick=(e)=>{
+      e.preventDefault();
       e.stopPropagation();
+
       const i=Number(btn.dataset.compactRoute);
+
+      if(i===selectedRouteIndex){
+        fitSelectedRouteForExploration({animate:true});
+        return;
+      }
+
       selectRouteAlternative(i);
       renderCompactRouteChoices();
       renderMapRouteSheet();
+
+      showMapStatus(
+        `مسیر ${(i+1).toLocaleString('fa-IR')} انتخاب شد`
+      );
     };
   });
 }
@@ -9649,6 +10058,16 @@ function renderMapRouteSheet(){
 
   const integrity=analyzeSelectedRoute();
   const decision=routeDecisionExplanation(selectedRouteIndex);
+  const optionInfo=classifyRouteOption(route,selectedRouteIndex);
+
+  const fastest=Math.min(
+    ...routeAlternatives.map(r=>Number(r.duration||Infinity))
+  );
+
+  const deltaMin=Math.max(
+    0,
+    Math.round((Number(route.duration||0)-fastest)/60)
+  );
 
   $('mapRouteDestination').textContent=navDestination.label||"مقصد";
   $('mapRouteEta').textContent=formatDurationFa(route.duration);
@@ -9658,23 +10077,34 @@ function renderMapRouteSheet(){
   $('mapRouteKicker').textContent=
     integrity.critical
       ?"مسیر نیاز به بررسی دارد"
-      :routeAlternatives.length>1
-        ?`مسیر ${(selectedRouteIndex+1).toLocaleString('fa-IR')} از ${routeAlternatives.length.toLocaleString('fa-IR')}`
-        :"مسیر ۱";
+      :selectedRouteIndex===0
+        ?"مسیر پیشنهادی"
+        :deltaMin>0
+          ?`مسیر جایگزین • ${deltaMin.toLocaleString('fa-IR')} دقیقه بیشتر`
+          :"مسیر جایگزین";
 
   $('mapRouteReason').classList.add('route-road-summary');
   $('mapRouteReason').textContent=
     integrity.critical
       ?"این مسیر نیاز به بررسی دارد."
-      :routeStreetSummary(route,selectedRouteIndex,{compact:true});
+      :`${optionInfo.badge} • ${routeStreetSummary(route,selectedRouteIndex,{compact:true})}`;
 
   $('mapStartBtn').disabled=integrity.critical;
   $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"بزن بریم";
+
+  const wasRouteSelection=
+    document.body.classList.contains('route-selection-mode');
 
   sheet.classList.add('show');
   setRouteSelectionMode(true);
   ensureMapExplorationEnabled();
   renderCompactRouteChoices();
+
+  if(!wasRouteSelection){
+    setTimeout(()=>{
+      fitAllRouteAlternatives({animate:true});
+    },80);
+  }
   syncRouteAltLabelsSoon();
   $('mapDevBtn').style.display='none';
 }
@@ -15958,7 +16388,12 @@ $('mapFitRouteBtn').onclick=(e)=>{
     return;
   }
 
-  fitSelectedRouteForExploration({animate:true});
+  if(document.body.classList.contains('route-selection-mode')){
+    fitAllRouteAlternatives({animate:true});
+    showMapStatus("نمایش همه مسیرهای معتبر");
+  }else{
+    fitSelectedRouteForExploration({animate:true});
+  }
 };
 
 $('mapCenterBtn').onclick=()=>{
@@ -16001,7 +16436,9 @@ $('mapDestinationSearch').addEventListener('focus',()=>{
 $('mapOriginButton').onclick=()=>autoLocateOriginMapFirst({silent:false});
 $('mapOriginChip').onclick=openMapFirstOriginPicker;
 
-$('mapRouteCompareBtn').onclick=openRouteComparison;
+$('mapRouteCompareBtn').onclick=()=>{
+  openRouteComparison();
+};
 $('mapRoutePreviewBtn').onclick=openRoutePreview;
 $('mapStartBtn').onclick=smartStartTrip;
 $('mapRouteCloseBtn').onclick=closeMapRouteSheet;
