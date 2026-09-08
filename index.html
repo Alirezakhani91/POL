@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۵ Trusted Trip History & Trends</title>
+<title>POL | نسخه ۴.۶ Real Trip Integrity Gate</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3126,6 +3126,140 @@ body.trip-replay-mode .trip-replay-event-strip{
   .trusted-trip-trend-chart{height:165px}
 }
 
+
+/* ===== v4.6 Real Trip Integrity Gate ===== */
+.trip-integrity-debug-box{
+  border-color:rgba(168,85,247,.22)!important;
+}
+.trip-integrity-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.trip-integrity-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.trip-integrity-debug-box .eligibilityStatus.bad{
+  background:#441717;
+  border-color:#7d3030;
+  color:#fecaca;
+}
+.trip-integrity-debug-box .eligibilityStatus.collecting{
+  background:#172334;
+  border-color:#3b526f;
+  color:#bfdbfe;
+}
+
+.summary-integrity-card{
+  display:none;
+  margin-top:10px;
+  padding:11px;
+  border-radius:14px;
+  background:#101923;
+  border:1px solid #2b4058;
+}
+.summary-integrity-card.show{display:block}
+.summary-integrity-card.trusted{
+  border-color:#28543c;
+}
+.summary-integrity-card.review{
+  border-color:#6d551d;
+}
+.summary-integrity-card.invalid{
+  border-color:#7d3030;
+}
+.summary-integrity-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:9px;
+}
+.summary-integrity-head small{
+  display:block;
+  color:#8fa0b6;
+  font-size:7px;
+}
+.summary-integrity-head b{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+}
+.summary-integrity-confidence{
+  padding:5px 8px;
+  border-radius:999px;
+  background:#172334;
+  border:1px solid #3b526f;
+  color:#bfdbfe;
+  font-size:8px;
+  white-space:nowrap;
+}
+.summary-integrity-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:9px;
+}
+.summary-integrity-grid>div{
+  padding:7px;
+  border-radius:10px;
+  background:#172334;
+  text-align:center;
+}
+.summary-integrity-grid b{
+  display:block;
+  font-size:12px;
+}
+.summary-integrity-grid span{
+  display:block;
+  margin-top:2px;
+  color:#8fa0b6;
+  font-size:7px;
+}
+.summary-integrity-reason{
+  margin-top:8px;
+  padding:8px 9px;
+  border-radius:10px;
+  background:#0e1823;
+  color:#c2cedc;
+  font-size:8px;
+  line-height:1.65;
+}
+
+/* Trusted history gets an independent integrity badge. */
+.trusted-trip-integrity{
+  display:inline-flex;
+  width:auto!important;
+  margin:6px 5px 0 0!important;
+  padding:3px 6px!important;
+  border-radius:999px!important;
+  font-size:7px!important;
+  background:#172334!important;
+  border:1px solid #3b526f!important;
+  color:#bfdbfe!important;
+}
+.trusted-trip-integrity.TRUSTED{
+  background:#12351d!important;
+  border-color:#28543c!important;
+  color:#86efac!important;
+}
+.trusted-trip-integrity.REVIEW{
+  background:#3b2d0d!important;
+  border-color:#6d551d!important;
+  color:#fde68a!important;
+}
+.trusted-trip-integrity.INVALID{
+  background:#441717!important;
+  border-color:#7d3030!important;
+  color:#fecaca!important;
+}
+.trusted-trip-integrity.LEGACY{
+  background:#172334!important;
+  border-color:#3b526f!important;
+  color:#94a3b8!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3879,9 +4013,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.5</span>
+              <span class="lab-version-chip">v4.6</span>
               <div>
-                <b>Trusted Trip History & Trends</b>
+                <b>Real Trip Integrity Gate</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -3900,6 +4034,32 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox trip-integrity-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Real Trip Integrity Gate</b>
+                  <div class="small">GPS / Map Match / Telemetry / Exposure • بدون Mock GPS ادعایی</div>
+                </div>
+                <div id="tripIntegrityStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="tripIntegrityConfidence">--</b><span>Integrity Confidence</span></div>
+                <div class="eligibilityCell"><b id="tripIntegrityAccuracy">--</b><span>GPS ≤35m</span></div>
+                <div class="eligibilityCell"><b id="tripIntegrityRouteMatch">--</b><span>Route Match</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="tripIntegrityTelemetry">--</b><span>Telemetry Valid</span></div>
+                <div class="eligibilityCell"><b id="tripIntegrityJumps">۰</b><span>GPS Jump</span></div>
+                <div class="eligibilityCell"><b id="tripIntegrityFixes">۰</b><span>GPS Fix</span></div>
+              </div>
+
+              <div id="tripIntegrityReason" class="reasonList">
+                بعد از شروع GPS واقعی، کیفیت سفر به‌صورت مستقل از Safety Score ارزیابی می‌شود.
+              </div>
             </div>
 
             <div class="eligibilityBox safety-score-debug-box">
@@ -4147,7 +4307,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
         </div>
 
         <div id="trustedTrendNotice" class="trusted-trend-notice">
-          برای تحلیل روند، حداقل ۳ سفر دارای Safety Score لازم است.
+          برای تحلیل روند، حداقل ۳ سفر TRUSTED دارای Safety Score لازم است.
         </div>
 
         <canvas id="trustedTripTrendChart" class="trusted-trip-trend-chart" width="900" height="210"></canvas>
@@ -4439,6 +4599,24 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       </div>
     </div>
 
+    <div id="summaryIntegrityCard" class="summary-integrity-card">
+      <div class="summary-integrity-head">
+        <div>
+          <small>Trip Integrity</small>
+          <b id="summaryIntegrityTitle">در انتظار</b>
+        </div>
+        <div id="summaryIntegrityConfidence" class="summary-integrity-confidence">--</div>
+      </div>
+
+      <div class="summary-integrity-grid">
+        <div><b id="summaryIntegrityGps">--</b><span>GPS خوب</span></div>
+        <div><b id="summaryIntegrityMatch">--</b><span>Route Match</span></div>
+        <div><b id="summaryIntegrityTelemetry">--</b><span>Telemetry</span></div>
+      </div>
+
+      <div id="summaryIntegrityReason" class="summary-integrity-reason">--</div>
+    </div>
+
     <div id="summaryWhy" class="summary-why">پس از پایان سفر، مهم‌ترین نکته اینجا نمایش داده می‌شود.</div>
     <div id="summaryCoach" class="summary-coach">
       <b>دستیار ایمنی</b>
@@ -4622,6 +4800,27 @@ let confidenceSafetyScoreState={
   cornerScore:null,
   eventBurden:{brake:0,accel:0,corner:0},
   evidence:""
+};
+
+
+let realTripIntegrityState={
+  active:false,
+  startedAt:0,
+  lastRawPoint:null,
+  lastTimestamp:null,
+  fixes:0,
+  goodAccuracyFixes:0,
+  excellentAccuracyFixes:0,
+  accuracySum:0,
+  temporalConfidenceSum:0,
+  temporalSamples:0,
+  goodRouteMatchFixes:0,
+  networkMatchedFixes:0,
+  longGapCount:0,
+  implausibleJumpCount:0,
+  severeJumpCount:0,
+  maxRawSpeedKmh:0,
+  result:null
 };
 
 let realTelemetryState={
@@ -6862,6 +7061,7 @@ function saveRecentDestination(dest){
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
   resetRealTelemetry();
+resetRealTripIntegrity();
 resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
 renderTrustedRealTrips();
@@ -10136,6 +10336,330 @@ function renderMappedSpeedDiagnostics(){
   }
 }
 
+
+function resetRealTripIntegrity(){
+  realTripIntegrityState={
+    active:false,
+    startedAt:0,
+    lastRawPoint:null,
+    lastTimestamp:null,
+    fixes:0,
+    goodAccuracyFixes:0,
+    excellentAccuracyFixes:0,
+    accuracySum:0,
+    temporalConfidenceSum:0,
+    temporalSamples:0,
+    goodRouteMatchFixes:0,
+    networkMatchedFixes:0,
+    longGapCount:0,
+    implausibleJumpCount:0,
+    severeJumpCount:0,
+    maxRawSpeedKmh:0,
+    result:null
+  };
+  renderRealTripIntegrityDiagnostics();
+}
+
+function updateRealTripIntegritySample({
+  rawPoint,
+  timestamp,
+  accuracy,
+  temporalConfidence,
+  routeDistance,
+  networkMatched
+}={}){
+  const s=realTripIntegrityState;
+  if(!s.active)return;
+
+  s.fixes+=1;
+  s.accuracySum+=Number(accuracy||999);
+
+  if(Number(accuracy)<=35)s.goodAccuracyFixes+=1;
+  if(Number(accuracy)<=20)s.excellentAccuracyFixes+=1;
+
+  if(Number.isFinite(Number(temporalConfidence))){
+    s.temporalConfidenceSum+=Number(temporalConfidence);
+    s.temporalSamples+=1;
+  }
+
+  const routeThreshold=Math.max(65,Number(accuracy||999)*1.9);
+  if(Number(routeDistance)<=routeThreshold){
+    s.goodRouteMatchFixes+=1;
+  }
+
+  if(networkMatched)s.networkMatchedFixes+=1;
+
+  if(
+    Array.isArray(s.lastRawPoint) &&
+    Number.isFinite(Number(s.lastTimestamp)) &&
+    Number(timestamp)>Number(s.lastTimestamp)
+  ){
+    const dt=(Number(timestamp)-Number(s.lastTimestamp))/1000;
+    const d=hav(s.lastRawPoint,rawPoint);
+    const impliedKmh=dt>0?(d/dt)*3.6:0;
+
+    s.maxRawSpeedKmh=Math.max(
+      Number(s.maxRawSpeedKmh||0),
+      Number(impliedKmh||0)
+    );
+
+    if(dt>5.5)s.longGapCount+=1;
+
+    // This is a DATA CONSISTENCY check, not fraud detection.
+    // A very fast raw jump can simply be GPS noise.
+    if(dt>=.2 && d>=90 && impliedKmh>220){
+      s.implausibleJumpCount+=1;
+    }
+
+    if(dt>=.2 && d>=180 && impliedKmh>360){
+      s.severeJumpCount+=1;
+    }
+  }
+
+  s.lastRawPoint=Array.isArray(rawPoint)?[...rawPoint]:null;
+  s.lastTimestamp=Number(timestamp||Date.now());
+
+  computeRealTripIntegrity({finalize:false});
+}
+
+function integrityPercent(n,d){
+  return d>0?clamp(n/d*100,0,100):0;
+}
+
+function computeRealTripIntegrity({finalize=false}={}){
+  const s=realTripIntegrityState;
+
+  const durationS=s.startedAt
+    ?Math.max(0,(Date.now()-Number(s.startedAt))/1000)
+    :0;
+
+  const distanceM=realTelemetryActualDistanceM();
+
+  const goodAccuracyRatio=integrityPercent(
+    s.goodAccuracyFixes,
+    s.fixes
+  );
+
+  const excellentAccuracyRatio=integrityPercent(
+    s.excellentAccuracyFixes,
+    s.fixes
+  );
+
+  const avgAccuracy=s.fixes
+    ?s.accuracySum/s.fixes
+    :999;
+
+  const avgTemporal=s.temporalSamples
+    ?s.temporalConfidenceSum/s.temporalSamples
+    :0;
+
+  const routeMatchRatio=integrityPercent(
+    s.goodRouteMatchFixes,
+    s.fixes
+  );
+
+  const networkMatchRatio=integrityPercent(
+    s.networkMatchedFixes,
+    s.fixes
+  );
+
+  const telemetryTotal=
+    realTelemetryState.validSamples+
+    realTelemetryState.rejectedSamples;
+
+  const telemetryValidRatio=integrityPercent(
+    realTelemetryState.validSamples,
+    telemetryTotal
+  );
+
+  // Confidence is evidence quality, not driver behavior.
+  let confidence=
+    goodAccuracyRatio*.23+
+    routeMatchRatio*.24+
+    avgTemporal*.18+
+    telemetryValidRatio*.18+
+    networkMatchRatio*.07+
+    Math.min(100,s.fixes/25*100)*.10;
+
+  if(s.implausibleJumpCount>0)confidence-=8*s.implausibleJumpCount;
+  if(s.severeJumpCount>0)confidence-=18*s.severeJumpCount;
+  if(s.longGapCount>2)confidence-=Math.min(14,(s.longGapCount-2)*3);
+
+  confidence=clamp(Math.round(confidence),0,96);
+
+  const reasons=[];
+  const blockers=[];
+
+  if(s.fixes<8)reasons.push("GPS Fix کم");
+  if(durationS<30)reasons.push("مدت سفر کوتاه");
+  if(distanceM<150)reasons.push("مسافت قابل‌استفاده کم");
+  if(goodAccuracyRatio<55)reasons.push("پوشش GPS دقیق پایین");
+  if(routeMatchRatio<55)reasons.push("تطبیق با Route ضعیف");
+  if(avgTemporal<55)reasons.push("Temporal Match ناپایدار");
+  if(telemetryValidRatio<55)reasons.push("Telemetry معتبر کم");
+  if(s.implausibleJumpCount>0)reasons.push("GPS Jump ثبت شده");
+
+  if(finalize){
+    if(s.fixes<5)blockers.push("GPS Fix بسیار کم");
+    if(durationS<15)blockers.push("سفر برای ارزیابی بیش از حد کوتاه است");
+    if(distanceM<70)blockers.push("حرکت واقعی کافی ثبت نشده است");
+    if(s.severeJumpCount>=2)blockers.push("چند جهش شدید GPS");
+    if(s.fixes>=10 && goodAccuracyRatio<25)blockers.push("کیفیت GPS بسیار پایین");
+    if(s.fixes>=10 && routeMatchRatio<20)blockers.push("Route Match بسیار ضعیف");
+  }
+
+  let status="COLLECTING";
+
+  if(finalize){
+    if(blockers.length){
+      status="INVALID";
+    }else{
+      const trusted=
+        durationS>=60 &&
+        distanceM>=500 &&
+        s.fixes>=18 &&
+        goodAccuracyRatio>=65 &&
+        routeMatchRatio>=65 &&
+        avgTemporal>=60 &&
+        telemetryValidRatio>=60 &&
+        s.severeJumpCount===0 &&
+        s.implausibleJumpCount<=1 &&
+        confidence>=70;
+
+      status=trusted?"TRUSTED":"REVIEW";
+    }
+  }else{
+    if(
+      durationS>=30 &&
+      s.fixes>=10 &&
+      confidence>=68
+    ){
+      status="TRUSTED";
+    }else if(
+      s.fixes>=6 &&
+      confidence>=45
+    ){
+      status="REVIEW";
+    }
+  }
+
+  const primaryReason=
+    status==="TRUSTED"
+      ?"GPS، Map Match و Telemetry برای تحلیل پایه سازگار هستند."
+      :status==="INVALID"
+        ?(blockers[0]||"داده این سفر قابل اتکا نیست.")
+        :status==="REVIEW"
+          ?(reasons[0]||"کیفیت داده متوسط است و بهتر است با احتیاط تفسیر شود.")
+          :"در حال جمع‌شدن داده سفر.";
+
+  const result={
+    status,
+    confidence,
+    durationS:Math.round(durationS),
+    distanceKm:Number((distanceM/1000).toFixed(2)),
+    fixes:s.fixes,
+    goodAccuracyRatio:Math.round(goodAccuracyRatio),
+    excellentAccuracyRatio:Math.round(excellentAccuracyRatio),
+    avgAccuracy:Number(avgAccuracy.toFixed(1)),
+    avgTemporal:Math.round(avgTemporal),
+    routeMatchRatio:Math.round(routeMatchRatio),
+    networkMatchRatio:Math.round(networkMatchRatio),
+    telemetryValidRatio:Math.round(telemetryValidRatio),
+    longGapCount:s.longGapCount,
+    implausibleJumpCount:s.implausibleJumpCount,
+    severeJumpCount:s.severeJumpCount,
+    maxRawSpeedKmh:Math.round(s.maxRawSpeedKmh||0),
+    reasons:[...reasons,...blockers],
+    primaryReason
+  };
+
+  s.result=result;
+  renderRealTripIntegrityDiagnostics();
+  return result;
+}
+
+function renderRealTripIntegrityDiagnostics(){
+  const r=realTripIntegrityState.result;
+
+  const status=$('tripIntegrityStatus');
+
+  if(!r){
+    if(status){
+      status.className='eligibilityStatus review';
+      status.textContent='در انتظار';
+    }
+    if($('tripIntegrityConfidence'))$('tripIntegrityConfidence').textContent='--';
+    if($('tripIntegrityAccuracy'))$('tripIntegrityAccuracy').textContent='--';
+    if($('tripIntegrityRouteMatch'))$('tripIntegrityRouteMatch').textContent='--';
+    if($('tripIntegrityTelemetry'))$('tripIntegrityTelemetry').textContent='--';
+    if($('tripIntegrityJumps'))$('tripIntegrityJumps').textContent='۰';
+    if($('tripIntegrityFixes'))$('tripIntegrityFixes').textContent='۰';
+    if($('tripIntegrityReason'))$('tripIntegrityReason').textContent=
+      'بعد از شروع GPS واقعی، کیفیت سفر به‌صورت مستقل از Safety Score ارزیابی می‌شود.';
+    return;
+  }
+
+  if($('tripIntegrityConfidence')){
+    $('tripIntegrityConfidence').textContent=
+      `${Number(r.confidence).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('tripIntegrityAccuracy')){
+    $('tripIntegrityAccuracy').textContent=
+      `${Number(r.goodAccuracyRatio).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('tripIntegrityRouteMatch')){
+    $('tripIntegrityRouteMatch').textContent=
+      `${Number(r.routeMatchRatio).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('tripIntegrityTelemetry')){
+    $('tripIntegrityTelemetry').textContent=
+      `${Number(r.telemetryValidRatio).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('tripIntegrityJumps')){
+    $('tripIntegrityJumps').textContent=
+      Number(r.implausibleJumpCount).toLocaleString('fa-IR');
+  }
+
+  if($('tripIntegrityFixes')){
+    $('tripIntegrityFixes').textContent=
+      Number(r.fixes).toLocaleString('fa-IR');
+  }
+
+  if($('tripIntegrityReason')){
+    $('tripIntegrityReason').textContent=r.primaryReason;
+  }
+
+  if(status){
+    status.classList.remove('good','warn','bad','review','collecting');
+
+    if(r.status==="TRUSTED"){
+      status.classList.add('good');
+      status.textContent='TRUSTED';
+    }else if(r.status==="REVIEW"){
+      status.classList.add('warn');
+      status.textContent='REVIEW';
+    }else if(r.status==="INVALID"){
+      status.classList.add('bad');
+      status.textContent='INVALID';
+    }else{
+      status.classList.add('collecting');
+      status.textContent='در حال جمع‌آوری';
+    }
+  }
+}
+
+function integrityFa(status){
+  if(status==="TRUSTED")return"قابل اعتماد";
+  if(status==="REVIEW")return"نیازمند بررسی";
+  if(status==="INVALID")return"نامعتبر";
+  if(status==="LEGACY")return"قبل از v4.6";
+  return"در حال جمع‌آوری";
+}
+
 function resetRealTelemetry(){
   stopDeviceMotionTelemetry();
   realTelemetryState={
@@ -10972,6 +11496,16 @@ function trustedHistoryCopy(result){
     telemetryOnly:!!result.telemetryOnly,
     safetyScoreV1:!!result.safetyScoreV1,
     navigationMode:result.navigationMode||"real-gps",
+
+    integrityStatus:result.integrityStatus||"LEGACY",
+    integrityConfidence:Number(result.integrityConfidence||0),
+    integrityReason:result.integrityReason||"",
+    integrityGoodAccuracyRatio:Number(result.integrityGoodAccuracyRatio||0),
+    integrityRouteMatchRatio:Number(result.integrityRouteMatchRatio||0),
+    integrityTelemetryRatio:Number(result.integrityTelemetryRatio||0),
+    integrityGpsJumps:Number(result.integrityGpsJumps||0),
+    integrityFixes:Number(result.integrityFixes||0),
+
     score:result.score==null?null:Number(result.score),
     behaviorScore:result.behaviorScore==null?null:Number(result.behaviorScore),
     scoreStatus:result.scoreStatus||(result.navigationOnly?"insufficient":"preliminary"),
@@ -11050,7 +11584,7 @@ function trustedTrendDelta(trips,key="score"){
   return Number.isFinite(a)&&Number.isFinite(b)?b-a:null;
 }
 function trustedTrendLabel(delta){
-  if(delta==null)return{label:"داده کم",className:"",text:"برای تحلیل روند، حداقل ۳ سفر دارای Safety Score لازم است."};
+  if(delta==null)return{label:"داده کم",className:"",text:"برای تحلیل روند، حداقل ۳ سفر TRUSTED دارای Safety Score لازم است."};
   if(delta>=3)return{label:"رو به بهبود",className:"good",text:`میانگین سفرهای اخیر حدود ${Math.round(delta).toLocaleString('fa-IR')} امتیاز بهتر شده است.`};
   if(delta<=-3)return{label:"نیازمند توجه",className:"bad",text:`میانگین سفرهای اخیر حدود ${Math.abs(Math.round(delta)).toLocaleString('fa-IR')} امتیاز افت کرده است.`};
   return{label:"پایدار",className:"warn",text:"میانگین سفرهای اخیر تغییر معناداری نداشته است."};
@@ -11079,7 +11613,11 @@ function renderTrustedTrendChart(trips){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cssW,cssH);
   const scored=(trips||[])
-    .filter(t=>Number.isFinite(Number(t.score))&&t.scoreStatus!=="insufficient")
+    .filter(t=>
+      t.integrityStatus==="TRUSTED" &&
+      Number.isFinite(Number(t.score)) &&
+      t.scoreStatus!=="insufficient"
+    )
     .slice(-10);
   ctx.font='10px Vazirmatn, sans-serif';
   ctx.textAlign='center';
@@ -11115,7 +11653,11 @@ function renderTrustedTrendChart(trips){
 }
 function renderTrustedRealTrips(){
   const trips=loadTrustedRealTrips();
-  const scored=trips.filter(t=>Number.isFinite(Number(t.score))&&t.scoreStatus!=="insufficient");
+  const scored=trips.filter(t=>
+    t.integrityStatus==="TRUSTED" &&
+    Number.isFinite(Number(t.score)) &&
+    t.scoreStatus!=="insufficient"
+  );
   if($('trustedTripCount'))$('trustedTripCount').textContent=trips.length.toLocaleString('fa-IR');
   const recentAvg=weightedTripAverage(scored.slice(-5),'score');
   if($('trustedRecentAvg'))$('trustedRecentAvg').textContent=recentAvg==null?"—":Math.round(recentAvg).toLocaleString('fa-IR');
@@ -11149,6 +11691,9 @@ function renderTrustedRealTrips(){
           <b>${route}</b>
           <span>${trustedDateTime(trip.savedAt)}</span>
           <span class="trusted-trip-status ${status}">${trustedStatusLabel(status)}</span>
+          <span class="trusted-trip-integrity ${trip.integrityStatus||"LEGACY"}">
+            Integrity: ${integrityFa(trip.integrityStatus||"LEGACY")}
+          </span>
         </div>
         <div class="trusted-trip-score ${status==='insufficient'?'insufficient':''}">
           <b>${scoreText}</b><span>Safety Score</span>
@@ -11263,6 +11808,14 @@ function buildRealTelemetryResult(){
 
   const mappedCompliance=mappedSpeedCompliancePreview();
   const mappedCoverage=mappedSpeedCoveragePreview();
+  const integrity=computeRealTripIntegrity({finalize:true});
+  if(integrity.status==="INVALID"){
+    scoreModel.status="insufficient";
+    scoreModel.score=null;
+    scoreModel.confidence=Math.min(scoreModel.confidence,44);
+    scoreModel.evidence="Trip Integrity نامعتبر است؛ Safety Score نمایش داده نمی‌شود.";
+  }
+
   const coach=coachActionForWeakness(
     ranked[0][0],
     scoreModel.status,
@@ -11274,6 +11827,15 @@ function buildRealTelemetryResult(){
     telemetryOnly:true,
     safetyScoreV1:true,
     navigationMode:"real-gps",
+
+    integrityStatus:integrity.status,
+    integrityConfidence:integrity.confidence,
+    integrityReason:integrity.primaryReason,
+    integrityGoodAccuracyRatio:integrity.goodAccuracyRatio,
+    integrityRouteMatchRatio:integrity.routeMatchRatio,
+    integrityTelemetryRatio:integrity.telemetryValidRatio,
+    integrityGpsJumps:integrity.implausibleJumpCount,
+    integrityFixes:integrity.fixes,
 
     score:scoreModel.score,
     behaviorScore:scoreModel.score,
@@ -11470,6 +12032,15 @@ async function processRealGps(position){
   realGpsState.distanceFromRoute=networkRouteMatch.distance;
   realGpsState.matchedPoint=temporal.point||roadDecisionPoint;
 
+  updateRealTripIntegritySample({
+    rawPoint,
+    timestamp:stamp,
+    accuracy,
+    temporalConfidence:Number(temporal.confidence||0),
+    routeDistance:Number(networkRouteMatch.distance||Infinity),
+    networkMatched:!!trusted
+  });
+
   updateRealDrivingTelemetry({
     point:temporal.point||roadDecisionPoint,
     speedKmh:speed,
@@ -11603,6 +12174,9 @@ function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
   resetRealTelemetry();
+  resetRealTripIntegrity();
+  realTripIntegrityState.active=true;
+  realTripIntegrityState.startedAt=Date.now();
   resetConfidenceSafetyScore();
   resetMappedSpeedTripStats();
   prefetchMappedSpeedLimits({force:false});
@@ -11736,6 +12310,7 @@ async function triggerRealGpsReroute(rawPoint){
   }
 }
 function buildRealGpsNavigationResult(){
+  const integrity=computeRealTripIntegrity({finalize:true});
   const tripConf=gpsRouteConfidence(
     Number(realGpsState.accuracy||999),
     Number(realGpsState.distanceFromRoute||999)
@@ -11745,6 +12320,16 @@ function buildRealGpsNavigationResult(){
     navigationOnly:true,
     telemetryOnly:false,
     navigationMode:"real-gps",
+
+    integrityStatus:integrity.status,
+    integrityConfidence:integrity.confidence,
+    integrityReason:integrity.primaryReason,
+    integrityGoodAccuracyRatio:integrity.goodAccuracyRatio,
+    integrityRouteMatchRatio:integrity.routeMatchRatio,
+    integrityTelemetryRatio:integrity.telemetryValidRatio,
+    integrityGpsJumps:integrity.implausibleJumpCount,
+    integrityFixes:integrity.fixes,
+
     score:null,
     scoreStatus:"insufficient",
     scoreConfidence:Math.min(44,Number(tripConf||0)),
@@ -12390,6 +12975,8 @@ function finish(){
   $('status').textContent=wasRealGps?"سفر GPS واقعی پایان یافت.":"به مقصد رسیدی.";
   if(!wasRealGps)updateTurnByTurn(1);
   if(wasRealGps){
+    computeRealTripIntegrity({finalize:true});
+
     if(realTelemetryState.validSamples>=4){
       buildRealTelemetryResult();
     }else{
@@ -12404,6 +12991,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
+  resetRealTripIntegrity();
   resetConfidenceSafetyScore();
   resetMappedSpeedTripStats();
   pendingRealGpsFix=null;
@@ -14093,6 +14681,40 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const p=loadProfile();
       const lr=p.lastReward||{};
 
+      const integrityCard=document.getElementById('summaryIntegrityCard');
+
+      if(integrityCard){
+        const showIntegrity=r.navigationMode==="real-gps";
+        integrityCard.classList.toggle('show',showIntegrity);
+        integrityCard.classList.remove('trusted','review','invalid');
+
+        if(showIntegrity){
+          const integrityStatus=r.integrityStatus||"REVIEW";
+
+          if(integrityStatus==="TRUSTED")integrityCard.classList.add('trusted');
+          else if(integrityStatus==="INVALID")integrityCard.classList.add('invalid');
+          else integrityCard.classList.add('review');
+
+          document.getElementById('summaryIntegrityTitle').textContent=
+            integrityFa(integrityStatus);
+
+          document.getElementById('summaryIntegrityConfidence').textContent=
+            `${Number(r.integrityConfidence||0).toLocaleString('fa-IR')}٪`;
+
+          document.getElementById('summaryIntegrityGps').textContent=
+            `${Number(r.integrityGoodAccuracyRatio||0).toLocaleString('fa-IR')}٪`;
+
+          document.getElementById('summaryIntegrityMatch').textContent=
+            `${Number(r.integrityRouteMatchRatio||0).toLocaleString('fa-IR')}٪`;
+
+          document.getElementById('summaryIntegrityTelemetry').textContent=
+            `${Number(r.integrityTelemetryRatio||0).toLocaleString('fa-IR')}٪`;
+
+          document.getElementById('summaryIntegrityReason').textContent=
+            r.integrityReason||"کیفیت داده سفر ارزیابی شد.";
+        }
+      }
+
       const safetyBreakdown=document.getElementById('summarySafetyBreakdown');
 
       if(safetyBreakdown){
@@ -14145,7 +14767,11 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
         document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
       }
       const st=document.getElementById('summaryEligibility');
-      if(r.navigationOnly){
+
+      if(r.navigationMode==="real-gps" && r.integrityStatus==="INVALID"){
+        st.textContent='داده سفر نامعتبر';
+        st.className='summary-status bad';
+      }else if(r.navigationOnly){
         st.textContent='تست Navigation واقعی';
         st.className='summary-status review';
       }else if(r.telemetryOnly){
