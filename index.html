@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۷ Real Reward Eligibility Shadow Gate</title>
+<title>POL | نسخه ۴.۸ SafeCoin Shadow Reward Model</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3292,6 +3292,64 @@ body.trip-replay-mode .trip-replay-event-strip{
 .trusted-trip-shadow.NOT_ELIGIBLE{background:#441717!important;border-color:#7d3030!important;color:#fecaca!important}
 .trusted-trip-shadow.LEGACY{color:#94a3b8!important}
 
+
+/* ===== v4.8 SafeCoin Shadow Reward Model ===== */
+.safecoin-shadow-box{
+  border-color:rgba(245,158,11,.22)!important;
+}
+.safecoin-shadow-box .eligibilityStatus.eligible{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.safecoin-shadow-box .eligibilityStatus.locked{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.safecoin-shadow-box .eligibilityStatus.blocked{
+  background:#441717;
+  border-color:#7d3030;
+  color:#fecaca;
+}
+
+.summary-safecoin-shadow-card{
+  display:none;
+  margin-top:10px;
+  padding:11px;
+  border-radius:14px;
+  background:#101923;
+  border:1px solid #6d551d;
+}
+.summary-safecoin-shadow-card.show{display:block}
+.summary-safecoin-shadow-card.candidate{border-color:#28543c}
+.summary-safecoin-shadow-card.blocked{border-color:#7d3030}
+
+.trusted-trip-coin{
+  display:inline-flex;
+  width:auto!important;
+  margin:6px 5px 0 0!important;
+  padding:3px 6px!important;
+  border-radius:999px!important;
+  font-size:7px!important;
+  background:#172334!important;
+  border:1px solid #3b526f!important;
+  color:#bfdbfe!important;
+}
+.trusted-trip-coin.CANDIDATE{
+  background:#12351d!important;
+  border-color:#28543c!important;
+  color:#86efac!important;
+}
+.trusted-trip-coin.BLOCKED{
+  background:#441717!important;
+  border-color:#7d3030!important;
+  color:#fecaca!important;
+}
+.trusted-trip-coin.LEGACY{
+  color:#94a3b8!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4045,9 +4103,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.7</span>
+              <span class="lab-version-chip">v4.8</span>
               <div>
-                <b>Real Reward Eligibility Shadow Gate</b>
+                <b>SafeCoin Shadow Reward Model</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4066,6 +4124,37 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox safecoin-shadow-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>SafeCoin Shadow Reward Model</b>
+                  <div class="small">Reward Preview بر اساس کیفیت • بدون پاداش برای km / زمان / تعداد سفر</div>
+                </div>
+                <div id="safeCoinShadowStatus" class="eligibilityStatus review">قفل</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="safeCoinShadowCandidate">۰</b><span>Coin Candidate</span></div>
+                <div class="eligibilityCell"><b id="safeCoinShadowTier">--</b><span>Quality Tier</span></div>
+                <div class="eligibilityCell"><b id="safeCoinShadowActual">۰</b><span>Coin صادرشده</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="safeCoinShadowScore">--</b><span>Safety Score</span></div>
+                <div class="eligibilityCell"><b id="safeCoinShadowDaily">--</b><span>Daily Rule</span></div>
+                <div class="eligibilityCell"><b id="safeCoinShadowReasonCount">۰</b><span>Policy Rule</span></div>
+              </div>
+
+              <div id="safeCoinShadowReasons" class="reasonList">
+                فقط سفر Shadow ELIGIBLE می‌تواند Reward Candidate داشته باشد.
+              </div>
+
+              <div class="shadow-production-lock">
+                <b>Actual SafeCoin = 0</b>
+                <span>این نسخه فقط مدل اقتصادی و Anti-Incentive را تست می‌کند؛ کیف پول واقعی تغییر نمی‌کند.</span>
+              </div>
             </div>
 
             <div class="eligibilityBox real-reward-shadow-box">
@@ -4658,6 +4747,25 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       </div>
     </div>
 
+    <div id="summarySafeCoinShadowCard" class="summary-safecoin-shadow-card">
+      <div class="summary-shadow-head">
+        <div>
+          <small>SafeCoin • Shadow Preview</small>
+          <b id="summarySafeCoinShadowTitle">پاداش قفل است</b>
+        </div>
+        <div id="summarySafeCoinShadowCandidate" class="summary-shadow-confidence">۰ Coin</div>
+      </div>
+
+      <div class="summary-shadow-grid">
+        <div><b id="summarySafeCoinShadowTier">--</b><span>Tier</span></div>
+        <div><b id="summarySafeCoinShadowScore">--</b><span>Safety Score</span></div>
+        <div><b id="summarySafeCoinShadowActual">۰</b><span>Coin واقعی</span></div>
+      </div>
+
+      <div id="summarySafeCoinShadowReason" class="summary-shadow-reason">--</div>
+      <div class="summary-shadow-lock">مسافت، مدت و تعداد سفر هیچ Coin اضافه‌ای ایجاد نمی‌کنند</div>
+    </div>
+
     <div id="summaryRewardShadowCard" class="summary-reward-shadow-card">
       <div class="summary-shadow-head">
         <div>
@@ -4878,6 +4986,17 @@ let confidenceSafetyScoreState={
   evidence:""
 };
 
+
+let safeCoinShadowState={
+  status:"LOCKED",
+  candidateCoins:0,
+  actualCoins:0,
+  tier:"--",
+  safetyScore:null,
+  dailyRule:"1/day max",
+  policyRules:[],
+  reason:""
+};
 
 let realRewardShadowState={
   status:"WAITING",
@@ -7155,6 +7274,7 @@ function saveRecentDestination(dest){
   });
   localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
   resetRealTelemetry();
+resetSafeCoinShadow();
 resetRealRewardShadow();
 resetRealTripIntegrity();
 resetConfidenceSafetyScore();
@@ -10432,6 +10552,189 @@ function renderMappedSpeedDiagnostics(){
 }
 
 
+
+function resetSafeCoinShadow(){
+  safeCoinShadowState={
+    status:"LOCKED",
+    candidateCoins:0,
+    actualCoins:0,
+    tier:"--",
+    safetyScore:null,
+    dailyRule:"1/day max",
+    policyRules:[],
+    reason:""
+  };
+  renderSafeCoinShadowDiagnostics();
+}
+
+function safeCoinTier(score){
+  const s=Number(score);
+  if(!Number.isFinite(s))return{tier:"--",coins:0};
+
+  if(s>=95)return{tier:"Exceptional",coins:20};
+  if(s>=90)return{tier:"Excellent",coins:15};
+  if(s>=82)return{tier:"Strong",coins:12};
+  if(s>=75)return{tier:"Safe",coins:10};
+
+  return{tier:"Below Gate",coins:0};
+}
+
+function shadowRewardDayKey(ts=Date.now()){
+  try{
+    return new Intl.DateTimeFormat('en-CA',{
+      timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,
+      year:'numeric',
+      month:'2-digit',
+      day:'2-digit'
+    }).format(new Date(ts));
+  }catch(e){
+    return new Date(ts).toISOString().slice(0,10);
+  }
+}
+
+function bestShadowCandidateToday(excludeId=null){
+  const today=shadowRewardDayKey();
+  const trips=loadTrustedRealTrips();
+
+  let best=0;
+
+  trips.forEach(t=>{
+    if(excludeId && t.id===excludeId)return;
+    if(shadowRewardDayKey(t.savedAt)!==today)return;
+
+    const c=Number(t.safeCoinShadowCandidate||0);
+    if(Number.isFinite(c))best=Math.max(best,c);
+  });
+
+  return best;
+}
+
+function evaluateSafeCoinShadow({
+  shadowGate=null,
+  score=null,
+  tripId=null,
+  savedAt=Date.now()
+}={}){
+  const gate=shadowGate||realRewardShadowState||{};
+  const scoreValue=Number.isFinite(Number(score))
+    ?Number(score)
+    :Number.isFinite(Number(gate.safetyScore))
+      ?Number(gate.safetyScore)
+      :null;
+
+  const tier=safeCoinTier(scoreValue);
+  const rules=[];
+
+  let status="BLOCKED";
+  let candidate=0;
+
+  rules.push("Coin هرگز بر اساس مسافت محاسبه نمی‌شود");
+  rules.push("Coin هرگز بر اساس مدت سفر محاسبه نمی‌شود");
+  rules.push("Coin هرگز با تعداد سفر جمع نمی‌شود");
+
+  if(gate.status==="ELIGIBLE" && tier.coins>0){
+    status="CANDIDATE";
+    candidate=tier.coins;
+
+    rules.push(`Quality Tier ${tier.tier}: ${tier.coins} Coin`);
+
+    // Anti-incentive: more trips in the same day do not stack rewards.
+    // The highest candidate of the day wins in production policy.
+    const currentDay=shadowRewardDayKey(savedAt);
+    const todayBest=bestShadowCandidateToday(tripId);
+
+    if(todayBest>0){
+      rules.push(
+        `Daily anti-stacking: بهترین Candidate امروز ${todayBest} Coin است`
+      );
+      candidate=Math.max(candidate,todayBest);
+    }else{
+      rules.push("Daily anti-stacking: فقط یک Quality Reward در روز");
+    }
+  }else{
+    if(gate.status!=="ELIGIBLE"){
+      rules.push(`Reward Gate = ${gate.status||"WAITING"}`);
+    }
+
+    if(tier.coins<=0){
+      rules.push("Safety Score به Tier پاداش نرسیده است");
+    }
+  }
+
+  const reason=
+    status==="CANDIDATE"
+      ?`${candidate} SafeCoin فقط به‌عنوان Shadow Candidate محاسبه شد؛ هیچ Coin واقعی صادر نشد.`
+      :"این سفر در مدل فعلی SafeCoin Candidate ندارد.";
+
+  safeCoinShadowState={
+    status,
+    candidateCoins:candidate,
+    actualCoins:0,
+    tier:tier.tier,
+    safetyScore:scoreValue,
+    dailyRule:"1 quality reward/day",
+    policyRules:rules,
+    reason
+  };
+
+  renderSafeCoinShadowDiagnostics();
+  return safeCoinShadowState;
+}
+
+function renderSafeCoinShadowDiagnostics(){
+  const s=safeCoinShadowState;
+
+  const status=$('safeCoinShadowStatus');
+  if(status){
+    status.classList.remove('eligible','locked','blocked');
+
+    if(s.status==="CANDIDATE"){
+      status.classList.add('eligible');
+      status.textContent="CANDIDATE";
+    }else{
+      status.classList.add('locked');
+      status.textContent="قفل";
+    }
+  }
+
+  if($('safeCoinShadowCandidate')){
+    $('safeCoinShadowCandidate').textContent=
+      Number(s.candidateCoins||0).toLocaleString('fa-IR');
+  }
+
+  if($('safeCoinShadowTier')){
+    $('safeCoinShadowTier').textContent=s.tier||"--";
+  }
+
+  if($('safeCoinShadowActual')){
+    $('safeCoinShadowActual').textContent='۰';
+  }
+
+  if($('safeCoinShadowScore')){
+    $('safeCoinShadowScore').textContent=
+      s.safetyScore==null?"—":Math.round(s.safetyScore).toLocaleString('fa-IR');
+  }
+
+  if($('safeCoinShadowDaily')){
+    $('safeCoinShadowDaily').textContent="۱ / روز";
+  }
+
+  if($('safeCoinShadowReasonCount')){
+    $('safeCoinShadowReasonCount').textContent=
+      Number(s.policyRules?.length||0).toLocaleString('fa-IR');
+  }
+
+  if($('safeCoinShadowReasons')){
+    if(!s.policyRules?.length){
+      $('safeCoinShadowReasons').textContent=
+        "فقط سفر Shadow ELIGIBLE می‌تواند Reward Candidate داشته باشد.";
+    }else{
+      $('safeCoinShadowReasons').innerHTML=
+        s.policyRules.map(x=>`• ${x}`).join("<br>");
+    }
+  }
+}
+
 function resetRealRewardShadow(){
   realRewardShadowState={
     status:"WAITING",confidence:0,blockers:[],reviews:[],passes:[],
@@ -11743,6 +12046,12 @@ function trustedHistoryCopy(result){
     shadowRewardReason:result.shadowRewardReason||"",
     shadowRewardProductionEnabled:false,
 
+    safeCoinShadowStatus:result.safeCoinShadowStatus||"LEGACY",
+    safeCoinShadowCandidate:Number(result.safeCoinShadowCandidate||0),
+    safeCoinShadowActual:0,
+    safeCoinShadowTier:result.safeCoinShadowTier||"--",
+    safeCoinShadowReason:result.safeCoinShadowReason||"",
+
     score:result.score==null?null:Number(result.score),
     behaviorScore:result.behaviorScore==null?null:Number(result.behaviorScore),
     scoreStatus:result.scoreStatus||(result.navigationOnly?"insufficient":"preliminary"),
@@ -11934,6 +12243,9 @@ function renderTrustedRealTrips(){
           <span class="trusted-trip-shadow ${trip.shadowRewardStatus||"LEGACY"}">
             Reward: ${trip.shadowRewardStatus==="ELIGIBLE"?"Shadow Eligible":trip.shadowRewardStatus==="REVIEW"?"Shadow Review":trip.shadowRewardStatus==="NOT_ELIGIBLE"?"Not Eligible":"Legacy"}
           </span>
+          <span class="trusted-trip-coin ${trip.safeCoinShadowStatus||"LEGACY"}">
+            Coin: ${trip.safeCoinShadowStatus==="CANDIDATE"?`${Number(trip.safeCoinShadowCandidate||0).toLocaleString('fa-IR')} Shadow`:"۰"}
+          </span>
         </div>
         <div class="trusted-trip-score ${status==='insufficient'?'insufficient':''}">
           <b>${scoreText}</b><span>Safety Score</span>
@@ -12062,6 +12374,13 @@ function buildRealTelemetryResult(){
     finalize:true
   });
 
+  const safeCoinShadow=evaluateSafeCoinShadow({
+    shadowGate:shadowEligibility,
+    score:scoreModel.score,
+    tripId:lastTripResult?.id||null,
+    savedAt:Date.now()
+  });
+
   const coach=coachActionForWeakness(
     ranked[0][0],
     scoreModel.status,
@@ -12089,6 +12408,12 @@ function buildRealTelemetryResult(){
     shadowRewardBlockers:[...shadowEligibility.blockers],
     shadowRewardReviews:[...shadowEligibility.reviews],
     shadowRewardProductionEnabled:false,
+
+    safeCoinShadowStatus:safeCoinShadow.status,
+    safeCoinShadowCandidate:safeCoinShadow.candidateCoins,
+    safeCoinShadowActual:0,
+    safeCoinShadowTier:safeCoinShadow.tier,
+    safeCoinShadowReason:safeCoinShadow.reason,
 
     score:scoreModel.score,
     behaviorScore:scoreModel.score,
@@ -12434,6 +12759,7 @@ function startRealGps(){
   if(!navigator.geolocation){realGpsFailure({code:2});return false;}
   stopRealGps();
   resetRealTelemetry();
+  resetSafeCoinShadow();
   resetRealRewardShadow();
   resetRealTripIntegrity();
   realTripIntegrityState.active=true;
@@ -12610,6 +12936,12 @@ function buildRealGpsNavigationResult(){
     shadowRewardBlockers:[...navShadow.blockers],
     shadowRewardReviews:[...navShadow.reviews],
     shadowRewardProductionEnabled:false,
+
+    safeCoinShadowStatus:"BLOCKED",
+    safeCoinShadowCandidate:0,
+    safeCoinShadowActual:0,
+    safeCoinShadowTier:"--",
+    safeCoinShadowReason:"Navigation-only trip has no reward candidate.",
 
     score:null,
     scoreStatus:"insufficient",
@@ -13272,6 +13604,7 @@ function finish(){
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
+  resetSafeCoinShadow();
   resetRealRewardShadow();
   resetRealTripIntegrity();
   resetConfidenceSafetyScore();
@@ -14962,6 +15295,40 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const r=lastTripResult;
       const p=loadProfile();
       const lr=p.lastReward||{};
+
+      const coinCard=document.getElementById('summarySafeCoinShadowCard');
+
+      if(coinCard){
+        const showCoin=r.navigationMode==="real-gps";
+        coinCard.classList.toggle('show',showCoin);
+        coinCard.classList.remove('candidate','blocked');
+
+        if(showCoin){
+          const candidate=r.safeCoinShadowStatus==="CANDIDATE";
+
+          coinCard.classList.add(candidate?'candidate':'blocked');
+
+          document.getElementById('summarySafeCoinShadowTitle').textContent=
+            candidate
+              ?"SafeCoin Candidate"
+              :"SafeCoin Candidate ندارد";
+
+          document.getElementById('summarySafeCoinShadowCandidate').textContent=
+            `${Number(r.safeCoinShadowCandidate||0).toLocaleString('fa-IR')} Coin`;
+
+          document.getElementById('summarySafeCoinShadowTier').textContent=
+            r.safeCoinShadowTier||"--";
+
+          document.getElementById('summarySafeCoinShadowScore').textContent=
+            r.score==null?"—":Number(r.score).toLocaleString('fa-IR');
+
+          document.getElementById('summarySafeCoinShadowActual').textContent='۰';
+
+          document.getElementById('summarySafeCoinShadowReason').textContent=
+            r.safeCoinShadowReason||
+            "SafeCoin واقعی هنوز فعال نشده است.";
+        }
+      }
 
       const shadowCard=document.getElementById('summaryRewardShadowCard');
 
