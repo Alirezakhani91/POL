@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۱.۸ آمادگی سفر</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۱.۹ محاسبه مجدد واقعی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -669,6 +669,12 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
 
 @media(min-width:760px){
   .ready-checks{grid-template-columns:1fr 1fr}
+}
+
+
+body.driving-mode #rerouteBanner{
+  max-width:520px;
+  margin-inline:auto;
 }
 
 </style>
@@ -1488,7 +1494,18 @@ let destinationSearchCache=[];
 let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
-let rerouteState={active:false,offSince:null,lastAt:-999,count:0,noticeTimer:null};
+let rerouteState={
+  active:false,
+  offSince:null,
+  lastAt:-999,
+  count:0,
+  noticeTimer:null,
+  rerouted:false,
+  newRouteStartSimP:null,
+  newRouteTravelledBeforeM:0
+};
+let tripJourneyDistanceM=0;
+let tripJourneyDurationS=0;
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -1558,7 +1575,8 @@ function normalizeProfile(p){
     originLabel:t.originLabel||"",
     destinationLabel:t.destinationLabel||"",
     routeKm:Number(t.routeKm||0),
-    plannedDurationMin:Number(t.plannedDurationMin||0)
+    plannedDurationMin:Number(t.plannedDurationMin||0),
+    rerouteCount:Number(t.rerouteCount||0)
   }));
   n.walletTx=Array.isArray(n.walletTx)?n.walletTx:[];
   n.redemptions=Array.isArray(n.redemptions)?n.redemptions:[];
@@ -2609,7 +2627,22 @@ function toggleVoiceGuidance(){
     updateVoiceStatus("راهنمای صوتی خاموش است","warn");
   }
 }
+
+function currentNavigationProgress(simProgress){
+  const p=clamp(Number(simProgress||0),0,1);
+  if(rerouteState.rerouted && rerouteState.newRouteStartSimP!=null){
+    const start=clamp(rerouteState.newRouteStartSimP,0,.999);
+    return clamp((p-start)/(1-start),0,1);
+  }
+  return p;
+}
+function currentRoutePosition(simProgress){
+  const navP=currentNavigationProgress(simProgress);
+  return interpolateOnRoute(navP);
+}
+
 function simulatedOffRoutePosition(base,p){
+  if(rerouteState.rerouted)return base;
   if(!$('scenario') || $('scenario').value!=="offRoute" || !(p>.30&&p<.43))return base;
   // ~250–400 m visual departure in Tehran lat/lng scale.
   const phase=(p-.30)/.13;
@@ -2627,27 +2660,138 @@ function showRerouteNotice(title,message,success=false){
   if(rerouteState.noticeTimer)clearTimeout(rerouteState.noticeTimer);
   rerouteState.noticeTimer=setTimeout(()=>box.classList.remove('show'),success?1800:3000);
 }
-function triggerReroute(pos){
-  if(rerouteState.active)return;
+async function triggerReroute(pos,simProgress){
+  if(rerouteState.active || rerouteState.rerouted)return;
+
   rerouteState.active=true;
   rerouteState.lastAt=t;
   rerouteState.count++;
+
   showRerouteNotice("از مسیر خارج شدی","در حال محاسبه مسیر جدید...");
   $('turnArrow').textContent="↻";
   $('turnDistance').textContent="در حال محاسبه";
   $('turnInstruction').textContent="مسیر جدید";
   $('turnStreet').textContent="موقعیت فعلی تا مقصد";
 
-  // Prototype: demonstrate reroute state without corrupting the safety-score simulation.
-  setTimeout(()=>{
+  if(navigator.onLine===false){
+    rerouteState.active=false;
+    showRerouteNotice(
+      "اینترنت در دسترس نیست",
+      "مسیر فعلی حفظ شد. وقتی اتصال برگردد محاسبه مجدد دوباره انجام می‌شود."
+    );
+    return;
+  }
+
+  const oldRouteDistance=Number(routeDistanceM||0);
+  const oldRouteDuration=Number(routeDurationS||0);
+  const oldNavProgress=currentNavigationProgress(simProgress);
+  const travelledBefore=Math.max(
+    rerouteState.newRouteTravelledBeforeM||0,
+    oldRouteDistance*oldNavProgress
+  );
+  const durationBefore=oldRouteDuration*oldNavProgress;
+
+  const coords=`${Number(pos[1]).toFixed(6)},${Number(pos[0]).toFixed(6)};${navDestination.lng},${navDestination.lat}`;
+  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=false&overview=full&geometries=geojson&steps=true`;
+
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),9000);
+    const res=await fetch(url,{signal:controller.signal});
+    clearTimeout(timeout);
+
+    if(!res.ok)throw new Error(`route service ${res.status}`);
+    const data=await res.json();
+    const route=data?.routes?.[0];
+    if(!route)throw new Error("no reroute returned");
+
+    const newCoords=routeToCoords(route);
+    if(!Array.isArray(newCoords) || newCoords.length<2)throw new Error("invalid reroute geometry");
+
+    // Replace ONLY the future route. The driven track remains visible.
+    routeCoords=newCoords;
+    routeDistanceM=Number(route.distance||totalDistance(routeCoords));
+    routeDurationS=Number(route.duration||0);
+    routeAlternatives=[route];
+    selectedRouteIndex=0;
+    buildNavigationSteps(route);
+
+    // Keep a realistic whole-trip estimate for history/summary.
+    tripJourneyDistanceM=Math.max(
+      travelledBefore + routeDistanceM,
+      tripJourneyDistanceM||0
+    );
+    tripJourneyDurationS=Math.max(
+      durationBefore + routeDurationS,
+      tripJourneyDurationS||0
+    );
+
+    rerouteState.rerouted=true;
+    rerouteState.newRouteStartSimP=clamp(Number(simProgress||0),0,.995);
+    rerouteState.newRouteTravelledBeforeM=travelledBefore;
+    rerouteState.offSince=null;
+    rerouteState.active=false;
+
+    // Replace route geometry on map; do not clear driven track.
+    routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
+    routeAltLayers=[];
+    if(routeLine)try{map.removeLayer(routeLine)}catch(e){}
+    routeLine=L.polyline(routeCoords,{
+      color:'#2f6df6',
+      weight:6,
+      opacity:.97
+    }).addTo(map);
+
+    renderNavMarkers();
+    updateRouteSummary();
+    resetTurnByTurn();
+    updateTurnByTurn(0);
+
+    try{
+      map.fitBounds(routeLine.getBounds(),{
+        padding:[55,55],
+        animate:true,
+        duration:.45
+      });
+    }catch(e){}
+
+    showRerouteNotice(
+      "مسیر جدید آماده شد",
+      `مسیر جدید ${formatKm(routeDistanceM)} • حدود ${formatDurationFa(routeDurationS)}`,
+      true
+    );
+
+    if(voiceGuidanceEnabled){
+      coachVoice("مسیر جدید آماده شد. راهنمای مسیر به‌روزرسانی شد.");
+    }
+  }catch(e){
+    console.warn("Real reroute failed:",e);
     rerouteState.active=false;
     rerouteState.offSince=null;
-    showRerouteNotice("مسیر جدید آماده شد","راهنمای مسیر ادامه پیدا می‌کند.",true);
-    const progress=Math.min(.98,Number($('progress').textContent.replace('%',''))/100 || 0);
-    updateTurnByTurn(progress);
-  },1200);
+    showRerouteNotice(
+      "محاسبه مسیر جدید انجام نشد",
+      navigator.onLine===false
+        ?"اتصال اینترنت قطع شد؛ مسیر فعلی حفظ می‌شود."
+        :"سرویس مسیر پاسخ نداد؛ مسیر فعلی حفظ می‌شود."
+    );
+  }
 }
 function handleOffRoute(s,pos){
+  // GPS uncertainty is NOT treated as off-route. Only a confident deviation triggers rerouting.
+  if(rerouteState.rerouted){
+    rerouteState.offSince=null;
+    return;
+  }
+  const confidentDeviation=!!s.offRoute && s.gps<=35 && s.match>=70;
+  if(confidentDeviation){
+    if(rerouteState.offSince==null)rerouteState.offSince=t;
+    if(t-rerouteState.offSince>=1.25 && !rerouteState.active && t-rerouteState.lastAt>4){
+      triggerReroute(pos,s.p);
+    }
+  }else{
+    rerouteState.offSince=null;
+  }
+}function handleOffRoute(s,pos){
   // GPS uncertainty is NOT treated as off-route. Only a confident deviation triggers rerouting.
   const confidentDeviation=!!s.offRoute && s.gps<=35 && s.match>=70;
   if(confidentDeviation){
@@ -2671,7 +2815,8 @@ function updateDrivingSpeedUI(s,det){
 
 function step(){
   const dur=Number($('duration').value),s=simulatedState(t,dur),det=detect(s);
-  const routePos=interpolateOnRoute(s.p);
+  const navProgress=currentNavigationProgress(s.p);
+  const routePos=currentRoutePosition(s.p);
   const pos=simulatedOffRoutePosition(routePos,s.p);
   const tc=tripConfidence(s.gps,s.match);
   const row={
@@ -2697,8 +2842,10 @@ function step(){
   const liveRisk=Math.max(s.meta.mult.speed,s.meta.mult.brake,s.meta.mult.accel,s.meta.mult.corner);
   $('riskMult').textContent=liveRisk.toFixed(2)+"×";
   $('progress').textContent=Math.round(s.p*100)+"%";$('timeNow').textContent=t.toFixed(1)+"s";
-  $('status').textContent=`در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
-  updateTurnByTurn(s.p);
+  $('status').textContent=rerouteState.rerouted
+    ? `مسیر جدید فعال • ${Math.round(navProgress*100).toLocaleString('fa-IR')}٪ مسیر جدید`
+    : `در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
+  updateTurnByTurn(navProgress);
   updateDrivingSpeedUI(s,det);
   updateSafetyCoach(s,det);
   handleOffRoute(s,pos);
@@ -2720,12 +2867,20 @@ function start(){
 function startCoreDrive(){
   if(!routeCoords.length){loadRoute().then(()=>start());return}
   reset(false,true);
+
+  tripJourneyDistanceM=Number(routeDistanceM||0);
+  tripJourneyDurationS=Number(routeDurationS||0);
+
+  rerouteState.offSince=null;
+  rerouteState.active=false;
+  rerouteState.rerouted=false;
+  rerouteState.newRouteStartSimP=null;
+  rerouteState.newRouteTravelledBeforeM=0;
+
   resetTurnByTurn();
   updateTurnByTurn(0);
   $('start').disabled=true;
   $('stop').disabled=false;
-  rerouteState.offSince=null;
-  rerouteState.active=false;
   enterDrivingMode();
   timer=setInterval(step,250)
 }
@@ -2746,7 +2901,13 @@ function finish(){
 }
 function reset(full=true,keepRoute=false){
   if(timer)clearInterval(timer);timer=null;t=0;rows=[];events=[];activeSpeed=activeGPS=activeBrake=activeAccel=activeCorner=null;
-  rerouteState.active=false;rerouteState.offSince=null;
+  rerouteState.active=false;
+  rerouteState.offSince=null;
+  rerouteState.rerouted=false;
+  rerouteState.newRouteStartSimP=null;
+  rerouteState.newRouteTravelledBeforeM=0;
+  tripJourneyDistanceM=0;
+  tripJourneyDurationS=0;
   resetSafetyCoach();
   releaseScreenWakeLock();
   closeTripReadiness();
@@ -2920,10 +3081,11 @@ function buildScore(){
     maxExcess:Math.round(maxExcess),
     avgContextRisk:Number(avgContext.toFixed(2)),
     topRiskEvent:top?top.title:null,
-    routeKm:Number((routeDistanceM/1000).toFixed(1)),
+    routeKm:Number((((tripJourneyDistanceM||routeDistanceM)||0)/1000).toFixed(1)),
     originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
     destinationLabel:(navDestination&&navDestination.label)||"مقصد",
-    plannedDurationMin:Math.max(1,Math.round((routeDurationS||0)/60)),
+    plannedDurationMin:Math.max(1,Math.round(((tripJourneyDurationS||routeDurationS)||0)/60)),
+    rerouteCount:rerouteState.count||0,
     coachAlerts:{
       speed:safetyCoach.counts.speed||0,
       brake:safetyCoach.counts.brake||0,
@@ -3439,7 +3601,7 @@ function renderModernTripHistory(trips){
         <div><b>${Number(tr.routeKm||0).toLocaleString('fa-IR',{maximumFractionDigits:1})}</b><span>کیلومتر</span></div>
       </div>
       <div class="trip-bottom-note">
-        <span>${tr.plannedDurationMin?`زمان مسیر: ${Number(tr.plannedDurationMin).toLocaleString('fa-IR')} دقیقه`:"سفر ثبت‌شده"}</span>
+        <span>${tr.plannedDurationMin?`زمان مسیر: ${Number(tr.plannedDurationMin).toLocaleString('fa-IR')} دقیقه`:"سفر ثبت‌شده"}${Number(tr.rerouteCount||0)>0?` • ${Number(tr.rerouteCount).toLocaleString('fa-IR')} محاسبه مجدد`:""}</span>
         <span class="trip-focus-chip">تمرکز: ${driverComponentLabel(weak[0])}</span>
       </div>
     </div>`;
