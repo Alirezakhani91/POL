@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۰ Shadow Wallet & Marketplace Readiness</title>
+<title>POL | نسخه ۵.۱ Navigation UX Overhaul</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3538,6 +3538,572 @@ body.trip-replay-mode .trip-replay-event-strip{
   .shadow-wallet-grid>div:last-child{grid-column:1/-1}
 }
 
+
+/* ============================================================
+   v5.1 NAVIGATION UX OVERHAUL
+   P0: map clarity / maneuver hierarchy / one-glance driving UI
+   ============================================================ */
+
+/* -------- Driving canvas -------- */
+body.driving-mode{
+  overflow:hidden!important;
+}
+body.driving-mode #tripMapCard{
+  background:#0b121b!important;
+}
+body.driving-mode #map{
+  height:100dvh!important;
+  min-height:100dvh!important;
+}
+
+/* Hide all non-navigation product surfaces while the vehicle is moving. */
+body.driving-mode #tripLiveMetrics,
+body.driving-mode #tripAdvanced,
+body.driving-mode .trip-desktop-side,
+body.driving-mode #mapStatusToast,
+body.driving-mode #destinationMapLabel{
+  display:none!important;
+}
+
+/* Behavioral/gamification UI must never compete with turn guidance. */
+body.driving-mode #safetyCoachAlert,
+body.driving-mode #safetyCoachPill{
+  display:none!important;
+}
+
+/* -------- Primary maneuver card -------- */
+body.driving-mode #turnCard{
+  top:10px!important;
+  left:10px!important;
+  right:10px!important;
+  width:min(calc(100% - 20px),620px)!important;
+  max-width:620px!important;
+  min-height:106px!important;
+  padding:10px 12px!important;
+  display:grid!important;
+  grid-template-columns:78px minmax(0,1fr)!important;
+  gap:11px!important;
+  align-items:center!important;
+
+  border-radius:22px!important;
+  border:1px solid rgba(255,255,255,.065)!important;
+  background:rgba(8,16,25,.955)!important;
+  box-shadow:
+    0 18px 50px rgba(2,8,23,.34),
+    0 1px 0 rgba(255,255,255,.025) inset!important;
+  backdrop-filter:blur(16px)!important;
+  pointer-events:auto!important;
+}
+
+body.driving-mode .turn-arrow{
+  width:70px!important;
+  height:70px!important;
+  border-radius:20px!important;
+  background:#17283c!important;
+  color:#f8fbff!important;
+  font-size:45px!important;
+  font-weight:900!important;
+  box-shadow:none!important;
+}
+
+body.driving-mode .turn-distance{
+  display:inline-block!important;
+  width:auto!important;
+  margin-bottom:2px!important;
+  font-size:18px!important;
+  line-height:1.15!important;
+  font-weight:950!important;
+  color:#8dc5ff!important;
+  letter-spacing:-.4px!important;
+}
+
+body.driving-mode .turn-instruction{
+  max-width:100%!important;
+  font-size:19px!important;
+  line-height:1.28!important;
+  font-weight:950!important;
+  color:#fff!important;
+  white-space:normal!important;
+}
+
+body.driving-mode .turn-street{
+  margin-top:3px!important;
+  max-width:100%!important;
+  font-size:10px!important;
+  line-height:1.4!important;
+  color:#b8c7d8!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* Approach line is navigation context, not a decorative progress bar. */
+body.driving-mode .turn-approach-rail{
+  height:3px!important;
+  margin-top:7px!important;
+  background:rgba(148,163,184,.13)!important;
+}
+body.driving-mode .turn-approach-fill{
+  background:#4da3ff!important;
+}
+
+/* Stronger emphasis only at the actual maneuver. */
+body.driving-mode #turnCard.turn-critical,
+body.driving-mode #turnCard.guidance-now{
+  border-color:rgba(77,163,255,.42)!important;
+  box-shadow:
+    0 18px 50px rgba(2,8,23,.38),
+    0 0 0 2px rgba(77,163,255,.10)!important;
+}
+
+/* -------- Secondary maneuver -------- */
+body.driving-mode .next-turn-preview{
+  min-height:28px!important;
+  margin-top:6px!important;
+  padding:4px 7px!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.045)!important;
+  border:0!important;
+}
+body.driving-mode .next-turn-preview>span{
+  font-size:7px!important;
+}
+body.driving-mode .next-turn-preview>b{
+  width:22px!important;
+  height:22px!important;
+  border-radius:7px!important;
+  font-size:14px!important;
+  background:rgba(77,163,255,.12)!important;
+}
+body.driving-mode .next-turn-preview>strong{
+  font-size:8px!important;
+}
+
+/* -------- Lane guidance: visible only when provider data exists -------- */
+body.driving-mode .lane-guidance{
+  margin-top:6px!important;
+  padding:5px 7px!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.04)!important;
+  border:0!important;
+}
+body.driving-mode .lane-guidance-label{
+  font-size:7px!important;
+}
+
+/* -------- Current road -------- */
+.drive-current-road-bar{
+  display:none;
+}
+body.driving-mode .drive-current-road-bar{
+  position:absolute;
+  z-index:1180;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  left:50%;
+  bottom:91px;
+  transform:translateX(-50%);
+  width:auto;
+  max-width:min(68vw,430px);
+  min-height:31px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:rgba(8,16,25,.89);
+  border:1px solid rgba(148,163,184,.12);
+  box-shadow:0 8px 24px rgba(2,8,23,.18);
+  backdrop-filter:blur(12px);
+  pointer-events:none;
+}
+body.driving-mode .drive-current-road-bar span{
+  flex:0 0 auto;
+  font-size:7px;
+  color:#7890a8;
+}
+body.driving-mode .drive-current-road-bar b{
+  min-width:0;
+  font-size:9px;
+  color:#e8f0f8;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* -------- ETA / arrival bar -------- */
+body.driving-mode .nav-bottom-strip{
+  left:50%!important;
+  right:auto!important;
+  bottom:9px!important;
+  transform:translateX(-50%)!important;
+  width:min(calc(100% - 162px),520px)!important;
+  min-height:70px!important;
+  padding:7px 9px!important;
+  border-radius:19px!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+  background:rgba(8,16,25,.95)!important;
+  box-shadow:0 16px 42px rgba(2,8,23,.31)!important;
+  backdrop-filter:blur(15px)!important;
+}
+
+body.driving-mode .nav-bottom-main{
+  display:grid!important;
+  grid-template-columns:1.2fr 1fr 1fr!important;
+  gap:3px!important;
+  align-items:center!important;
+}
+
+/* Arrival time is the primary trip-level information. */
+body.driving-mode .nav-bottom-main>div{
+  min-width:0!important;
+  padding:3px 6px!important;
+  text-align:center!important;
+}
+body.driving-mode .nav-bottom-arrival{
+  order:0!important;
+  border-left:1px solid rgba(148,163,184,.10)!important;
+}
+body.driving-mode .nav-bottom-distance{
+  order:1!important;
+}
+body.driving-mode .nav-bottom-time{
+  order:2!important;
+}
+body.driving-mode .nav-bottom-arrival b{
+  font-size:18px!important;
+  color:#7ec0ff!important;
+  font-weight:950!important;
+}
+body.driving-mode .nav-bottom-distance b,
+body.driving-mode .nav-bottom-time b{
+  font-size:12px!important;
+  color:#f3f7fb!important;
+  font-weight:900!important;
+}
+body.driving-mode .nav-bottom-main span{
+  margin-top:2px!important;
+  font-size:6.5px!important;
+  color:#8295aa!important;
+}
+
+body.driving-mode .route-progress-rail{
+  display:none!important;
+}
+body.driving-mode .live-eta-source{
+  margin-top:2px!important;
+  font-size:6px!important;
+  opacity:.55!important;
+}
+
+/* -------- Speed / speed limit -------- */
+body.driving-mode #currentSpeedGauge{
+  left:12px!important;
+  bottom:11px!important;
+  width:66px!important;
+  height:66px!important;
+  border-radius:50%!important;
+  border:3px solid rgba(213,222,233,.96)!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#111827!important;
+  box-shadow:0 12px 32px rgba(2,8,23,.24)!important;
+  z-index:1200!important;
+}
+body.driving-mode #currentSpeedGauge b{
+  font-size:22px!important;
+  line-height:1!important;
+}
+body.driving-mode #currentSpeedGauge span{
+  margin-top:2px!important;
+  font-size:6px!important;
+  color:#6b7280!important;
+}
+body.driving-mode #currentSpeedGauge.over{
+  border-color:#ef4444!important;
+  color:#b91c1c!important;
+}
+
+body.driving-mode .mapHUD{
+  left:18px!important;
+  right:auto!important;
+  bottom:85px!important;
+  z-index:1190!important;
+}
+body.driving-mode .speedSign{
+  width:44px!important;
+  height:44px!important;
+  border-width:4px!important;
+  font-size:13px!important;
+}
+body.driving-mode .speed-limit-source-badge{
+  display:none!important;
+}
+
+/* -------- Navigation controls -------- */
+body.driving-mode .drive-control-cluster{
+  right:12px!important;
+  bottom:88px!important;
+  width:50px!important;
+  max-width:50px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:7px!important;
+  pointer-events:none!important;
+  z-index:1250!important;
+}
+body.driving-mode .drive-control-cluster>button{
+  flex:0 0 auto!important;
+  width:46px!important;
+  min-width:46px!important;
+  height:46px!important;
+  min-height:46px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  border:1px solid rgba(148,163,184,.14)!important;
+  background:rgba(8,16,25,.93)!important;
+  color:#f0f5fa!important;
+  box-shadow:0 9px 26px rgba(2,8,23,.22)!important;
+  backdrop-filter:blur(12px)!important;
+  pointer-events:auto!important;
+  font-size:18px!important;
+}
+body.driving-mode .drive-control-cluster>button:active{
+  transform:scale(.94)!important;
+}
+body.driving-mode #driveHeadingBtn.active{
+  background:#236fd3!important;
+  border-color:#4c9df4!important;
+  color:#fff!important;
+}
+body.driving-mode #driveVoiceBtn.muted{
+  color:#fca5a5!important;
+}
+body.driving-mode #driveEndBtn{
+  margin-top:2px!important;
+  color:#fca5a5!important;
+  background:rgba(54,18,22,.93)!important;
+  border-color:rgba(239,68,68,.18)!important;
+}
+body.driving-mode #driveOverviewBtn{
+  font-size:20px!important;
+}
+
+/* Recenter becomes the one dominant action only after manual exploration. */
+body.driving-mode #driveRecenterBtn.is-needed{
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:88px!important;
+  transform:translateX(-50%)!important;
+  width:auto!important;
+  min-width:170px!important;
+  height:48px!important;
+  min-height:48px!important;
+  padding:0 15px!important;
+  border-radius:999px!important;
+  background:#236fd3!important;
+  border-color:#4c9df4!important;
+  color:#fff!important;
+  z-index:1450!important;
+}
+body.driving-mode #driveRecenterBtn.is-needed:hover,
+body.driving-mode #driveRecenterBtn.is-needed:active{
+  transform:translateX(-50%) scale(.98)!important;
+}
+
+/* Follow status is noise while follow is healthy.
+   Show it only when the driver has manually explored the map. */
+body.driving-mode .drive-follow-badge{
+  display:none!important;
+}
+body.driving-mode.map-manual-explore .drive-follow-badge{
+  display:flex!important;
+  top:auto!important;
+  bottom:145px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  background:rgba(52,38,10,.92)!important;
+  border-color:rgba(245,158,11,.25)!important;
+}
+
+/* Report is secondary to navigation. */
+body.driving-mode .drive-report-btn{
+  right:13px!important;
+  bottom:34px!important;
+  width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  font-size:17px!important;
+  opacity:.70!important;
+  background:rgba(8,16,25,.93)!important;
+  color:#fbbf24!important;
+  border:1px solid rgba(245,158,11,.19)!important;
+}
+
+/* Stable GPS state should not occupy map space.
+   Warnings remain visible. */
+body.driving-mode #realGpsBadge{
+  display:none!important;
+}
+body.driving-mode #realGpsBadge.warn,
+body.driving-mode #realGpsBadge.bad{
+  display:flex!important;
+}
+
+/* Reroute/offline messages: compact and non-blocking. */
+body.driving-mode #rerouteBanner,
+body.driving-mode #offlineDriveBanner{
+  max-width:min(calc(100% - 140px),430px)!important;
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  border-radius:14px!important;
+  padding:7px 10px!important;
+}
+body.driving-mode #rerouteBanner b,
+body.driving-mode #offlineDriveBanner b{
+  font-size:8px!important;
+}
+body.driving-mode #rerouteBanner span,
+body.driving-mode #offlineDriveBanner span{
+  font-size:7px!important;
+}
+
+/* Speed warning stays contextual, not a giant takeover. */
+body.driving-mode #speedAlertBanner{
+  max-width:230px!important;
+  min-height:34px!important;
+  padding:6px 10px!important;
+  border-radius:999px!important;
+  font-size:8px!important;
+}
+
+/* Leaflet +/- must remain usable and must never create a transparent blocker. */
+body.driving-mode #map .leaflet-control-container,
+body.driving-mode #map .leaflet-top,
+body.driving-mode #map .leaflet-bottom{
+  pointer-events:none!important;
+}
+body.driving-mode #map .leaflet-control{
+  pointer-events:auto!important;
+}
+body.driving-mode #map .leaflet-control-zoom{
+  margin-top:132px!important;
+  margin-left:10px!important;
+  border-radius:13px!important;
+}
+body.driving-mode #map .leaflet-control-zoom a{
+  width:38px!important;
+  height:38px!important;
+  line-height:38px!important;
+  font-size:22px!important;
+}
+
+/* -------- Mobile -------- */
+@media(max-width:650px){
+  body.driving-mode #turnCard{
+    top:7px!important;
+    left:7px!important;
+    right:7px!important;
+    width:calc(100% - 14px)!important;
+    min-height:100px!important;
+    grid-template-columns:70px minmax(0,1fr)!important;
+    gap:9px!important;
+    border-radius:19px!important;
+  }
+  body.driving-mode .turn-arrow{
+    width:64px!important;
+    height:64px!important;
+    font-size:40px!important;
+    border-radius:18px!important;
+  }
+  body.driving-mode .turn-distance{
+    font-size:16px!important;
+  }
+  body.driving-mode .turn-instruction{
+    font-size:17px!important;
+  }
+  body.driving-mode .turn-street{
+    font-size:9px!important;
+  }
+
+  body.driving-mode .nav-bottom-strip{
+    width:calc(100% - 154px)!important;
+    min-height:68px!important;
+  }
+  body.driving-mode .nav-bottom-arrival b{
+    font-size:16px!important;
+  }
+  body.driving-mode .nav-bottom-distance b,
+  body.driving-mode .nav-bottom-time b{
+    font-size:10px!important;
+  }
+
+  body.driving-mode .drive-current-road-bar{
+    bottom:88px!important;
+    max-width:60vw!important;
+  }
+
+  body.driving-mode .drive-control-cluster{
+    right:8px!important;
+    bottom:86px!important;
+    gap:6px!important;
+  }
+  body.driving-mode .drive-control-cluster>button{
+    width:43px!important;
+    min-width:43px!important;
+    height:43px!important;
+    min-height:43px!important;
+  }
+
+  body.driving-mode #currentSpeedGauge{
+    left:8px!important;
+    bottom:9px!important;
+    width:62px!important;
+    height:62px!important;
+  }
+  body.driving-mode .mapHUD{
+    left:14px!important;
+    bottom:80px!important;
+  }
+  body.driving-mode .speedSign{
+    width:40px!important;
+    height:40px!important;
+  }
+
+  body.driving-mode #map .leaflet-control-zoom{
+    margin-top:124px!important;
+    margin-left:7px!important;
+  }
+  body.driving-mode #map .leaflet-control-zoom a{
+    width:36px!important;
+    height:36px!important;
+    line-height:36px!important;
+  }
+}
+
+/* Very narrow phones: keep maneuver legible before anything else. */
+@media(max-width:390px){
+  body.driving-mode #turnCard{
+    grid-template-columns:62px minmax(0,1fr)!important;
+    padding:8px 9px!important;
+  }
+  body.driving-mode .turn-arrow{
+    width:58px!important;
+    height:58px!important;
+    font-size:37px!important;
+  }
+  body.driving-mode .turn-instruction{
+    font-size:16px!important;
+  }
+  body.driving-mode .nav-bottom-strip{
+    width:calc(100% - 142px)!important;
+    padding-left:5px!important;
+    padding-right:5px!important;
+  }
+  body.driving-mode .nav-bottom-main span{
+    font-size:5.8px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -4151,6 +4717,11 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 </div>
               </div>
 
+              <div id="driveCurrentRoadBar" class="drive-current-road-bar">
+                <span>در مسیر</span>
+                <b id="driveCurrentRoad">مسیر فعلی</b>
+              </div>
+
               <div class="mapHUD">
                 <div class="speed-limit-stack">
                   <div class="speedSign" id="speedSign">--</div>
@@ -4211,13 +4782,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
 
               <div class="drive-control-cluster">
-                <button id="driveRecenterBtn" class="drive-circle-btn drive-recenter-btn" title="برگشت به موقعیت فعلی">
+                <button id="driveRecenterBtn" class="drive-circle-btn drive-recenter-btn" title="برگشت به موقعیت فعلی" aria-label="برگشت به موقعیت فعلی">
                   <span class="drive-recenter-icon">◎</span>
                   <b class="drive-recenter-label">برگشت به موقعیت من</b>
                 </button>
-                <button id="driveHeadingBtn" class="drive-circle-btn drive-heading-btn active" title="جهت حرکت بالا">🧭</button>
-                <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
-                <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
+                <button id="driveOverviewBtn" class="drive-circle-btn drive-overview-btn" title="نمایش کل مسیر" aria-label="نمایش کل مسیر">↔</button>
+                <button id="driveHeadingBtn" class="drive-circle-btn drive-heading-btn active" title="جهت حرکت بالا" aria-label="تغییر جهت نقشه">🧭</button>
+                <button id="driveVoiceBtn" class="drive-circle-btn drive-voice-btn" title="قطع یا وصل راهنمای صوتی" aria-label="راهنمای صوتی">🔊</button>
+                <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر" aria-label="پایان سفر">■</button>
               </div>
 
               <button id="driveReportBtn" class="drive-report-btn" title="گزارش مسیر">!</button>
@@ -4260,9 +4832,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div class="nav-bottom-strip">
                 <div class="nav-bottom-main">
-                  <div><b id="remainingDistance">--</b><span>باقی‌مانده</span></div>
-                  <div><b id="remainingEta">--</b><span>زمان باقی‌مانده</span></div>
-                  <div><b id="liveArrival">--</b><span>رسیدن</span></div>
+                  <div class="nav-bottom-arrival"><b id="liveArrival">--</b><span>زمان رسیدن</span></div>
+                  <div class="nav-bottom-distance"><b id="remainingDistance">--</b><span>فاصله باقی‌مانده</span></div>
+                  <div class="nav-bottom-time"><b id="remainingEta">--</b><span>زمان باقی‌مانده</span></div>
                 </div>
                 <div class="route-progress-rail"><div id="routeProgressFill" class="route-progress-fill"></div></div>
                 <div id="liveEtaSource" class="live-eta-source">ETA تخمینی • بدون ترافیک زنده</div>
@@ -4291,9 +4863,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.0</span>
+              <span class="lab-version-chip">v5.1</span>
               <div>
-                <b>Shadow Wallet & Marketplace Readiness</b>
+                <b>Navigation UX Overhaul</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6843,6 +7415,53 @@ function renderEtaDiagnostics(result){
   }
 }
 
+function currentNavigationRoad(travelled,nextIndex){
+  if(!navigationSteps.length)return"مسیر فعلی";
+
+  // The next maneuver's road is usually the road being entered.
+  // For "current road", prefer the latest meaningful step already passed.
+  for(let i=Math.min(
+    Math.max(0,Number(nextIndex||0)-1),
+    navigationSteps.length-1
+  );i>=0;i--){
+    const name=String(navigationSteps[i]?.street||"").trim();
+    const type=String(navigationSteps[i]?.type||"").toLowerCase();
+
+    if(
+      name &&
+      name!=="مسیر فعلی" &&
+      type!=="arrive"
+    ){
+      return name;
+    }
+  }
+
+  // At the very beginning, fall back to the first useful named road.
+  for(const step of navigationSteps){
+    const name=String(step?.street||"").trim();
+    if(name && name!=="مسیر فعلی")return name;
+  }
+
+  return"مسیر فعلی";
+}
+
+function renderDrivingCurrentRoad(travelled,next){
+  const el=$('driveCurrentRoad');
+  const bar=$('driveCurrentRoadBar');
+  if(!el||!bar)return;
+
+  const name=currentNavigationRoad(
+    travelled,
+    next?.index??0
+  );
+
+  el.textContent=name;
+  bar.classList.toggle(
+    'is-generic',
+    !name || name==="مسیر فعلی"
+  );
+}
+
 function updateTurnByTurn(progress){
   const stableProgress=clamp(Number(progress||0),0,1);
   const travelled=routeDistanceM*stableProgress;
@@ -6850,6 +7469,8 @@ function updateTurnByTurn(progress){
   const remaining=eta.remainingM;
   const remainingSeconds=eta.remainingSeconds;
   const next=nextNavigationStep(travelled);
+
+  renderDrivingCurrentRoad(travelled,next);
 
   if($('remainingDistance'))$('remainingDistance').textContent=distanceTextFa(remaining);
   if($('remainingEta'))$('remainingEta').textContent=formatDurationFa(remainingSeconds);
@@ -6880,6 +7501,7 @@ function updateTurnByTurn(progress){
 }
 function resetTurnByTurn(){
   resetLiveEtaEngine();
+  if($('driveCurrentRoad'))$('driveCurrentRoad').textContent="مسیر فعلی";
   if($('turnArrow'))$('turnArrow').textContent="↑";
   if($('turnDistance'))$('turnDistance').textContent="آماده حرکت";
   if($('turnInstruction'))$('turnInstruction').textContent="مسیر را انتخاب کن";
@@ -9973,7 +10595,7 @@ function enterDrivingMode(){
   try{map.stop()}catch(e){}
   try{map.setBearing?.(0)}catch(e){}
   updateOfflineDrivingBanner();
-  $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
+  syncVoiceButtons();
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
   endRerouteVisual();
@@ -10004,7 +10626,21 @@ function exitDrivingMode(){
 }
 function syncVoiceButtons(){
   if($('voiceToggle'))$('voiceToggle').textContent=voiceGuidanceEnabled?"روشن":"خاموش";
-  if($('driveVoiceBtn'))$('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
+
+  const driveBtn=$('driveVoiceBtn');
+  if(driveBtn){
+    driveBtn.textContent=voiceGuidanceEnabled?"🔊":"🔇";
+    driveBtn.classList.toggle('muted',!voiceGuidanceEnabled);
+    driveBtn.setAttribute(
+      'aria-label',
+      voiceGuidanceEnabled
+        ?"خاموش کردن راهنمای صوتی"
+        :"روشن کردن راهنمای صوتی"
+    );
+    driveBtn.title=voiceGuidanceEnabled
+      ?"خاموش کردن راهنمای صوتی"
+      :"روشن کردن راهنمای صوتی";
+  }
 }
 function toggleVoiceGuidance(){
   voiceGuidanceEnabled=!voiceGuidanceEnabled;
@@ -10027,7 +10663,8 @@ function isRealGpsMode(){
 function setRealGpsBadge(state,message){
   const el=$('realGpsBadge');
   if(!el)return;
-  el.classList.remove('warn','bad');
+  el.classList.remove('good','warn','bad');
+  if(state==="good")el.classList.add('good');
   if(state==="warn")el.classList.add('warn');
   if(state==="bad")el.classList.add('bad');
   if($('realGpsBadgeText'))$('realGpsBadgeText').textContent=message;
@@ -15424,6 +16061,18 @@ $('destinationSearch').addEventListener('keydown',e=>{
 $('voiceToggle').onclick=toggleVoiceGuidance;
 $('voiceTestBtn').onclick=testVoice;
 $('driveRecenterBtn').onclick=recenterDrivingCamera;
+
+$('driveOverviewBtn').onclick=()=>{
+  if(!document.body.classList.contains('driving-mode'))return;
+
+  pauseFollowForManualExplore("route-overview");
+  ensureMapExplorationEnabled();
+  fitSelectedRouteForExploration({animate:true});
+  syncRecenterUi();
+
+  showMapStatus("نمای کلی مسیر • برای برگشت، «موقعیت من» را بزن");
+};
+
 $('driveReportBtn').onclick=openDriveReport;
 $('closeDriveReportBtn').onclick=closeDriveReport;
 $('driveReportSheet').onclick=e=>{if(e.target===$('driveReportSheet'))closeDriveReport()};
@@ -15454,11 +16103,13 @@ $('driveHeadingBtn').onclick=()=>{
 };
 
 $('driveVoiceBtn').onclick=()=>{
-  if(!voiceGuidanceEnabled){
-    voiceGuidanceEnabled=true;
-    syncVoiceButtons();
-  }
-  testVoice();
+  toggleVoiceGuidance();
+
+  showMapStatus(
+    voiceGuidanceEnabled
+      ?"راهنمای صوتی روشن شد"
+      :"راهنمای صوتی خاموش شد"
+  );
 };
 $('driveEndBtn').onclick=()=>{
   if(confirm("سفر پایان داده شود؟"))finish();
@@ -16378,27 +17029,36 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   function smartDrivingZoom(progress,speedKmh=0){
     const d=nextTurnDistanceAtProgress(progress);
 
-    if(d<=55)return 18;
-    if(d<=130)return 17;
-    if(d<=300)return 16;
+    // Near maneuvers: zoom in progressively.
+    if(d<=45)return 17.9;
+    if(d<=105)return 17.25;
+    if(d<=220)return 16.55;
+    if(d<=420)return 15.85;
 
-    if(speedKmh>=95)return 13.8;
-    if(speedKmh>=75)return 14.2;
-    if(speedKmh>=50)return 14.8;
-    return 15.3;
+    // Cruising: stable zoom bands reduce "camera breathing".
+    if(speedKmh>=100)return 13.9;
+    if(speedKmh>=80)return 14.25;
+    if(speedKmh>=60)return 14.65;
+    if(speedKmh>=40)return 15.0;
+    return 15.25;
   }
 
   function smartLookAhead(progress,speedKmh){
     const d=nextTurnDistanceAtProgress(progress);
 
+    // Car should sit below visual center so the driver sees more road ahead.
     let base=
-      speedKmh>=90?.080:
-      speedKmh>=70?.065:
-      speedKmh>=45?.050:.038;
+      speedKmh>=100?.092:
+      speedKmh>=80?.078:
+      speedKmh>=60?.064:
+      speedKmh>=40?.050:.040;
 
-    if(d<350)base=Math.min(base,.030);
-    if(d<160)base=Math.min(base,.018);
-    if(d<70)base=Math.min(base,.010);
+    // As the maneuver approaches, reduce look-ahead so the junction itself
+    // stays visually stable instead of sliding under the top card.
+    if(d<450)base=Math.min(base,.034);
+    if(d<230)base=Math.min(base,.025);
+    if(d<110)base=Math.min(base,.015);
+    if(d<50)base=Math.min(base,.008);
 
     return interpolateOnRoute(clamp(progress+base,0,1));
   }
@@ -16427,7 +17087,8 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     const dist=hav([current.lat,current.lng],[target.lat,target.lng]);
     const zoomGap=Math.abs(Number(map.getZoom()||0)-Number(zoom||0));
 
-    if(!force && now-followCameraLastUpdate<120 && dist<170 && zoomGap<.35)return;
+    // Do not let GPS updates cause continuous micro-camera animation.
+    if(!force && now-followCameraLastUpdate<180 && dist<150 && zoomGap<.45)return;
     followCameraLastUpdate=now;
 
     try{
