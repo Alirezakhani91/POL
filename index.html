@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۵ پیش‌نمایش و سلامت مسیر</title>
+<title>سامانه رانندگی ایمن ایران | نسخه ۲.۶ اطمینان مقصد</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -944,6 +944,87 @@ body.real-gps-active #safetyCoachPill{display:none!important}
   .route-preview-footer{grid-template-columns:1fr}
 }
 
+
+/* ===== v2.6 Destination Confidence ===== */
+.destination-confirm-card{
+  display:none;margin-top:9px;padding:11px;border-radius:14px;
+  background:#0f1823;border:1px solid #2b425e
+}
+.destination-confirm-card.show{display:block}
+.destination-confirm-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.destination-confirm-head small{display:block;font-size:8px;color:#7f91a8}
+.destination-confirm-head b{display:block;font-size:11px;margin-top:2px;line-height:1.6}
+.destination-confidence-badge{
+  padding:4px 7px;border-radius:999px;font-size:8px;white-space:nowrap;
+  background:#172334;border:1px solid #42546c;color:#cbd5e1
+}
+.destination-confidence-badge.good{background:#12351d;border-color:#28543c;color:#86efac}
+.destination-confidence-badge.warn{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.destination-confidence-badge.bad{background:#441717;border-color:#7d3030;color:#fecaca}
+.destination-confirm-address{margin-top:7px;font-size:9px;color:#9cadc0;line-height:1.8}
+.destination-access-info{
+  display:none;margin-top:7px;padding:8px;border-radius:10px;background:#121e2b;
+  border:1px solid #29425f;font-size:8px;color:#a8b8ca;line-height:1.7
+}
+.destination-access-info.show{display:block}
+.destination-confirm-actions{display:grid;grid-template-columns:1fr 1.2fr;gap:7px;margin-top:9px}
+.destination-confirm-actions button{min-height:42px}
+
+.recent-destinations-wrap{
+  display:none;margin-top:9px;padding:9px;border-radius:13px;background:#0d141d;
+  border:1px solid #25364a
+}
+.recent-destinations-wrap.show{display:block}
+.recent-destinations-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.recent-destinations-head b{font-size:9px}
+.recent-destinations-head button{
+  width:auto!important;min-height:30px!important;padding:4px 7px!important;font-size:8px!important
+}
+.recent-destinations-list{display:flex;gap:6px;overflow:auto;margin-top:7px;padding-bottom:2px}
+.recent-destination-chip{
+  flex:0 0 auto;max-width:220px;text-align:right!important;width:auto!important;
+  min-height:42px!important;padding:6px 9px!important;border-radius:11px!important
+}
+.recent-destination-chip b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-destination-chip span{display:block;font-size:7px;color:#8799ae;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.destination-pick-banner{
+  display:none;position:absolute;z-index:1005;top:12px;left:12px;right:12px;
+  padding:10px;border-radius:14px;background:rgba(13,23,38,.97);
+  border:1px solid #35658e;color:#dbeafe;backdrop-filter:blur(12px);
+  box-shadow:0 12px 28px rgba(0,0,0,.28);
+  grid-template-columns:1fr auto;gap:8px;align-items:center
+}
+.destination-pick-banner.show{display:grid}
+.destination-pick-banner b{display:block;font-size:10px}
+.destination-pick-banner span{display:block;font-size:8px;color:#9eb1c7;line-height:1.6;margin-top:2px}
+.destination-pick-banner button{
+  width:auto!important;min-height:34px!important;padding:5px 8px!important;font-size:8px!important
+}
+
+.destination-pin-marker{
+  position:relative;width:30px;height:30px;border-radius:50% 50% 50% 0;
+  background:#ef4444;transform:rotate(-45deg);border:3px solid #fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.3)
+}
+.destination-pin-marker:after{
+  content:"";position:absolute;width:8px;height:8px;border-radius:50%;
+  background:#fff;left:8px;top:8px
+}
+
+.destination-result-rich{
+  display:grid!important;grid-template-columns:1fr auto!important;gap:8px!important;align-items:start!important
+}
+.destination-result-rich b{display:block;font-size:10px}
+.destination-result-rich span{display:block;font-size:8px;color:#8ea0b4;line-height:1.6;margin-top:2px}
+.destination-result-meta{
+  font-size:7px!important;color:#66798f!important;white-space:nowrap;
+  direction:ltr;text-align:left
+}
+@media(max-width:430px){
+  .destination-confirm-actions{grid-template-columns:1fr}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1228,6 +1309,35 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <button id="destinationSearchBtn" class="nav-icon-btn" title="جست‌وجو">⌕</button>
                 </div>
                 <div id="destinationResults" class="search-results"></div>
+
+                <div id="destinationConfirmCard" class="destination-confirm-card">
+                  <div class="destination-confirm-head">
+                    <div>
+                      <small>مقصد انتخاب‌شده</small>
+                      <b id="destinationConfirmTitle">هنوز مقصدی تأیید نشده</b>
+                    </div>
+                    <span id="destinationConfidenceBadge" class="destination-confidence-badge checking">در انتظار انتخاب</span>
+                  </div>
+
+                  <div id="destinationConfirmAddress" class="destination-confirm-address">
+                    از جست‌وجو یا نقشه یک مقصد انتخاب کن.
+                  </div>
+
+                  <div id="destinationAccessInfo" class="destination-access-info"></div>
+
+                  <div class="destination-confirm-actions">
+                    <button id="pickDestinationOnMapBtn">انتخاب روی نقشه</button>
+                    <button id="confirmDestinationBtn" class="primary" disabled>همین مقصد</button>
+                  </div>
+                </div>
+
+                <div id="recentDestinationsWrap" class="recent-destinations-wrap">
+                  <div class="recent-destinations-head">
+                    <b>مقصدهای اخیر</b>
+                    <button id="clearRecentDestinationsBtn">پاک‌کردن</button>
+                  </div>
+                  <div id="recentDestinationsList" class="recent-destinations-list"></div>
+                </div>
               </div>
 
               <div id="routeSummary" class="route-summary">
@@ -1368,6 +1478,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
 
               
+              <div id="destinationPickBanner" class="destination-pick-banner">
+                <div>
+                  <b>نقطه مقصد را روی نقشه انتخاب کن</b>
+                  <span>روی محل دقیق مقصد کلیک کن؛ آدرس و دسترسی خودرویی بعد از انتخاب بررسی می‌شود.</span>
+                </div>
+                <button id="cancelDestinationPickBtn">لغو</button>
+              </div>
+
               <div id="realGpsBadge" class="real-gps-badge">
                 <span class="gps-live-dot"></span>
                 <div>
@@ -1941,6 +2059,12 @@ let originAccessLine=null;
 let destinationAccessLine=null;
 let routePreviewMarker=null;
 let routeIntegrityState={level:"checking",checks:[],critical:false};
+
+const RECENT_DESTINATIONS_KEY="pol_recent_destinations_v1";
+let pendingDestination=null;
+let destinationConfirmed=false;
+let destinationPickMode=false;
+let destinationPickMarker=null;
 let wakeLockSentinel=null;
 let pendingDriveStart=false;
 let ttsState={
@@ -3081,63 +3205,386 @@ function applyPresetSelection(load=true){
   navOrigin={lat:preset.points[0][0],lng:preset.points[0][1],label:preset.name.split(" تا ")[0]+"، تهران"};
   const last=preset.points[preset.points.length-1];
   navDestination={lat:last[0],lng:last[1],label:preset.name.split(" تا ").slice(-1)[0]+"، تهران"};
+  pendingDestination={
+    label:navDestination.label,
+    address:"مسیر نمونه تهران",
+    lat:navDestination.lat,
+    lng:navDestination.lng,
+    source:"preset",
+    accessState:"good",
+    accessText:"مقصد نمونه برای تست شبیه‌ساز انتخاب شده است.",
+    access:null
+  };
+  destinationConfirmed=true;
   if($('destinationSearch'))$('destinationSearch').value=navDestination.label.replace("، تهران","");
   updateNavLabels();
+  renderPendingDestination();
   if(load)loadRoute();
+}
+
+
+function escapeHtml(value){
+  return String(value||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function loadRecentDestinations(){
+  try{
+    const arr=JSON.parse(localStorage.getItem(RECENT_DESTINATIONS_KEY)||"[]");
+    return Array.isArray(arr)?arr:[];
+  }catch(e){return[]}
+}
+function saveRecentDestination(dest){
+  const list=loadRecentDestinations().filter(x=>
+    Math.abs(Number(x.lat)-Number(dest.lat))>.00005 ||
+    Math.abs(Number(x.lng)-Number(dest.lng))>.00005
+  );
+  list.unshift({
+    label:dest.label||"مقصد",
+    address:dest.address||dest.label||"",
+    lat:Number(dest.lat),
+    lng:Number(dest.lng),
+    ts:Date.now()
+  });
+  localStorage.setItem(RECENT_DESTINATIONS_KEY,JSON.stringify(list.slice(0,6)));
+  renderRecentDestinations();
+}
+function renderRecentDestinations(){
+  const wrap=$('recentDestinationsWrap');
+  const box=$('recentDestinationsList');
+  if(!wrap||!box)return;
+
+  const list=loadRecentDestinations();
+  wrap.classList.toggle('show',list.length>0);
+
+  box.innerHTML=list.map((d,i)=>`
+    <button class="recent-destination-chip" data-recent-dest="${i}">
+      <b>${escapeHtml(d.label||"مقصد")}</b>
+      <span>${escapeHtml(d.address||"")}</span>
+    </button>
+  `).join("");
+
+  box.querySelectorAll('[data-recent-dest]').forEach(btn=>{
+    btn.onclick=()=>{
+      const d=list[Number(btn.dataset.recentDest)];
+      if(d)stageDestination(d,{source:"recent"});
+    };
+  });
+}
+function destinationLabelFromItem(item){
+  const a=item?.address||{};
+  return a.name||a.shop||a.amenity||a.tourism||a.building||a.road||
+    shortPlaceName(item?.display_name||"مقصد");
+}
+function destinationAddressFromItem(item){
+  const a=item?.address||{};
+  const parts=[
+    a.road,
+    a.neighbourhood||a.suburb,
+    a.city||a.town||a.village||a.county,
+    a.state,
+    a.country
+  ].filter(Boolean);
+  return parts.length?parts.join("، "):String(item?.display_name||"");
+}
+async function reverseGeocodePoint(lat,lng){
+  const url=
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18`+
+    `&accept-language=fa&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+  const res=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!res.ok)throw new Error(`reverse ${res.status}`);
+  const item=await res.json();
+  return{
+    label:destinationLabelFromItem(item),
+    address:destinationAddressFromItem(item),
+    lat:Number(lat),
+    lng:Number(lng)
+  };
+}
+async function analyzeDestinationAccess(dest){
+  try{
+    const snap=await snapRoutingEndpoint(
+      [Number(dest.lat),Number(dest.lng)],
+      "destination"
+    );
+    if(!snap){
+      return{
+        state:"bad",
+        access:null,
+        text:"برای این نقطه، دسترسی خودرویی قابل اعتماد پیدا نشد."
+      };
+    }
+
+    const d=Math.round(Number(snap.accessDistance||0));
+    if(d<=40){
+      return{
+        state:"good",
+        access:snap,
+        text:`دسترسی خودرویی مناسب • حدود ${d.toLocaleString('fa-IR')} متر تا نقطه مقصد`
+      };
+    }
+    if(d<=120){
+      return{
+        state:"warn",
+        access:snap,
+        text:`نقطه دقیق مقصد حدود ${d.toLocaleString('fa-IR')} متر با خیابان قابل رانندگی فاصله دارد؛ این حالت برای مجتمع‌ها و مکان‌های داخل محوطه طبیعی است.`
+      };
+    }
+    return{
+      state:"warn",
+      access:snap,
+      text:`دسترسی خودرویی حدود ${d.toLocaleString('fa-IR')} متر با نقطه دقیق مقصد فاصله دارد؛ محل را روی نقشه با دقت بررسی کن.`
+    };
+  }catch(e){
+    return{
+      state:"warn",
+      access:null,
+      text:"بررسی دسترسی خودرویی موقتاً انجام نشد؛ قبل از Route گرفتن محل را روی نقشه بررسی کن."
+    };
+  }
+}
+function renderPendingDestination(){
+  const card=$('destinationConfirmCard');
+  if(!card)return;
+  card.classList.add('show');
+
+  if(!pendingDestination){
+    $('destinationConfirmTitle').textContent="هنوز مقصدی تأیید نشده";
+    $('destinationConfirmAddress').textContent="از جست‌وجو یا نقشه یک مقصد انتخاب کن.";
+    $('destinationConfidenceBadge').className="destination-confidence-badge checking";
+    $('destinationConfidenceBadge').textContent="در انتظار انتخاب";
+    $('destinationAccessInfo').classList.remove('show');
+    $('confirmDestinationBtn').disabled=true;
+    $('confirmDestinationBtn').textContent="همین مقصد";
+    return;
+  }
+
+  $('destinationConfirmTitle').textContent=pendingDestination.label||"مقصد";
+  $('destinationConfirmAddress').textContent=pendingDestination.address||"";
+  $('confirmDestinationBtn').textContent=destinationConfirmed?"مقصد تأیید شد":"همین مقصد";
+
+  const badge=$('destinationConfidenceBadge');
+  const state=pendingDestination.accessState;
+
+  if(destinationConfirmed){
+    badge.className="destination-confidence-badge good";
+    badge.textContent="تأیید شد";
+  }else if(state==="good"){
+    badge.className="destination-confidence-badge good";
+    badge.textContent="دسترسی مناسب";
+  }else if(state==="warn"){
+    badge.className="destination-confidence-badge warn";
+    badge.textContent="نیاز به توجه";
+  }else if(state==="bad"){
+    badge.className="destination-confidence-badge bad";
+    badge.textContent="دسترسی نامطمئن";
+  }else{
+    badge.className="destination-confidence-badge checking";
+    badge.textContent="در حال بررسی";
+  }
+
+  if(pendingDestination.accessText){
+    $('destinationAccessInfo').classList.add('show');
+    $('destinationAccessInfo').textContent=pendingDestination.accessText;
+  }else{
+    $('destinationAccessInfo').classList.remove('show');
+  }
+
+  $('confirmDestinationBtn').disabled=
+    destinationConfirmed || state==="bad" || !state;
+}
+async function stageDestination(dest,{source="search"}={}){
+  destinationConfirmed=false;
+
+  pendingDestination={
+    label:dest.label||"مقصد",
+    address:dest.address||dest.label||"",
+    lat:Number(dest.lat),
+    lng:Number(dest.lng),
+    source,
+    accessState:null,
+    accessText:"",
+    access:null
+  };
+
+  if($('destinationSearch'))$('destinationSearch').value=pendingDestination.label;
+  $('destinationResults')?.classList.remove('open');
+
+  renderPendingDestination();
+
+  if(destinationPickMarker){
+    try{map.removeLayer(destinationPickMarker)}catch(e){}
+    destinationPickMarker=null;
+  }
+
+  const icon=L.divIcon({
+    className:"",
+    html:'<div class="destination-pin-marker"></div>',
+    iconSize:[30,30],
+    iconAnchor:[15,30]
+  });
+  destinationPickMarker=L.marker(
+    [pendingDestination.lat,pendingDestination.lng],
+    {icon,zIndexOffset:2000}
+  ).addTo(map);
+
+  try{
+    map.setView(
+      [pendingDestination.lat,pendingDestination.lng],
+      Math.max(map.getZoom(),16),
+      {animate:true}
+    );
+  }catch(e){}
+
+  $('status').textContent="در حال بررسی دسترسی خودرویی مقصد...";
+  const access=await analyzeDestinationAccess(pendingDestination);
+
+  // Ignore late response if user selected a different destination meanwhile.
+  if(
+    !pendingDestination ||
+    Math.abs(pendingDestination.lat-Number(dest.lat))>.000001 ||
+    Math.abs(pendingDestination.lng-Number(dest.lng))>.000001
+  )return;
+
+  pendingDestination.accessState=access.state;
+  pendingDestination.accessText=access.text;
+  pendingDestination.access=access.access;
+  renderPendingDestination();
+
+  $('status').textContent=
+    access.state==="bad"
+      ?"دسترسی خودرویی مقصد تأیید نشد."
+      :"مقصد روی نقشه آماده بررسی و تأیید است.";
+}
+function clearExistingRouteForDestinationChange(){
+  routeAlternatives=[];
+  routeCoords=[];
+  routeDistanceM=0;
+  routeDurationS=0;
+  selectedRouteIndex=0;
+
+  if(routeLine){try{map.removeLayer(routeLine)}catch(e){};routeLine=null}
+  routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
+  routeAltLayers=[];
+  clearAccessLines();
+
+  $('routeOptions').innerHTML="";
+  $('routeSummary').classList.remove('show');
+  $('tripInfo').style.display="none";
+  $('start').disabled=true;
+}
+function confirmPendingDestination(){
+  if(!pendingDestination || pendingDestination.accessState==="bad")return;
+
+  navDestination={
+    lat:Number(pendingDestination.lat),
+    lng:Number(pendingDestination.lng),
+    label:pendingDestination.label||"مقصد"
+  };
+  destinationConfirmed=true;
+  saveRecentDestination(pendingDestination);
+  clearExistingRouteForDestinationChange();
+  updateNavLabels();
+  renderPendingDestination();
+
+  $('status').textContent="مقصد تأیید شد • حالا «دریافت مسیر» را بزن.";
+}
+function beginDestinationPick(){
+  destinationPickMode=true;
+  $('destinationPickBanner')?.classList.add('show');
+  $('status').textContent="روی نقشه، نقطه دقیق مقصد را انتخاب کن.";
+}
+function cancelDestinationPick(){
+  destinationPickMode=false;
+  $('destinationPickBanner')?.classList.remove('show');
+  $('status').textContent="انتخاب مقصد روی نقشه لغو شد.";
+}
+async function handleDestinationMapPick(latlng){
+  if(!destinationPickMode)return;
+  destinationPickMode=false;
+  $('destinationPickBanner')?.classList.remove('show');
+  $('status').textContent="در حال شناسایی نقطه انتخاب‌شده...";
+
+  try{
+    const dest=await reverseGeocodePoint(latlng.lat,latlng.lng);
+    await stageDestination(dest,{source:"map"});
+  }catch(e){
+    console.warn("reverse geocode failed",e);
+    await stageDestination({
+      label:"نقطه انتخاب‌شده",
+      address:`${Number(latlng.lat).toFixed(5)}, ${Number(latlng.lng).toFixed(5)}`,
+      lat:latlng.lat,
+      lng:latlng.lng
+    },{source:"map"});
+  }
 }
 
 async function searchDestination(){
   const input=$('destinationSearch');
   const results=$('destinationResults');
   const q=(input?.value||"").trim();
-  if(!q){$('status').textContent="نام مقصد را وارد کن.";return}
+  if(!q){
+    $('status').textContent="نام مقصد را وارد کن.";
+    return;
+  }
 
   $('status').textContent="در حال جست‌وجوی مقصد...";
   results.innerHTML='<div class="small" style="padding:10px">در حال جست‌وجو...</div>';
   results.classList.add('open');
 
   try{
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=ir&accept-language=fa&q=${encodeURIComponent(q)}`;
+    const url=
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&countrycodes=ir`+
+      `&addressdetails=1&accept-language=fa&q=${encodeURIComponent(q)}`;
+
     const res=await fetch(url,{headers:{'Accept':'application/json'}});
-    if(!res.ok)throw new Error("geocode");
+    if(!res.ok)throw new Error(`geocode ${res.status}`);
+
     const data=await res.json();
-    destinationSearchCache=data||[];
-    if(!destinationSearchCache.length)throw new Error("empty");
-    results.innerHTML=destinationSearchCache.map((x,i)=>`
-      <button class="search-result" onclick="chooseDestination(${i})">
-        <b>${shortPlaceName(x.display_name)}</b>
-        <span>${x.type||"مکان"} • ایران</span>
-      </button>`).join('');
-    $('status').textContent=`${destinationSearchCache.length.toLocaleString('fa-IR')} نتیجه پیدا شد.`;
+    destinationSearchCache=Array.isArray(data)?data:[];
+
+    if(!destinationSearchCache.length){
+      results.innerHTML='<div class="small" style="padding:10px">نتیجه‌ای در ایران پیدا نشد.</div>';
+      $('status').textContent="نتیجه‌ای برای این جست‌وجو پیدا نشد.";
+      return;
+    }
+
+    results.innerHTML=destinationSearchCache.map((x,i)=>{
+      const label=destinationLabelFromItem(x);
+      const address=destinationAddressFromItem(x);
+      const meta=[x.type,x.category].filter(Boolean).join(" • ");
+      return `<button class="search-result destination-result-rich" onclick="chooseDestination(${i})">
+        <div>
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(address)}</span>
+        </div>
+        <span class="destination-result-meta">${escapeHtml(meta)}</span>
+      </button>`;
+    }).join("");
+
+    $('status').textContent=
+      `${destinationSearchCache.length.toLocaleString('fa-IR')} نتیجه پیدا شد • مقصد را روی نقشه بررسی کن.`;
+
   }catch(e){
-    const fallback=[
-      {display_name:"برج میلاد، تهران",lat:"35.7448",lon:"51.3753"},
-      {display_name:"بازار بزرگ تهران، تهران",lat:"35.6759",lon:"51.4197"},
-      {display_name:"میدان تجریش، تهران",lat:"35.8044",lon:"51.4282"},
-      {display_name:"فرودگاه مهرآباد، تهران",lat:"35.6892",lon:"51.3134"}
-    ].filter(x=>x.display_name.includes(q) || q.length<3);
-    destinationSearchCache=fallback.length?fallback:[
-      {display_name:"برج میلاد، تهران",lat:"35.7448",lon:"51.3753"},
-      {display_name:"میدان تجریش، تهران",lat:"35.8044",lon:"51.4282"}
-    ];
-    results.innerHTML=destinationSearchCache.map((x,i)=>`
-      <button class="search-result" onclick="chooseDestination(${i})">
-        <b>${x.display_name}</b><span>پیشنهاد نمونه تهران</span>
-      </button>`).join('');
-    $('status').textContent="سرویس جست‌وجو پاسخ نداد؛ پیشنهادهای نمونه نمایش داده شدند.";
+    console.warn("destination search failed",e);
+    destinationSearchCache=[];
+    results.innerHTML='<div class="small" style="padding:10px">جست‌وجوی مقصد فعلاً در دسترس نیست. مسیر یا مقصد نمونه ساخته نمی‌شود.</div>';
+    $('status').textContent="سرویس جست‌وجو پاسخ نداد؛ مقصد ساختگی نمایش داده نمی‌شود.";
   }
 }
 function chooseDestination(index){
   const x=destinationSearchCache[index];
   if(!x)return;
-  navDestination={
-    lat:Number(x.lat),lng:Number(x.lon),
-    label:shortPlaceName(x.display_name)
-  };
-  $('destinationSearch').value=navDestination.label;
-  $('destinationResults').classList.remove('open');
-  updateNavLabels();
-  loadRoute();
+
+  stageDestination({
+    lat:Number(x.lat),
+    lng:Number(x.lon),
+    label:destinationLabelFromItem(x),
+    address:destinationAddressFromItem(x)
+  },{source:"search"});
 }
 window.chooseDestination=chooseDestination;
 
@@ -3166,6 +3613,12 @@ function useCurrentLocation(){
 }
 
 async function loadRoute(){
+  if(!destinationConfirmed){
+    $('status').textContent="ابتدا مقصد را انتخاب و تأیید کن.";
+    renderPendingDestination();
+    return;
+  }
+
   reset(false);
   updateNavLabels();
   updateRoutingDataDisclosure();
@@ -3198,6 +3651,14 @@ async function loadRoute(){
       originAccessM:originSnap.accessDistance,
       destinationAccessM:destinationSnap.accessDistance
     };
+
+    if(pendingDestination && destinationConfirmed){
+      pendingDestination.accessState=destinationSnap.accessDistance<=40?"good":"warn";
+      pendingDestination.accessText=destinationSnap.accessDistance<=40
+        ?`دسترسی خودرویی نزدیک مقصد تأیید شد • حدود ${Math.round(destinationSnap.accessDistance).toLocaleString('fa-IR')} متر`
+        :`مسیر خودرو حدود ${Math.round(destinationSnap.accessDistance).toLocaleString('fa-IR')} متر با نقطه دقیق مقصد فاصله دارد. خط خاکستری نقطه‌چین، فاصله پایان Route تا مقصد را نشان می‌دهد.`;
+      renderPendingDestination();
+    }
 
     $('status').textContent="در حال محاسبه و اعتبارسنجی مسیرهای پیشنهادی...";
 
@@ -3711,17 +4172,20 @@ async function getLocationReadiness(){
 }
 async function updateTripReadiness(){
   const hasRoute=Array.isArray(routeCoords)&&routeCoords.length>1;
+  const destReady=destinationConfirmed;
   const integrity=hasRoute?analyzeSelectedRoute():{level:"bad",critical:true,checks:[]};
-  const navigationReady=hasRoute&&!integrity.critical;
+  const navigationReady=destReady&&hasRoute&&!integrity.critical;
   const online=navigator.onLine!==false;
   const loc=await getLocationReadiness();
 
   setReadyCheck(
     'readyRouteCheck',
     navigationReady?(integrity.level==="warn"?"warn":"good"):'bad',
-    !hasRoute
-      ?'ابتدا مسیر را بارگذاری کن.'
-      :integrity.critical
+    !destReady
+      ?'مقصد هنوز تأیید نشده است.'
+      :!hasRoute
+        ?'ابتدا مسیر را بارگذاری کن.'
+        :integrity.critical
         ?'Route برای Navigation تأیید نشده؛ پیش‌نمایش مسیر را بررسی کن.'
         :integrity.level==="warn"
           ?'Route قابل شروع است، اما چند نکته غیرحیاتی دارد.'
@@ -5758,6 +6222,24 @@ $('csv').onclick=exportCSV;
 $('fitMap').onclick=()=>{fixMapSize(true)};
 $('routePreset').onchange=()=>applyPresetSelection(true);
 $('destinationSearchBtn').onclick=searchDestination;
+$('destinationSearch').addEventListener('input',()=>{
+  if(destinationConfirmed && pendingDestination){
+    const typed=$('destinationSearch').value.trim();
+    if(typed && typed!==pendingDestination.label){
+      destinationConfirmed=false;
+      clearExistingRouteForDestinationChange();
+      if($('confirmDestinationBtn'))$('confirmDestinationBtn').textContent="همین مقصد";
+      renderPendingDestination();
+    }
+  }
+});
+$('confirmDestinationBtn').onclick=confirmPendingDestination;
+$('pickDestinationOnMapBtn').onclick=beginDestinationPick;
+$('cancelDestinationPickBtn').onclick=cancelDestinationPick;
+$('clearRecentDestinationsBtn').onclick=()=>{
+  localStorage.removeItem(RECENT_DESTINATIONS_KEY);
+  renderRecentDestinations();
+};
 $('useMyLocation').onclick=useCurrentLocation;
 $('destinationSearch').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();searchDestination()}
@@ -5792,6 +6274,12 @@ $('routeCompareSheet').onclick=(e)=>{
   if(e.target===$('routeCompareSheet'))closeRouteComparison();
 };
 updateRoutingDataDisclosure();
+renderRecentDestinations();
+renderPendingDestination();
+
+map.on('click',e=>{
+  if(destinationPickMode)handleDestinationMapPick(e.latlng);
+});
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
@@ -5851,8 +6339,7 @@ renderProfile();
 setTimeout(()=>fixMapSize(false),300);
 setTimeout(()=>fixMapSize(false),900);
 updateNavLabels();
-if($('destinationSearch'))$('destinationSearch').value='تجریش';
-setTimeout(loadRoute,1000);
+if($('destinationSearch'))$('destinationSearch').value='';
 </script>
 
 <script>
