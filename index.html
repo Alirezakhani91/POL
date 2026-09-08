@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۸ Heading-Up Navigation</title>
+<title>POL | نسخه ۳.۸.۱ Map Interaction Hotfix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2459,6 +2459,87 @@ body.driving-mode #map .leaflet-tile-pane{
 /* While manually exploring, compass remains available but follow is visibly paused. */
 body.driving-mode.map-manual-explore #driveHeadingBtn{
   opacity:.86;
+}
+
+
+/* ===== v3.8.1 CRITICAL MAP INTERACTION HOTFIX ===== */
+
+/*
+  IMPORTANT:
+  Leaflet's parent control containers must NOT receive pointer events.
+  Only the actual visible controls should be interactive.
+  Previous v3.7.2 rules incorrectly enabled pointer events on the
+  invisible top/bottom/control-container layers and could block:
+  - map drag
+  - wheel / pinch
+  - navigation buttons
+  - recenter button
+*/
+body.driving-mode #map .leaflet-control-container,
+body.driving-mode #map .leaflet-top,
+body.driving-mode #map .leaflet-bottom{
+  pointer-events:none!important;
+}
+
+/* Only real Leaflet controls receive events. */
+body.driving-mode #map .leaflet-control,
+body.driving-mode #map .leaflet-control a,
+body.driving-mode #map .leaflet-control button{
+  pointer-events:auto!important;
+}
+
+/* Do not force the entire map/tile panes into competing hit layers. */
+body.driving-mode #map .leaflet-pane,
+body.driving-mode #map .leaflet-map-pane,
+body.driving-mode #map .leaflet-tile-pane{
+  pointer-events:auto;
+}
+
+/* Navigation controls must always sit above Leaflet UI. */
+body.driving-mode .drive-control-cluster{
+  z-index:1250!important;
+  pointer-events:none!important;
+}
+body.driving-mode .drive-control-cluster > button{
+  pointer-events:auto!important;
+  position:relative!important;
+  z-index:1!important;
+}
+body.driving-mode #driveRecenterBtn,
+body.driving-mode #driveHeadingBtn,
+body.driving-mode #driveVoiceBtn,
+body.driving-mode #driveEndBtn,
+body.driving-mode #driveReportBtn{
+  pointer-events:auto!important;
+}
+
+/* Turn card / status layers should not block the free map outside their content. */
+body.driving-mode #turnCard,
+body.driving-mode .nav-bottom-strip,
+body.driving-mode #currentSpeedGauge,
+body.driving-mode .drive-follow-badge{
+  pointer-events:auto;
+}
+
+/* Keep Leaflet +/- clickable without giving its whole parent overlay hit-testing. */
+body.driving-mode #map .leaflet-control-zoom{
+  pointer-events:auto!important;
+  z-index:1100!important;
+}
+
+/* The map itself remains a fully interactive gesture surface. */
+body.driving-mode #map,
+body.driving-mode #map.leaflet-container{
+  pointer-events:auto!important;
+  touch-action:auto!important;
+}
+
+/* Manual explore state */
+body.driving-mode.map-manual-explore #map{
+  cursor:grab!important;
+}
+body.driving-mode.map-manual-explore #map:active{
+  cursor:grabbing!important;
 }
 
 </style>
@@ -7603,6 +7684,8 @@ function updateOfflineDrivingBanner(){
 function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
+  setTimeout(repairLeafletPointerRouting,0);
+  setTimeout(repairLeafletPointerRouting,120);
   manualExploreLock=false;
   headingUpEnabled=true;
   lastNavigationHeading=null;
@@ -10184,6 +10267,40 @@ map.on('dragstart',()=>{
 
 // Any genuine interaction with the map should immediately pause Follow.
 // This happens BEFORE the gesture fully starts, so the camera stops fighting the user.
+
+function repairLeafletPointerRouting(){
+  const container=map.getContainer();
+  if(!container)return;
+
+  // Parent wrappers should never intercept map gestures.
+  container.querySelectorAll(
+    '.leaflet-control-container,.leaflet-top,.leaflet-bottom'
+  ).forEach(el=>{
+    el.style.pointerEvents='none';
+  });
+
+  // Visible controls remain clickable.
+  container.querySelectorAll('.leaflet-control').forEach(el=>{
+    el.style.pointerEvents='auto';
+  });
+
+  // Navigation controls are not Leaflet controls and must remain above them.
+  const driveCluster=document.querySelector('.drive-control-cluster');
+  if(driveCluster){
+    driveCluster.style.zIndex='1250';
+    driveCluster.style.pointerEvents='none';
+
+    driveCluster.querySelectorAll('button').forEach(btn=>{
+      btn.style.pointerEvents='auto';
+      btn.style.position='relative';
+    });
+  }
+}
+
+repairLeafletPointerRouting();
+setTimeout(repairLeafletPointerRouting,100);
+setTimeout(repairLeafletPointerRouting,600);
+
 const mapContainerEl=map.getContainer();
 
 const shouldIgnoreManualEvent=(target)=>{
@@ -10624,6 +10741,7 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     syncRecenterUi();
   }
   function recenterDrivingCamera(){
+    repairLeafletPointerRouting();
     resumeFollowAfterManualExplore();
     followCameraLastUpdate=0;
     updateFollowBadge();
