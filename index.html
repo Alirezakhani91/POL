@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۶ Route Recovery و Re-route UX</title>
+<title>POL | نسخه ۳.۷ Temporal Map Matching و GPS Stability</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2193,6 +2193,22 @@ body.driving-mode .reroute-banner.show + .speed-alert-banner + .safety-coach-ale
   .reroute-banner span{max-width:250px}
 }
 
+
+/* ===== v3.7 Temporal Map Matching diagnostics ===== */
+.temporal-debug-box{
+  border-color:rgba(96,165,250,.20)!important;
+}
+.temporal-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.temporal-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -2907,6 +2923,22 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
           <details id="tripAdvanced" class="section-card advanced-details">
             <summary>جزئیات فنی سفر</summary>
 
+            <div class="eligibilityBox temporal-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>پایداری GPS و Map Matching</b>
+                  <div class="small">فقط برای آزمایشگاه — در UI راننده نمایش داده نمی‌شود.</div>
+                </div>
+                <div id="temporalMatchStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="temporalMatchConf">--</b><span>اطمینان تطبیق</span></div>
+                <div class="eligibilityCell"><b id="temporalRejects">۰</b><span>پرش ردشده</span></div>
+                <div class="eligibilityCell"><b id="temporalProgress">--</b><span>پیشرفت پایدار</span></div>
+              </div>
+              <div id="temporalMatchReason" class="reasonList">هنوز داده GPS کافی نیست.</div>
+            </div>
+
             <div class="eligibilityBox">
               <div class="eligibilityHead">
                 <div>
@@ -3402,6 +3434,17 @@ let realGpsState={
   arrived:false,
   track:[],
   traceBuffer:[],
+  temporalMatch:{
+    acceptedPoint:null,
+    acceptedProgress:0,
+    acceptedIndex:null,
+    lastAcceptedAt:0,
+    confidence:0,
+    rejectCount:0,
+    lastReason:"",
+    lastHeadingDelta:null,
+    lastProgressDeltaM:0
+  },
   networkMatch:{
     inFlight:false,
     lastRequestAt:0,
@@ -7109,6 +7152,256 @@ function matchRealPointToRoute(point){
   }
   return best;
 }
+
+function headingDeltaDegrees(a,b){
+  if(!Number.isFinite(a)||!Number.isFinite(b))return null;
+  const d=Math.abs((((b-a)+540)%360)-180);
+  return d;
+}
+function routeSegmentHeading(index){
+  if(!Array.isArray(routeCoords)||routeCoords.length<2)return null;
+  const i=Math.max(0,Math.min(routeCoords.length-2,Number(index||0)));
+  return bearingDeg(routeCoords[i],routeCoords[i+1]);
+}
+function matchPointToRouteWindow(point,centerIndex=null,radiusSegments=80){
+  if(!Array.isArray(routeCoords)||routeCoords.length<2){
+    return{distance:Infinity,point:null,progress:0,index:0};
+  }
+
+  if(centerIndex==null || !Number.isFinite(Number(centerIndex))){
+    return matchRealPointToRoute(point);
+  }
+
+  const cum=[0];
+  for(let i=1;i<routeCoords.length;i++){
+    cum[i]=cum[i-1]+hav(routeCoords[i-1],routeCoords[i]);
+  }
+  const total=Math.max(1,cum[cum.length-1]);
+
+  const start=Math.max(0,Math.floor(centerIndex-radiusSegments));
+  const end=Math.min(routeCoords.length-2,Math.ceil(centerIndex+radiusSegments));
+
+  let best={distance:Infinity,point:null,progress:0,index:start};
+
+  for(let i=start;i<=end;i++){
+    const r=pointToSegmentMeters(point,routeCoords[i],routeCoords[i+1]);
+    if(r.distance<best.distance){
+      const seg=Math.max(1,hav(routeCoords[i],routeCoords[i+1]));
+      best={
+        distance:r.distance,
+        point:r.point,
+        progress:clamp((cum[i]+seg*r.u)/total,0,1),
+        index:i
+      };
+    }
+  }
+
+  return best;
+}
+function temporalPlausibilityWindow(dtS,speedKmh,accuracy){
+  const speedMps=Math.max(0,Number(speedKmh||0))/3.6;
+  const acc=Math.max(5,Number(accuracy||20));
+
+  return{
+    backwardM:Math.max(28,acc*1.6,speedMps*dtS*.65),
+    forwardM:Math.max(75,acc*2.8,speedMps*dtS*3.4+35)
+  };
+}
+function smoothLatLng(previous,next,alpha=.6){
+  if(!Array.isArray(previous)||!Array.isArray(next))return next;
+  return[
+    previous[0]+(next[0]-previous[0])*alpha,
+    previous[1]+(next[1]-previous[1])*alpha
+  ];
+}
+function resetTemporalMapMatch(){
+  realGpsState.temporalMatch={
+    acceptedPoint:null,
+    acceptedProgress:0,
+    acceptedIndex:null,
+    lastAcceptedAt:0,
+    confidence:0,
+    rejectCount:0,
+    lastReason:"",
+    lastHeadingDelta:null,
+    lastProgressDeltaM:0
+  };
+  renderTemporalDiagnostics();
+}
+function renderTemporalDiagnostics(){
+  const s=realGpsState.temporalMatch;
+  const status=$('temporalMatchStatus');
+  const conf=$('temporalMatchConf');
+  const rejects=$('temporalRejects');
+  const progress=$('temporalProgress');
+  const reason=$('temporalMatchReason');
+
+  if(conf)conf.textContent=Number.isFinite(s.confidence)
+    ?`${Math.round(s.confidence).toLocaleString('fa-IR')}٪`
+    :"--";
+  if(rejects)rejects.textContent=Number(s.rejectCount||0).toLocaleString('fa-IR');
+  if(progress)progress.textContent=
+    `${Math.round(Number(s.acceptedProgress||0)*100).toLocaleString('fa-IR')}٪`;
+  if(reason)reason.textContent=s.lastReason||"هنوز داده GPS کافی نیست.";
+
+  if(status){
+    status.classList.remove('good','warn','review');
+    if(s.confidence>=78){
+      status.classList.add('good');
+      status.textContent="پایدار";
+    }else if(s.confidence>=55){
+      status.classList.add('warn');
+      status.textContent="متوسط";
+    }else{
+      status.classList.add('review');
+      status.textContent="در حال تثبیت";
+    }
+  }
+}
+function stabilizeActiveRouteMatch(point,{
+  accuracy=999,
+  speedKmh=0,
+  heading=null,
+  timestamp=Date.now(),
+  trustedNetwork=false
+}={}){
+  const state=realGpsState.temporalMatch;
+  const prevProgress=Number(state.acceptedProgress||0);
+  const prevIndex=state.acceptedIndex;
+  const prevAt=Number(state.lastAcceptedAt||0);
+  const dtS=prevAt?Math.max(.25,(timestamp-prevAt)/1000):1;
+
+  // Once we have history, prefer a local segment window to avoid jumping
+  // to parallel/overlapping parts of the route.
+  const dynamicRadius=
+    speedKmh>=80?180:
+    speedKmh>=50?130:
+    speedKmh>=20?95:65;
+
+  const local=matchPointToRouteWindow(point,prevIndex,dynamicRadius);
+  const full=matchRealPointToRoute(point);
+
+  let candidate=local;
+  if(
+    prevIndex==null ||
+    !Number.isFinite(local.distance) ||
+    local.distance>full.distance+70
+  ){
+    candidate=full;
+  }
+
+  const routeHeading=routeSegmentHeading(candidate.index);
+  const headingDelta=headingDeltaDegrees(heading,routeHeading);
+  const totalDistance=Math.max(1,Number(routeDistanceM||1));
+  const progressDeltaM=(candidate.progress-prevProgress)*totalDistance;
+  const window=temporalPlausibilityWindow(dtS,speedKmh,accuracy);
+
+  let accepted=true;
+  let reason="تطبیق مسیر پایدار است.";
+
+  if(state.lastAcceptedAt){
+    if(progressDeltaM < -window.backwardM){
+      accepted=false;
+      reason=`پرش عقب ${Math.round(Math.abs(progressDeltaM)).toLocaleString('fa-IR')} متر رد شد.`;
+    }else if(progressDeltaM > window.forwardM){
+      accepted=false;
+      reason=`پرش جلو ${Math.round(progressDeltaM).toLocaleString('fa-IR')} متر رد شد.`;
+    }
+  }
+
+  // Heading becomes meaningful once the car is actually moving.
+  if(
+    accepted &&
+    Number(speedKmh)>=15 &&
+    Number.isFinite(headingDelta) &&
+    headingDelta>115 &&
+    Number(accuracy)<=35
+  ){
+    accepted=false;
+    reason=`جهت GPS با جهت مسیر همخوان نبود (${Math.round(headingDelta).toLocaleString('fa-IR')}°).`;
+  }
+
+  if(accepted && candidate.distance>Math.max(95,Number(accuracy)*2.6) && !trustedNetwork){
+    accepted=false;
+    reason="نقطه GPS برای پذیرش روی Route بیش از حد دور بود.";
+  }
+
+  let confidence=gpsRouteConfidence(accuracy,candidate.distance);
+
+  if(trustedNetwork)confidence+=12;
+  if(Number.isFinite(headingDelta)){
+    if(headingDelta<=35)confidence+=9;
+    else if(headingDelta<=70)confidence+=3;
+    else if(headingDelta>110)confidence-=14;
+  }
+  if(state.lastAcceptedAt){
+    const continuityPenalty=
+      progressDeltaM<0
+        ?Math.min(18,Math.abs(progressDeltaM)/8)
+        :Math.min(15,Math.max(0,progressDeltaM-window.forwardM*.55)/10);
+    confidence-=continuityPenalty;
+  }
+  confidence=clamp(Math.round(confidence),0,100);
+
+  if(!accepted){
+    state.rejectCount=Number(state.rejectCount||0)+1;
+    state.confidence=Math.max(0,confidence-18);
+    state.lastReason=reason;
+    state.lastHeadingDelta=headingDelta;
+    state.lastProgressDeltaM=progressDeltaM;
+    renderTemporalDiagnostics();
+
+    const heldPoint=
+      state.acceptedPoint ||
+      (prevProgress>0?interpolateOnRoute(prevProgress):candidate.point);
+
+    return{
+      accepted:false,
+      point:heldPoint,
+      progress:prevProgress,
+      index:prevIndex??candidate.index,
+      distance:candidate.distance,
+      confidence:state.confidence,
+      reason
+    };
+  }
+
+  const alpha=
+    trustedNetwork
+      ?(speedKmh>=50?.82:.70)
+      :(accuracy<=15?.70:accuracy<=30?.56:.42);
+
+  const acceptedPoint=state.acceptedPoint
+    ?smoothLatLng(state.acceptedPoint,candidate.point,alpha)
+    :candidate.point;
+
+  const acceptedProgress=Math.max(
+    prevProgress,
+    Number(candidate.progress||0)
+  );
+
+  state.acceptedPoint=acceptedPoint;
+  state.acceptedProgress=acceptedProgress;
+  state.acceptedIndex=candidate.index;
+  state.lastAcceptedAt=timestamp;
+  state.confidence=confidence;
+  state.lastReason=reason;
+  state.lastHeadingDelta=headingDelta;
+  state.lastProgressDeltaM=progressDeltaM;
+
+  renderTemporalDiagnostics();
+
+  return{
+    accepted:true,
+    point:acceptedPoint,
+    progress:acceptedProgress,
+    index:candidate.index,
+    distance:candidate.distance,
+    confidence,
+    reason
+  };
+}
+
 function gpsSpeedKmh(coords,point,stamp){
   if(Number.isFinite(coords.speed)&&coords.speed>=0)return clamp(coords.speed*3.6,0,220);
   if(realGpsState.previousPoint&&realGpsState.previousTimestamp){
@@ -7212,7 +7505,8 @@ async function processRealGps(position){
     ?Number(c.heading)
     :(realGpsState.previousPoint?bearingDeg(realGpsState.previousPoint,rawPoint):null);
 
-  realGpsState.previousPoint=realGpsState.lat!=null?[realGpsState.lat,realGpsState.lng]:rawPoint;
+  realGpsState.previousPoint=
+    realGpsState.lat!=null?[realGpsState.lat,realGpsState.lng]:rawPoint;
   realGpsState.previousTimestamp=realGpsState.timestamp||stamp;
   realGpsState.lat=rawPoint[0];
   realGpsState.lng=rawPoint[1];
@@ -7222,22 +7516,18 @@ async function processRealGps(position){
   realGpsState.timestamp=stamp;
   realGpsState.firstFix=true;
 
-  // Build a short trace and refresh network matching in the background.
+  // Build short GPS history. Network map matching runs in the background.
   if(accuracy<=55){
     appendGpsTracePoint(rawPoint,accuracy,stamp);
     refreshNetworkMapMatch();
   }
 
   const trusted=trustedNetworkMatch();
-  const decisionPoint=trusted?.point||rawPoint;
+  const roadDecisionPoint=trusted?.point||rawPoint;
 
-  // Distance to ACTIVE route is calculated from the road-matched point when
-  // confidence is sufficient. This matters on parallel roads and ramps.
-  const routeMatch=matchRealPointToRoute(decisionPoint);
+  // Full-route distance remains important for detecting a real deviation.
+  const networkRouteMatch=matchRealPointToRoute(roadDecisionPoint);
   const rawRouteMatch=matchRealPointToRoute(rawPoint);
-
-  realGpsState.distanceFromRoute=routeMatch.distance;
-  realGpsState.matchedPoint=decisionPoint;
 
   const combinedConfidence=trusted
     ?Math.round(clamp(
@@ -7248,64 +7538,33 @@ async function processRealGps(position){
       ))
     :gpsRouteConfidence(accuracy,rawRouteMatch.distance);
 
-  // Route progress may advance, but GPS jitter must not rewind it.
-  if(routeMatch.progress>=realGpsState.routeProgress-.02){
-    realGpsState.routeProgress=Math.max(realGpsState.routeProgress,routeMatch.progress);
-  }
+  // Temporal active-route matching:
+  // recent progress + heading + speed + accuracy + local segment continuity.
+  const temporal=stabilizeActiveRouteMatch(
+    roadDecisionPoint,
+    {
+      accuracy,
+      speedKmh:speed,
+      heading,
+      timestamp:stamp,
+      trustedNetwork:!!trusted
+    }
+  );
 
-  // Display hierarchy:
-  // 1) trusted road-matched point
-  // 2) raw high-quality GPS
-  // 3) local projection to active route
-  let displayPoint;
-  if(trusted){
-    displayPoint=trusted.point;
-  }else if(accuracy<=25){
-    displayPoint=rawPoint;
-  }else{
-    displayPoint=rawRouteMatch.point||rawPoint;
-  }
+  realGpsState.routeProgress=Math.max(
+    Number(realGpsState.routeProgress||0),
+    Number(temporal.progress||0)
+  );
+  realGpsState.distanceFromRoute=networkRouteMatch.distance;
+  realGpsState.matchedPoint=temporal.point||roadDecisionPoint;
 
-  if(carMarker)carMarker.setLatLng(displayPoint);
-  realGpsState.track.push(displayPoint);
-  if(realGpsState.track.length>1500)realGpsState.track.shift();
-  if(trackLine)trackLine.setLatLngs(realGpsState.track);
-
-  updateDrivingCamera(realGpsState.routeProgress,displayPoint,Number(speed||0));
-  updateTurnByTurn(realGpsState.routeProgress);
-
-  // Arrival in real GPS mode requires BOTH route progress and actual
-  // physical proximity to the destination access point.
-  if(evaluateRealGpsArrival(rawPoint,accuracy)){
-    $('arrivalBanner')?.classList.add('show');
-    if($('turnDistance'))$('turnDistance').textContent="رسیدی";
-    if($('turnInstruction'))$('turnInstruction').textContent="به مقصد رسیدی";
-    if($('turnStreet'))$('turnStreet').textContent=navDestination.label||"مقصد";
-    if(voiceGuidanceEnabled)coachVoice("به مقصد رسیدید.");
-    setTimeout(()=>{
-      if(realGpsState.arrived && realGpsState.active)finish();
-    },900);
-    return;
-  }
-
-  // Only current speed is authoritative in this prototype.
-  if($('driveCurrentSpeed'))$('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
-  if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
-  if($('speedSign'))$('speedSign').textContent="--";
-  $('speedAlertBanner')?.classList.remove('show');
-
-  // Re-route decision requires:
-  // - usable GPS
-  // - actual movement
-  // - meaningful distance from active route
-  // - either trusted network match OR a much stricter raw-GPS fallback
   const threshold=Math.max(55,accuracy*1.8);
 
   const trustedOffRoute=
     !!trusted &&
     combinedConfidence>=68 &&
     speed>=5 &&
-    routeMatch.distance>threshold;
+    networkRouteMatch.distance>threshold;
 
   const strictRawFallback=
     !trusted &&
@@ -7315,38 +7574,97 @@ async function processRealGps(position){
 
   const confidentlyOff=trustedOffRoute||strictRawFallback;
 
-  if(confidentlyOff){
-    if(realGpsState.offRouteSince==null)realGpsState.offRouteSince=Date.now();
+  // On-route: show stabilized route projection.
+  // Off-route: show the stabilized road/network point instead of forcing
+  // the vehicle back onto the old route.
+  const displayPoint=confidentlyOff
+    ?roadDecisionPoint
+    :(temporal.point||rawRouteMatch.point||rawPoint);
 
-    // Network-matched deviation can act sooner; raw-GPS-only requires longer.
+  if(carMarker)carMarker.setLatLng(displayPoint);
+
+  realGpsState.track.push(displayPoint);
+  if(realGpsState.track.length>1500)realGpsState.track.shift();
+  if(trackLine)trackLine.setLatLngs(realGpsState.track);
+
+  updateDrivingCamera(
+    realGpsState.routeProgress,
+    displayPoint,
+    Number(speed||0)
+  );
+  updateTurnByTurn(realGpsState.routeProgress);
+
+  if(evaluateRealGpsArrival(rawPoint,accuracy)){
+    $('arrivalBanner')?.classList.add('show');
+    if($('turnDistance'))$('turnDistance').textContent="رسیدی";
+    if($('turnInstruction'))$('turnInstruction').textContent="به مقصد رسیدی";
+    if($('turnStreet'))$('turnStreet').textContent=navDestination.label||"مقصد";
+    if(voiceGuidanceEnabled)coachVoice("به مقصد رسیدید.");
+
+    setTimeout(()=>{
+      if(realGpsState.arrived&&realGpsState.active)finish();
+    },900);
+    return;
+  }
+
+  // Current speed is real. Speed limit remains hidden until an authoritative
+  // speed-limit source is connected.
+  if($('driveCurrentSpeed')){
+    $('driveCurrentSpeed').textContent=Math.round(speed).toLocaleString('fa-IR');
+  }
+  if($('currentSpeedGauge'))$('currentSpeedGauge').classList.remove('over');
+  if($('speedSign'))$('speedSign').textContent="--";
+  $('speedAlertBanner')?.classList.remove('show');
+
+  // Re-route only after sustained, high-confidence deviation.
+  if(confidentlyOff){
+    if(realGpsState.offRouteSince==null){
+      realGpsState.offRouteSince=Date.now();
+    }
+
     const minDuration=trusted?4000:6500;
     const sustained=Date.now()-realGpsState.offRouteSince>=minDuration;
     const cooldown=Date.now()-realGpsState.lastRerouteAt>=15000;
 
     if(sustained&&cooldown&&!rerouteState.active){
       realGpsState.lastRerouteAt=Date.now();
-      await triggerRealGpsReroute(decisionPoint);
+
+      // Re-route starts from the trusted road point, never from a projection
+      // forced onto the old route.
+      await triggerRealGpsReroute(roadDecisionPoint);
     }
   }else{
     realGpsState.offRouteSince=null;
   }
 
-  // Compact driving status. No extra distracting card is added.
   const badge=$('realGpsBadge');
   badge?.classList.remove('matched');
 
   if(trusted){
     badge?.classList.add('matched');
     if($('realGpsBadgeLabel'))$('realGpsBadgeLabel').textContent="روی خیابان";
+
+    const finalConf=Math.round(
+      clamp(
+        combinedConfidence*.62 +
+        Number(realGpsState.temporalMatch.confidence||0)*.38,
+        0,100
+      )
+    );
+
     setRealGpsBadge(
       "good",
-      `اطمینان ${combinedConfidence.toLocaleString('fa-IR')}٪`
+      `اطمینان ${finalConf.toLocaleString('fa-IR')}٪`
     );
   }else{
     if($('realGpsBadgeLabel'))$('realGpsBadgeLabel').textContent="GPS واقعی";
-    if(accuracy<=20)setRealGpsBadge("good",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
-    else if(accuracy<=35)setRealGpsBadge("warn",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
-    else setRealGpsBadge("bad",`GPS ضعیف • ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    if(accuracy<=20){
+      setRealGpsBadge("good",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    }else if(accuracy<=35){
+      setRealGpsBadge("warn",`دقت ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    }else{
+      setRealGpsBadge("bad",`GPS ضعیف • ${Math.round(accuracy).toLocaleString('fa-IR')} متر`);
+    }
   }
 }
 function startRealGps(){
@@ -7363,6 +7681,7 @@ function startRealGps(){
   realGpsState.previousPoint=null;
   realGpsState.previousTimestamp=null;
   resetNetworkMapMatch();
+  resetTemporalMapMatch();
   document.body.classList.add('real-gps-active');
   setRealGpsBadge("warn","در انتظار موقعیت");
 
@@ -7427,6 +7746,7 @@ async function triggerRealGpsReroute(rawPoint){
     realGpsState.arrivalSince=null;
     realGpsState.arrived=false;
     resetNetworkMapMatch();
+    resetTemporalMapMatch();
     appendGpsTracePoint(snapped.point,Math.min(25,Number(realGpsState.accuracy||25)),Date.now());
 
     routeAltLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}});
