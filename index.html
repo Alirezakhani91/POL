@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۳ Confidence-Aware Safety Score</title>
+<title>POL | نسخه ۴.۴ Trip Replay & Explainable Coaching</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2793,6 +2793,289 @@ body.real-gps-active #currentSpeedGauge.over{
   padding:16px 0 6px;
 }
 
+
+/* ===== v4.4 Trip Replay & Explainable Coaching ===== */
+.summary-actions{
+  grid-template-columns:1fr 1fr!important;
+}
+.summary-replay-btn{
+  display:none!important;
+  grid-column:1 / -1;
+}
+.summary-replay-btn.show{
+  display:block!important;
+}
+
+/* Replay mode owns the map but keeps it fully interactive. */
+body.trip-replay-mode .nav-launcher,
+body.trip-replay-mode .map-first-search-panel,
+body.trip-replay-mode .floating-map-controls,
+body.trip-replay-mode .map-route-sheet,
+body.trip-replay-mode .map-route-choice-strip,
+body.trip-replay-mode .route-alt-labels,
+body.trip-replay-mode .map-dev-btn,
+body.trip-replay-mode #turnCard,
+body.trip-replay-mode .mapHUD,
+body.trip-replay-mode #arrivalBanner,
+body.trip-replay-mode #realGpsBadge,
+body.trip-replay-mode #offlineDriveBanner,
+body.trip-replay-mode #rerouteBanner,
+body.trip-replay-mode #speedAlertBanner,
+body.trip-replay-mode #safetyCoachAlert,
+body.trip-replay-mode #safetyCoachPill,
+body.trip-replay-mode .drive-control-cluster,
+body.trip-replay-mode #driveReportBtn,
+body.trip-replay-mode #currentSpeedGauge,
+body.trip-replay-mode .nav-bottom-strip{
+  display:none!important;
+}
+body.trip-replay-mode #tripMapCard{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2800!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+}
+body.trip-replay-mode #map{
+  width:100%!important;
+  height:100vh!important;
+  min-height:100vh!important;
+  cursor:grab!important;
+}
+body.trip-replay-mode #map:active{
+  cursor:grabbing!important;
+}
+body.trip-replay-mode #map .leaflet-control-container,
+body.trip-replay-mode #map .leaflet-top,
+body.trip-replay-mode #map .leaflet-bottom{
+  pointer-events:none!important;
+}
+body.trip-replay-mode #map .leaflet-control{
+  pointer-events:auto!important;
+}
+
+.trip-replay-top{
+  display:none;
+  position:absolute;
+  z-index:1550;
+  top:14px;
+  left:14px;
+  right:14px;
+  max-width:590px;
+  margin:auto;
+  padding:10px 11px;
+  border-radius:17px;
+  background:rgba(8,15,25,.93);
+  border:1px solid rgba(148,163,184,.15);
+  box-shadow:0 14px 36px rgba(2,8,23,.28);
+  backdrop-filter:blur(12px);
+  color:#fff;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  pointer-events:auto;
+}
+body.trip-replay-mode .trip-replay-top{
+  display:flex;
+}
+.trip-replay-title small{
+  display:block;
+  font-size:7px;
+  color:#9aabc0;
+}
+.trip-replay-title b{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+}
+.trip-replay-top-actions{
+  display:flex;
+  gap:6px;
+  flex:0 0 auto;
+}
+.trip-replay-top-actions button,
+.trip-replay-detail-head button{
+  width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  padding:0!important;
+  border-radius:12px!important;
+  border:1px solid rgba(148,163,184,.16)!important;
+  background:#172334!important;
+  color:#e5edf7!important;
+  font-size:18px!important;
+}
+
+.trip-replay-event-strip{
+  display:none;
+  position:absolute;
+  z-index:1540;
+  left:12px;
+  right:12px;
+  bottom:16px;
+  gap:7px;
+  overflow-x:auto;
+  padding:4px 2px 8px;
+  pointer-events:auto;
+  scrollbar-width:none;
+}
+.trip-replay-event-strip::-webkit-scrollbar{display:none}
+body.trip-replay-mode .trip-replay-event-strip{
+  display:flex;
+}
+.trip-replay-chip{
+  flex:0 0 auto;
+  width:auto!important;
+  min-width:115px!important;
+  max-width:190px!important;
+  min-height:46px!important;
+  padding:7px 10px!important;
+  display:grid!important;
+  grid-template-columns:30px 1fr!important;
+  gap:7px!important;
+  align-items:center!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.97)!important;
+  border:1px solid rgba(15,23,42,.10)!important;
+  box-shadow:0 9px 24px rgba(15,23,42,.18)!important;
+  color:#172033!important;
+}
+.trip-replay-chip-icon{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#eef2f7;
+  font-size:13px;
+}
+.trip-replay-chip-copy{
+  min-width:0;
+  text-align:right;
+}
+.trip-replay-chip-copy b{
+  display:block;
+  font-size:9px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.trip-replay-chip-copy span{
+  display:block;
+  margin-top:2px;
+  font-size:7px;
+  color:#64748b;
+}
+.trip-replay-chip.selected{
+  background:#172334!important;
+  color:#fff!important;
+  border-color:#334a65!important;
+}
+.trip-replay-chip.selected .trip-replay-chip-icon{
+  background:#263b54;
+}
+.trip-replay-chip.selected .trip-replay-chip-copy span{
+  color:#a9b8c9;
+}
+
+.trip-replay-detail{
+  display:none;
+  position:absolute;
+  z-index:1560;
+  left:14px;
+  right:14px;
+  bottom:82px;
+  max-width:520px;
+  margin:auto;
+  padding:11px;
+  border-radius:17px;
+  background:rgba(8,15,25,.96);
+  border:1px solid rgba(148,163,184,.16);
+  box-shadow:0 18px 46px rgba(2,8,23,.34);
+  backdrop-filter:blur(14px);
+  color:#fff;
+  pointer-events:auto;
+}
+.trip-replay-detail.open{display:block}
+.trip-replay-detail-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:9px;
+}
+.trip-replay-detail-head small{
+  display:block;
+  color:#8fa0b6;
+  font-size:7px;
+}
+.trip-replay-detail-head b{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+}
+.trip-replay-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:9px;
+}
+.trip-replay-detail-grid>div{
+  padding:7px;
+  border-radius:10px;
+  background:#172334;
+  text-align:center;
+}
+.trip-replay-detail-grid b{
+  display:block;
+  font-size:13px;
+}
+.trip-replay-detail-grid span{
+  display:block;
+  margin-top:2px;
+  font-size:7px;
+  color:#8fa0b6;
+}
+.trip-replay-detail-coach{
+  margin-top:8px;
+  padding:8px 9px;
+  border-radius:10px;
+  background:#102133;
+  color:#d9e7f5;
+  font-size:8px;
+  line-height:1.65;
+}
+.trip-replay-no-events{
+  flex:0 0 auto;
+  margin:auto;
+  padding:9px 13px;
+  border-radius:999px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 8px 24px rgba(15,23,42,.16);
+  color:#334155;
+  font-size:8px;
+}
+
+@media(max-width:520px){
+  .trip-replay-top{
+    top:9px;
+    left:9px;
+    right:9px;
+  }
+  .trip-replay-detail{
+    left:9px;
+    right:9px;
+    bottom:78px;
+  }
+  .trip-replay-event-strip{
+    left:8px;
+    right:8px;
+    bottom:9px;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3482,6 +3765,35 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <span>km/h</span>
               </div>
 
+              <div id="tripReplayTop" class="trip-replay-top">
+                <div class="trip-replay-title">
+                  <small>تحلیل سفر</small>
+                  <b id="tripReplayTitle">مسیر و رویدادهای رانندگی</b>
+                </div>
+                <div class="trip-replay-top-actions">
+                  <button id="tripReplayFitBtn" title="نمایش کل سفر">↔</button>
+                  <button id="tripReplayCloseBtn" title="بازگشت">×</button>
+                </div>
+              </div>
+
+              <div id="tripReplayDetail" class="trip-replay-detail">
+                <div class="trip-replay-detail-head">
+                  <div>
+                    <small id="tripReplayDetailType">رویداد</small>
+                    <b id="tripReplayDetailTitle">--</b>
+                  </div>
+                  <button id="tripReplayDetailClose">×</button>
+                </div>
+                <div class="trip-replay-detail-grid">
+                  <div><b id="tripReplayDetailSeverity">--</b><span>شدت</span></div>
+                  <div><b id="tripReplayDetailConfidence">--</b><span>Confidence</span></div>
+                  <div><b id="tripReplayDetailPeak">--</b><span>Peak</span></div>
+                </div>
+                <div id="tripReplayDetailCoach" class="trip-replay-detail-coach">--</div>
+              </div>
+
+              <div id="tripReplayEventStrip" class="trip-replay-event-strip"></div>
+
               <div id="map" dir="ltr"></div>
 
               <div class="nav-bottom-strip">
@@ -3517,9 +3829,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.3</span>
+              <span class="lab-version-chip">v4.4</span>
               <div>
-                <b>Confidence-Aware Safety Score</b>
+                <b>Trip Replay & Explainable Coaching</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4045,6 +4357,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     </div>
 
     <div class="summary-actions">
+      <button id="summaryReplay" class="secondary summary-replay-btn">مشاهده نقشه سفر</button>
       <button id="summaryClose" class="secondary">بازگشت به خانه</button>
       <button id="summaryRewards" class="primary">دیدن پاداش‌ها</button>
     </div>
@@ -9854,12 +10167,17 @@ function updateRealTelemetryEvents(sample){
         startAt:now,
         endAt:now,
         peak:Math.abs(sample.longA),
-        confidence:sample.confidence
+        confidence:sample.confidence,
+        point:sample.point?[...sample.point]:null
       };
     }else{
       const e=realTelemetryState.activeBrake;
       e.endAt=now;
-      e.peak=Math.max(e.peak,Math.abs(sample.longA));
+      const peak=Math.abs(sample.longA);
+      if(peak>e.peak){
+        e.peak=peak;
+        if(sample.point)e.point=[...sample.point];
+      }
       e.confidence=Math.min(e.confidence,sample.confidence);
       if(sev==="critical")e.sev="critical";
       else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
@@ -9877,12 +10195,16 @@ function updateRealTelemetryEvents(sample){
         startAt:now,
         endAt:now,
         peak:sample.longA,
-        confidence:sample.confidence
+        confidence:sample.confidence,
+        point:sample.point?[...sample.point]:null
       };
     }else{
       const e=realTelemetryState.activeAccel;
       e.endAt=now;
-      e.peak=Math.max(e.peak,sample.longA);
+      if(sample.longA>e.peak){
+        e.peak=sample.longA;
+        if(sample.point)e.point=[...sample.point];
+      }
       e.confidence=Math.min(e.confidence,sample.confidence);
       if(sev==="critical")e.sev="critical";
       else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
@@ -9900,12 +10222,17 @@ function updateRealTelemetryEvents(sample){
         startAt:now,
         endAt:now,
         peak:Math.abs(sample.latA),
-        confidence:sample.confidence
+        confidence:sample.confidence,
+        point:sample.point?[...sample.point]:null
       };
     }else{
       const e=realTelemetryState.activeCorner;
       e.endAt=now;
-      e.peak=Math.max(e.peak,Math.abs(sample.latA));
+      const peak=Math.abs(sample.latA);
+      if(peak>e.peak){
+        e.peak=peak;
+        if(sample.point)e.point=[...sample.point];
+      }
       e.confidence=Math.min(e.confidence,sample.confidence);
       if(sev==="critical")e.sev="critical";
       else if(sev==="severe"&&e.sev!=="critical")e.sev="severe";
@@ -10020,6 +10347,7 @@ function stopDeviceMotionTelemetry(){
 }
 
 function updateRealDrivingTelemetry({
+  point,
   speedKmh,
   heading,
   accuracy,
@@ -10109,6 +10437,7 @@ function updateRealDrivingTelemetry({
   const sample={
     timestamp,
     dt,
+    point:Array.isArray(point)?[Number(point[0]),Number(point[1])]:null,
     speedKmh:Number(speedKmh||0),
     longA:Number(realTelemetryState.longA||0),
     latA:Number(realTelemetryState.latA||0),
@@ -10504,6 +10833,55 @@ function realTelemetryComponentScores(){
   };
 }
 
+
+function coachActionForWeakness(weakest,status,eventCount=0){
+  if(status==="insufficient"){
+    return{
+      title:"داده بیشتری لازم است",
+      action:"برای یک تحلیل قابل اتکا، چند دقیقه دیگر با GPS پایدار رانندگی کن. تا آن زمان سیستم از نتیجه‌گیری قطعی خودداری می‌کند."
+    };
+  }
+
+  if(!eventCount){
+    return{
+      title:"رانندگی نرم را حفظ کن",
+      action:"در این سفر رویداد شدید معتبری ثبت نشد. همین الگوی یکنواخت در ترمز، شتاب و پیچ را حفظ کن."
+    };
+  }
+
+  if(weakest==="ترمز"){
+    return{
+      title:"ترمز را زودتر شروع کن",
+      action:"فاصله طولی بیشتری نگه دار و قبل از تقاطع یا توقف، زودتر گاز را رها کن تا نیاز به ترمز ناگهانی کمتر شود."
+    };
+  }
+
+  if(weakest==="شتاب"){
+    return{
+      title:"شروع حرکت نرم‌تر",
+      action:"بعد از توقف یا کاهش سرعت، فشار گاز را تدریجی‌تر افزایش بده و از جهش ناگهانی سرعت جلوگیری کن."
+    };
+  }
+
+  return{
+    title:"ورود آرام‌تر به پیچ",
+    action:"قبل از ورود به پیچ سرعت را کم کن و داخل پیچ تا حد ممکن سرعت و فرمان را یکنواخت نگه دار."
+  };
+}
+
+function replaySafeEvent(event){
+  return{
+    type:event.type,
+    title:event.title,
+    sev:event.sev,
+    startAt:Number(event.startAt||0),
+    endAt:Number(event.endAt||event.startAt||0),
+    peak:Number(event.peak||0),
+    confidence:Number(event.confidence||0),
+    point:Array.isArray(event.point)?[Number(event.point[0]),Number(event.point[1])]:null
+  };
+}
+
 function buildRealTelemetryResult(){
   flushRealTelemetryEvents();
 
@@ -10545,6 +10923,11 @@ function buildRealTelemetryResult(){
 
   const mappedCompliance=mappedSpeedCompliancePreview();
   const mappedCoverage=mappedSpeedCoveragePreview();
+  const coach=coachActionForWeakness(
+    ranked[0][0],
+    scoreModel.status,
+    realTelemetryState.events.length
+  );
 
   lastTripResult={
     navigationOnly:false,
@@ -10576,6 +10959,15 @@ function buildRealTelemetryResult(){
 
     topRiskEvent:topEvent?.title||null,
     weakestBehavior:ranked[0][0],
+    coachTitle:coach.title,
+    coachAction:coach.action,
+
+    replayTrack:(realGpsState.track||[])
+      .filter(p=>Array.isArray(p)&&p.length>=2)
+      .map(p=>[Number(p[0]),Number(p[1])]),
+    replayEvents:(realTelemetryState.events||[])
+      .map(replaySafeEvent)
+      .filter(e=>Array.isArray(e.point)),
 
     telemetryEventCount:realTelemetryState.events.length,
     telemetryValidSamples:realTelemetryState.validSamples,
@@ -10740,6 +11132,7 @@ async function processRealGps(position){
   realGpsState.matchedPoint=temporal.point||roadDecisionPoint;
 
   updateRealDrivingTelemetry({
+    point:temporal.point||roadDecisionPoint,
     speedKmh:speed,
     heading,
     accuracy,
@@ -11819,6 +12212,15 @@ function buildScore(){
   }
 
   const worst=[["سرعت",speedScore],["ترمز",b],["شتاب",a],["پیچ",c]].sort((x,y)=>x[1]-y[1])[0];
+
+  const simCoach=worst[0]==="ترمز"
+    ?{title:"ترمز را زودتر شروع کن",action:"قبل از توقف یا تقاطع زودتر گاز را رها کن تا ترمز نرم‌تر شود."}
+    :worst[0]==="شتاب"
+      ?{title:"شروع حرکت نرم‌تر",action:"شتاب‌گیری را تدریجی‌تر کن و از جهش ناگهانی سرعت جلوگیری کن."}
+      :worst[0]==="پیچ"
+        ?{title:"ورود آرام‌تر به پیچ",action:"قبل از پیچ سرعت را کم کن و داخل پیچ حرکت یکنواخت‌تری داشته باش."}
+        :{title:"ثبات سرعت",action:"در بخش‌های دارای حد سرعت مشخص، سرعت را یکنواخت‌تر و نزدیک‌تر به حد مجاز نگه دار."};
+
   $('insight').textContent=
     `بزرگ‌ترین فرصت بهبود: ${worst[0]}. امتیاز بر اساس Severity × Road Context محاسبه شده است. `+
     `GPS/Map Match نامطمئن همچنان از جریمه حذف می‌شود.`;
@@ -11838,6 +12240,28 @@ function buildScore(){
     maxExcess:Math.round(maxExcess),
     avgContextRisk:Number(avgContext.toFixed(2)),
     topRiskEvent:top?top.title:null,
+    weakestBehavior:worst[0],
+    coachTitle:simCoach.title,
+    coachAction:simCoach.action,
+    replayTrack:rows
+      .map(r=>r.pos)
+      .filter(p=>Array.isArray(p)&&p.length>=2)
+      .map(p=>[Number(p[0]),Number(p[1])]),
+    replayEvents:events.map(e=>{
+      const dur=Math.max(1,Number($('duration')?.value||1));
+      const mid=clamp(((Number(e.start||0)+Number(e.end||0))/2)/dur,0,1);
+      const point=interpolateOnRoute(mid);
+      return{
+        type:e.type,
+        title:e.title,
+        sev:e.sev,
+        startAt:Number(e.start||0)*1000,
+        endAt:Number(e.end||e.start||0)*1000,
+        peak:Number(e.peak||0),
+        confidence:Number(e.conf||0),
+        point:Array.isArray(point)?[Number(point[0]),Number(point[1])]:null
+      };
+    }).filter(e=>Array.isArray(e.point)),
     routeKm:Number((((tripJourneyDistanceM||routeDistanceM)||0)/1000).toFixed(1)),
     originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
     destinationLabel:(navDestination&&navDestination.label)||"مقصد",
@@ -13045,6 +13469,238 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     };
   }
 
+
+  let replayRouteLayer=null;
+  let replayEventLayers=[];
+  let selectedReplayEventIndex=null;
+
+  function replayEventIcon(type){
+    if(type==="brake")return"◼";
+    if(type==="accel")return"↗";
+    if(type==="corner")return"↪";
+    if(type==="speeding")return"↟";
+    return"!";
+  }
+
+  function replayEventLabel(type){
+    if(type==="brake")return"ترمز";
+    if(type==="accel")return"شتاب";
+    if(type==="corner")return"پیچ";
+    if(type==="speeding")return"سرعت";
+    return"رویداد";
+  }
+
+  function replaySeverityFa(sev){
+    if(sev==="critical")return"بحرانی";
+    if(sev==="severe")return"شدید";
+    return"متوسط";
+  }
+
+  function replayEventCoach(event){
+    if(event.type==="brake"){
+      return"برای کاهش این نوع رویداد، فاصله بیشتری نگه دار و کاهش سرعت را زودتر شروع کن.";
+    }
+    if(event.type==="accel"){
+      return"فشار گاز را تدریجی‌تر افزایش بده تا شروع حرکت و افزایش سرعت نرم‌تر شود.";
+    }
+    if(event.type==="corner"){
+      return"پیش از ورود به پیچ سرعت را تنظیم کن و داخل پیچ از تغییر ناگهانی سرعت یا فرمان خودداری کن.";
+    }
+    return"این رویداد در Coach اصلی وارد نشده است.";
+  }
+
+  function clearTripReplayLayers(){
+    if(replayRouteLayer){
+      try{map.removeLayer(replayRouteLayer)}catch(e){}
+      replayRouteLayer=null;
+    }
+
+    replayEventLayers.forEach(layer=>{
+      try{map.removeLayer(layer)}catch(e){}
+    });
+    replayEventLayers=[];
+
+    document.getElementById('tripReplayEventStrip').innerHTML="";
+    document.getElementById('tripReplayDetail').classList.remove('open');
+    selectedReplayEventIndex=null;
+  }
+
+  function fitTripReplay(){
+    const r=lastTripResult;
+    if(!r?.replayTrack?.length)return;
+
+    try{
+      const bounds=L.latLngBounds(r.replayTrack);
+      map.fitBounds(bounds,{
+        paddingTopLeft:[42,88],
+        paddingBottomRight:[42,105],
+        animate:true
+      });
+    }catch(e){}
+  }
+
+  function openReplayEvent(index){
+    const r=lastTripResult;
+    const event=r?.replayEvents?.[index];
+    if(!event||!Array.isArray(event.point))return;
+
+    selectedReplayEventIndex=index;
+
+    document.querySelectorAll('.trip-replay-chip').forEach((el,i)=>{
+      el.classList.toggle('selected',i===index);
+    });
+
+    const detail=document.getElementById('tripReplayDetail');
+    detail.classList.add('open');
+
+    document.getElementById('tripReplayDetailType').textContent=
+      replayEventLabel(event.type);
+
+    document.getElementById('tripReplayDetailTitle').textContent=
+      event.title||replayEventLabel(event.type);
+
+    document.getElementById('tripReplayDetailSeverity').textContent=
+      replaySeverityFa(event.sev);
+
+    document.getElementById('tripReplayDetailConfidence').textContent=
+      `${Math.round(Number(event.confidence||0)).toLocaleString('fa-IR')}٪`;
+
+    document.getElementById('tripReplayDetailPeak').textContent=
+      Number(event.peak||0).toFixed(2);
+
+    document.getElementById('tripReplayDetailCoach').textContent=
+      replayEventCoach(event);
+
+    try{
+      map.flyTo(
+        [Number(event.point[0]),Number(event.point[1])],
+        Math.max(16,Number(map.getZoom()||15)),
+        {animate:true,duration:.32}
+      );
+    }catch(e){}
+
+    replayEventLayers.forEach((layer,i)=>{
+      try{
+        layer.setStyle?.({
+          radius:i===index?10:7,
+          weight:i===index?4:2
+        });
+      }catch(e){}
+    });
+  }
+
+  function renderTripReplayEvents(){
+    const r=lastTripResult;
+    const strip=document.getElementById('tripReplayEventStrip');
+    strip.innerHTML="";
+
+    const replayEvents=Array.isArray(r?.replayEvents)
+      ?r.replayEvents
+      :[];
+
+    if(!replayEvents.length){
+      strip.innerHTML=
+        `<div class="trip-replay-no-events">رویداد شدید معتبری روی این سفر ثبت نشد</div>`;
+      return;
+    }
+
+    replayEvents.forEach((event,index)=>{
+      if(!Array.isArray(event.point))return;
+
+      const layer=L.circleMarker(
+        [Number(event.point[0]),Number(event.point[1])],
+        {
+          radius:7,
+          weight:2,
+          opacity:1,
+          fillOpacity:.88
+        }
+      ).addTo(map);
+
+      layer.bindTooltip(
+        `${event.title||replayEventLabel(event.type)} • ${Math.round(Number(event.confidence||0))}٪`
+      );
+
+      layer.on('click',()=>openReplayEvent(index));
+      replayEventLayers.push(layer);
+
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='trip-replay-chip';
+
+      btn.innerHTML=
+        `<span class="trip-replay-chip-icon">${replayEventIcon(event.type)}</span>`+
+        `<span class="trip-replay-chip-copy">`+
+          `<b>${event.title||replayEventLabel(event.type)}</b>`+
+          `<span>${replaySeverityFa(event.sev)} • ${Math.round(Number(event.confidence||0)).toLocaleString('fa-IR')}٪</span>`+
+        `</span>`;
+
+      btn.onclick=()=>openReplayEvent(index);
+      strip.appendChild(btn);
+    });
+  }
+
+  function openTripReplay(){
+    const r=lastTripResult;
+    if(!r?.replayTrack || r.replayTrack.length<2)return;
+
+    document.getElementById('tripSummarySheet').classList.remove('open');
+    switchScreen('trip');
+
+    exitDrivingMode();
+    setRouteSelectionMode(false);
+    closeNavSearchSheet?.();
+    document.body.classList.add('trip-replay-mode');
+
+    try{
+      stopAutomaticHeading?.({northUp:true});
+      map.setBearing?.(0);
+    }catch(e){}
+
+    ensureMapExplorationEnabled();
+    repairLeafletPointerRouting?.();
+    clearTripReplayLayers();
+
+    document.getElementById('tripReplayTitle').textContent=
+      `${r.originLabel||"مبدأ"} ← ${r.destinationLabel||"مقصد"}`;
+
+    replayRouteLayer=L.polyline(
+      r.replayTrack,
+      {
+        weight:7,
+        opacity:.92,
+        lineCap:'round',
+        lineJoin:'round'
+      }
+    ).addTo(map);
+
+    try{replayRouteLayer.bringToFront()}catch(e){}
+
+    renderTripReplayEvents();
+
+    setTimeout(()=>{
+      map.invalidateSize(true);
+      fitTripReplay();
+    },90);
+  }
+
+  function closeTripReplay(){
+    document.body.classList.remove('trip-replay-mode');
+    clearTripReplayLayers();
+    document.getElementById('tripReplayDetail').classList.remove('open');
+
+    try{
+      map.setBearing?.(0);
+      map.invalidateSize(true);
+    }catch(e){}
+
+    if(lastTripResult){
+      showTripSummary();
+    }else{
+      switchScreen('home');
+    }
+  }
+
   function showTripSummary(){
     try{
       exitDrivingMode();
@@ -13147,9 +13803,9 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
             ? (
               r.scoreStatus==="insufficient"
                 ? `<b>داده ناکافی</b><span>سیستم به‌جای ساختن یک عدد ظاهراً دقیق، Score را متوقف کرده است. با ادامه رانندگی و GPS پایدارتر Confidence افزایش پیدا می‌کند.</span>`
-                : `<b>Safety Score واقعی</b><span>ترمز، شتاب و پیچ با Severity، Duration، Confidence و Exposure سفر وزن‌دهی شده‌اند. سفر طولانی‌تر صرفاً به خاطر طول بیشتر جریمه نمی‌شود.</span>`
+                : `<b>${r.coachTitle||"اقدام بعدی"}</b><span>${r.coachAction||"رانندگی نرم و یکنواخت را حفظ کن."}</span>`
             )
-            : `<b>دستیار ایمنی</b><span>${safetyCoachSummary()}</span>`;
+            : `<b>${r.coachTitle||"دستیار ایمنی"}</b><span>${r.coachAction||safetyCoachSummary()}</span>`;
       }
       if(document.getElementById('summaryComparison')){
         document.getElementById('summaryComparison').innerHTML=r.navigationOnly
@@ -13158,6 +13814,16 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
             ? `<b>محدوده این امتیاز</b><span>Safety Score فعلی فقط ترمز، شتاب و پیچ را پوشش می‌دهد. Speed Limit فعلی OSM فقط Preview است و Reward / SafeCoin / Streak / Mission هنوز متوقف‌اند.</span>`
             : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
+      const replayBtn=document.getElementById('summaryReplay');
+      if(replayBtn){
+        const replayAvailable=
+          Array.isArray(r.replayTrack) &&
+          r.replayTrack.length>=2;
+
+        replayBtn.classList.toggle('show',replayAvailable);
+        replayBtn.disabled=!replayAvailable;
+      }
+
       const rewardsBtn=document.getElementById('summaryRewards');
       if(rewardsBtn){
         rewardsBtn.disabled=!!r.telemetryOnly;
@@ -13469,7 +14135,29 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     showTripSummary();
   });
 
+  document.getElementById('summaryReplay')?.addEventListener('click',()=>{
+    openTripReplay();
+  });
+
+  document.getElementById('tripReplayCloseBtn')?.addEventListener('click',()=>{
+    closeTripReplay();
+  });
+
+  document.getElementById('tripReplayFitBtn')?.addEventListener('click',()=>{
+    fitTripReplay();
+  });
+
+  document.getElementById('tripReplayDetailClose')?.addEventListener('click',()=>{
+    document.getElementById('tripReplayDetail')?.classList.remove('open');
+    selectedReplayEventIndex=null;
+    document.querySelectorAll('.trip-replay-chip').forEach(el=>{
+      el.classList.remove('selected');
+    });
+  });
+
   document.getElementById('summaryClose')?.addEventListener('click',()=>{
+    document.body.classList.remove('trip-replay-mode');
+    clearTripReplayLayers();
     document.getElementById('tripSummarySheet').classList.remove('open');
     switchScreen('home');
   });
