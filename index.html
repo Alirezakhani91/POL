@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۴.۴ Trip Replay & Explainable Coaching</title>
+<title>POL | نسخه ۴.۵ Trusted Trip History & Trends</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3076,6 +3076,56 @@ body.trip-replay-mode .trip-replay-event-strip{
   }
 }
 
+
+/* ===== v4.5 Trusted Trip History & Trends ===== */
+.trusted-trips-card{border-color:rgba(37,99,235,.16)!important}
+.trusted-trip-overview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.trusted-overview-stat{padding:10px 8px;border-radius:12px;background:#101923;border:1px solid #293b50;text-align:center}
+.trusted-overview-stat b{display:block;font-size:17px}
+.trusted-overview-stat span{display:block;margin-top:3px;color:#8fa0b6;font-size:7px}
+.trusted-trend-notice{margin-top:9px;padding:8px 9px;border-radius:10px;background:#172334;border:1px solid #304760;color:#b8c7d8;font-size:8px;line-height:1.6}
+.trusted-trend-notice.good{background:#12351d;border-color:#28543c;color:#bbf7d0}
+.trusted-trend-notice.warn{background:#3b2d0d;border-color:#6d551d;color:#fde68a}
+.trusted-trend-notice.bad{background:#441717;border-color:#7d3030;color:#fecaca}
+.trusted-trip-trend-chart{width:100%;height:185px;margin-top:10px;border-radius:12px;background:#0e1721;border:1px solid #27394d}
+.trusted-component-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+.trusted-component{padding:9px;border-radius:11px;background:#101923;border:1px solid #293b50}
+.trusted-component-head{display:flex;justify-content:space-between;gap:8px;font-size:8px}
+.trusted-component-head b{font-size:10px}
+.trusted-component-track{height:6px;margin-top:7px;border-radius:999px;overflow:hidden;background:#223244}
+.trusted-component-track>div{width:0%;height:100%;border-radius:999px;background:#60a5fa;transition:width .2s ease}
+.trusted-history-head{display:flex;justify-content:space-between;align-items:center;gap:9px;margin-top:13px;padding-top:11px;border-top:1px solid #293b50}
+.trusted-history-head>b{font-size:10px}
+.trusted-clear-btn{width:auto!important;min-height:30px!important;padding:4px 8px!important;border-radius:9px!important;background:#172334!important;color:#94a3b8!important;border:1px solid #304760!important;font-size:7px!important}
+.trusted-trip-history{display:grid;gap:8px;margin-top:9px}
+.trusted-trip-card{padding:10px;border-radius:13px;background:#101923;border:1px solid #293b50}
+.trusted-trip-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.trusted-trip-route{min-width:0}
+.trusted-trip-route b{display:block;max-width:470px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px}
+.trusted-trip-route span{display:block;margin-top:3px;color:#8294a9;font-size:7px}
+.trusted-trip-score{flex:0 0 auto;min-width:48px;padding:7px 8px;border-radius:11px;background:#172334;text-align:center}
+.trusted-trip-score b{display:block;font-size:18px}
+.trusted-trip-score span{display:block;margin-top:1px;font-size:6px;color:#8fa0b6}
+.trusted-trip-score.insufficient b{font-size:9px;line-height:1.35;color:#fca5a5}
+.trusted-trip-status{display:inline-flex!important;width:auto!important;margin-top:6px!important;padding:3px 6px!important;border-radius:999px!important;font-size:7px!important;border:1px solid #3b526f!important;color:#bfdbfe!important;background:#172334!important}
+.trusted-trip-status.reliable{background:#12351d!important;border-color:#28543c!important;color:#86efac!important}
+.trusted-trip-status.preliminary{background:#3b2d0d!important;border-color:#6d551d!important;color:#fde68a!important}
+.trusted-trip-status.insufficient{background:#441717!important;border-color:#7d3030!important;color:#fecaca!important}
+.trusted-trip-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.trusted-trip-metrics>div{padding:6px;border-radius:9px;background:#172334;text-align:center}
+.trusted-trip-metrics b{display:block;font-size:9px}
+.trusted-trip-metrics span{display:block;margin-top:2px;color:#8294a9;font-size:6px}
+.trusted-trip-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.trusted-trip-footer span{min-width:0;color:#a8b6c7;font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trusted-replay-btn{flex:0 0 auto;width:auto!important;min-height:30px!important;padding:4px 8px!important;border-radius:9px!important;background:#2563eb!important;color:#fff!important;border:0!important;font-size:7px!important}
+@media(max-width:650px){
+  .trusted-trip-overview{grid-template-columns:repeat(2,1fr)}
+  .trusted-component-grid{grid-template-columns:1fr}
+  .trusted-trip-metrics{grid-template-columns:repeat(2,1fr)}
+  .trusted-trip-route b{max-width:240px}
+  .trusted-trip-trend-chart{height:165px}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3829,9 +3879,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v4.4</span>
+              <span class="lab-version-chip">v4.5</span>
               <div>
-                <b>Trip Replay & Explainable Coaching</b>
+                <b>Trusted Trip History & Trends</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -4080,6 +4130,50 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
           <div class="profile-name">پروفایل رانندگی من</div>
           <div class="profile-meta"><span id="pTrips">۰</span> سفر معتبر • میانگین <span id="pAvg">--</span></div>
           <div class="profile-meta">زنجیره سفر ایمن: <span id="pStreak">۰</span> • روند اخیر: <span id="pImprove">--</span></div>
+        </div>
+      </div>
+
+      <div class="section-card trusted-trips-card">
+        <div class="section-head">
+          <h3>سفرهای واقعی</h3>
+          <small>GPS واقعی • جدا از پاداش و Gamification</small>
+        </div>
+
+        <div class="trusted-trip-overview">
+          <div class="trusted-overview-stat"><b id="trustedTripCount">۰</b><span>سفر GPS واقعی</span></div>
+          <div class="trusted-overview-stat"><b id="trustedRecentAvg">--</b><span>میانگین معتبر اخیر</span></div>
+          <div class="trusted-overview-stat"><b id="trustedTrendStatus">--</b><span>روند رفتاری</span></div>
+          <div class="trusted-overview-stat"><b id="trustedAvgConfidence">--</b><span>Confidence میانگین</span></div>
+        </div>
+
+        <div id="trustedTrendNotice" class="trusted-trend-notice">
+          برای تحلیل روند، حداقل ۳ سفر دارای Safety Score لازم است.
+        </div>
+
+        <canvas id="trustedTripTrendChart" class="trusted-trip-trend-chart" width="900" height="210"></canvas>
+
+        <div class="trusted-component-grid">
+          <div class="trusted-component">
+            <div class="trusted-component-head"><span>ترمز</span><b id="trustedBrakeTrend">--</b></div>
+            <div class="trusted-component-track"><div id="trustedBrakeBar"></div></div>
+          </div>
+          <div class="trusted-component">
+            <div class="trusted-component-head"><span>شتاب</span><b id="trustedAccelTrend">--</b></div>
+            <div class="trusted-component-track"><div id="trustedAccelBar"></div></div>
+          </div>
+          <div class="trusted-component">
+            <div class="trusted-component-head"><span>پیچ</span><b id="trustedCornerTrend">--</b></div>
+            <div class="trusted-component-track"><div id="trustedCornerBar"></div></div>
+          </div>
+        </div>
+
+        <div class="trusted-history-head">
+          <b>آخرین سفرهای واقعی</b>
+          <button id="clearTrustedTripsBtn" class="trusted-clear-btn">پاک‌کردن تاریخچه واقعی</button>
+        </div>
+
+        <div id="trustedTripHistory" class="trusted-trip-history">
+          <div class="small">هنوز سفر GPS واقعی ذخیره نشده است.</div>
         </div>
       </div>
 
@@ -6770,6 +6864,7 @@ function saveRecentDestination(dest){
   resetRealTelemetry();
 resetConfidenceSafetyScore();
 resetMappedSpeedTripStats();
+renderTrustedRealTrips();
 renderRecentDestinations();
 }
 function renderRecentDestinations(){
@@ -10834,6 +10929,251 @@ function realTelemetryComponentScores(){
 }
 
 
+
+const TRUSTED_REAL_TRIPS_KEY="pol_trusted_real_trips_v1";
+const TRUSTED_REAL_TRIPS_MAX=12;
+
+function trustedTripId(){
+  return`real_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+}
+function downsampleReplayTrack(track,maxPoints=220){
+  const points=(track||[])
+    .filter(p=>Array.isArray(p)&&p.length>=2)
+    .map(p=>[Number(p[0]),Number(p[1])])
+    .filter(p=>p.every(Number.isFinite));
+  if(points.length<=maxPoints)return points;
+  const out=[];
+  for(let i=0;i<maxPoints;i++){
+    const idx=Math.round(i*(points.length-1)/(maxPoints-1));
+    out.push(points[idx]);
+  }
+  return out;
+}
+function loadTrustedRealTrips(){
+  try{
+    const arr=JSON.parse(localStorage.getItem(TRUSTED_REAL_TRIPS_KEY)||"[]");
+    return Array.isArray(arr)?arr:[];
+  }catch(e){return[]}
+}
+function saveTrustedRealTrips(trips){
+  try{
+    localStorage.setItem(
+      TRUSTED_REAL_TRIPS_KEY,
+      JSON.stringify((trips||[]).slice(-TRUSTED_REAL_TRIPS_MAX))
+    );
+    return true;
+  }catch(e){return false}
+}
+function trustedHistoryCopy(result){
+  return{
+    id:result.id||trustedTripId(),
+    savedAt:Number(result.savedAt||Date.now()),
+    navigationOnly:!!result.navigationOnly,
+    telemetryOnly:!!result.telemetryOnly,
+    safetyScoreV1:!!result.safetyScoreV1,
+    navigationMode:result.navigationMode||"real-gps",
+    score:result.score==null?null:Number(result.score),
+    behaviorScore:result.behaviorScore==null?null:Number(result.behaviorScore),
+    scoreStatus:result.scoreStatus||(result.navigationOnly?"insufficient":"preliminary"),
+    scoreConfidence:Number(result.scoreConfidence??result.tripConfidence??0),
+    scoreExposureKm:Number(result.scoreExposureKm??result.routeKm??0),
+    scoreDurationS:Number(result.scoreDurationS??Number(result.plannedDurationMin||0)*60),
+    brakeScore:result.brakeScore==null?null:Number(result.brakeScore),
+    accelScore:result.accelScore==null?null:Number(result.accelScore),
+    cornerScore:result.cornerScore==null?null:Number(result.cornerScore),
+    tripConfidence:Number(result.tripConfidence||0),
+    routeKm:Number(result.routeKm||0),
+    originLabel:result.originLabel||"مبدأ",
+    destinationLabel:result.destinationLabel||"مقصد",
+    plannedDurationMin:Number(result.plannedDurationMin||0),
+    rerouteCount:Number(result.rerouteCount||0),
+    gpsAccuracyM:Number(result.gpsAccuracyM||0),
+    mapMatchConfidence:Number(result.mapMatchConfidence||0),
+    mapMatchRatio:Number(result.mapMatchRatio||0),
+    topRiskEvent:result.topRiskEvent||null,
+    weakestBehavior:result.weakestBehavior||null,
+    coachTitle:result.coachTitle||null,
+    coachAction:result.coachAction||null,
+    telemetryEventCount:Number(result.telemetryEventCount||0),
+    telemetryValidSamples:Number(result.telemetryValidSamples||0),
+    telemetryRejectedSamples:Number(result.telemetryRejectedSamples||0),
+    mappedSpeedCoverage:result.mappedSpeedCoverage==null?null:Number(result.mappedSpeedCoverage),
+    mappedSpeedCompliance:result.mappedSpeedCompliance==null?null:Number(result.mappedSpeedCompliance),
+    replayTrack:downsampleReplayTrack(result.replayTrack||[],220),
+    replayEvents:(result.replayEvents||[]).slice(0,40).map(e=>({
+      type:e.type,title:e.title,sev:e.sev,
+      startAt:Number(e.startAt||0),
+      endAt:Number(e.endAt||e.startAt||0),
+      peak:Number(e.peak||0),
+      confidence:Number(e.confidence||0),
+      point:Array.isArray(e.point)?[Number(e.point[0]),Number(e.point[1])]:null
+    })).filter(e=>Array.isArray(e.point))
+  };
+}
+function persistTrustedRealTrip(result){
+  if(!result||result.navigationMode!=="real-gps")return null;
+  const trip=trustedHistoryCopy(result);
+  const trips=loadTrustedRealTrips().filter(t=>t.id!==trip.id);
+  trips.push(trip);
+  saveTrustedRealTrips(trips);
+  result.id=trip.id;
+  result.savedAt=trip.savedAt;
+  if(typeof renderTrustedRealTrips==="function")renderTrustedRealTrips();
+  return trip;
+}
+function getTrustedRealTrip(id){
+  return loadTrustedRealTrips().find(t=>t.id===id)||null;
+}
+function weightedTripAverage(trips,key){
+  let num=0,den=0;
+  (trips||[]).forEach(t=>{
+    const value=Number(t[key]);
+    if(!Number.isFinite(value))return;
+    const weight=clamp(Number(t.scoreConfidence||t.tripConfidence||60)/100,.45,1);
+    num+=value*weight; den+=weight;
+  });
+  return den?num/den:null;
+}
+function trustedTrendDelta(trips,key="score"){
+  const valid=(trips||[]).filter(t=>Number.isFinite(Number(t[key])));
+  if(valid.length<3)return null;
+  const recent=valid.slice(-5);
+  const previous=valid.slice(-10,-5);
+  if(!previous.length){
+    const split=Math.max(1,Math.floor(valid.length/2));
+    const a=weightedTripAverage(valid.slice(0,split),key);
+    const b=weightedTripAverage(valid.slice(split),key);
+    return Number.isFinite(a)&&Number.isFinite(b)?b-a:null;
+  }
+  const a=weightedTripAverage(previous,key);
+  const b=weightedTripAverage(recent,key);
+  return Number.isFinite(a)&&Number.isFinite(b)?b-a:null;
+}
+function trustedTrendLabel(delta){
+  if(delta==null)return{label:"داده کم",className:"",text:"برای تحلیل روند، حداقل ۳ سفر دارای Safety Score لازم است."};
+  if(delta>=3)return{label:"رو به بهبود",className:"good",text:`میانگین سفرهای اخیر حدود ${Math.round(delta).toLocaleString('fa-IR')} امتیاز بهتر شده است.`};
+  if(delta<=-3)return{label:"نیازمند توجه",className:"bad",text:`میانگین سفرهای اخیر حدود ${Math.abs(Math.round(delta)).toLocaleString('fa-IR')} امتیاز افت کرده است.`};
+  return{label:"پایدار",className:"warn",text:"میانگین سفرهای اخیر تغییر معناداری نداشته است."};
+}
+function trustedStatusLabel(status){
+  if(status==="reliable")return"قابل اتکا";
+  if(status==="preliminary")return"اولیه";
+  return"داده ناکافی";
+}
+function trustedDateTime(ts){
+  try{
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{
+      year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'
+    }).format(new Date(ts));
+  }catch(e){return new Date(ts).toLocaleString()}
+}
+function renderTrustedTrendChart(trips){
+  const canvas=$('trustedTripTrendChart');
+  if(!canvas)return;
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const cssW=Math.max(280,canvas.clientWidth||900);
+  const cssH=Math.max(150,canvas.clientHeight||185);
+  canvas.width=Math.round(cssW*dpr);
+  canvas.height=Math.round(cssH*dpr);
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+  const scored=(trips||[])
+    .filter(t=>Number.isFinite(Number(t.score))&&t.scoreStatus!=="insufficient")
+    .slice(-10);
+  ctx.font='10px Vazirmatn, sans-serif';
+  ctx.textAlign='center';
+  if(scored.length<2){
+    ctx.fillStyle='#7f91a8';
+    ctx.fillText('برای رسم روند، حداقل ۲ سفر دارای Score لازم است.',cssW/2,cssH/2);
+    return;
+  }
+  const pad={left:32,right:18,top:18,bottom:27};
+  const w=cssW-pad.left-pad.right;
+  const h=cssH-pad.top-pad.bottom;
+  [60,70,80,90,100].forEach(v=>{
+    const y=pad.top+h-(v-50)/50*h;
+    ctx.strokeStyle='rgba(148,163,184,.12)';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(cssW-pad.right,y);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.textAlign='right';ctx.fillText(String(v),pad.left-6,y+3);
+  });
+  const points=scored.map((t,i)=>{
+    const x=pad.left+w*i/(scored.length-1);
+    const y=pad.top+h-(clamp(Number(t.score),50,100)-50)/50*h;
+    return{x,y,t};
+  });
+  ctx.strokeStyle='#60a5fa';ctx.lineWidth=2.5;ctx.beginPath();
+  points.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));
+  ctx.stroke();
+  points.forEach((pt,i)=>{
+    ctx.fillStyle=pt.t.scoreStatus==="reliable"?'#22c55e':'#f59e0b';
+    ctx.beginPath();ctx.arc(pt.x,pt.y,4.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#9aaabc';ctx.textAlign='center';
+    ctx.fillText((i+1).toLocaleString('fa-IR'),pt.x,cssH-8);
+  });
+}
+function renderTrustedRealTrips(){
+  const trips=loadTrustedRealTrips();
+  const scored=trips.filter(t=>Number.isFinite(Number(t.score))&&t.scoreStatus!=="insufficient");
+  if($('trustedTripCount'))$('trustedTripCount').textContent=trips.length.toLocaleString('fa-IR');
+  const recentAvg=weightedTripAverage(scored.slice(-5),'score');
+  if($('trustedRecentAvg'))$('trustedRecentAvg').textContent=recentAvg==null?"—":Math.round(recentAvg).toLocaleString('fa-IR');
+  const avgConf=trips.length?trips.reduce((s,t)=>s+Number(t.scoreConfidence||t.tripConfidence||0),0)/trips.length:null;
+  if($('trustedAvgConfidence'))$('trustedAvgConfidence').textContent=avgConf==null?"—":`${Math.round(avgConf).toLocaleString('fa-IR')}٪`;
+  const trend=trustedTrendLabel(trustedTrendDelta(scored,'score'));
+  if($('trustedTrendStatus'))$('trustedTrendStatus').textContent=trend.label;
+  const notice=$('trustedTrendNotice');
+  if(notice){notice.className=`trusted-trend-notice ${trend.className}`.trim();notice.textContent=trend.text}
+  [['Brake','brakeScore'],['Accel','accelScore'],['Corner','cornerScore']].forEach(([id,key])=>{
+    const value=weightedTripAverage(scored.slice(-5),key);
+    const d=trustedTrendDelta(scored,key);
+    const label=value==null?"—":`${Math.round(value).toLocaleString('fa-IR')}${d==null?"":` (${d>=0?"+":""}${Math.round(d).toLocaleString('fa-IR')})`}`;
+    if($(`trusted${id}Trend`))$(`trusted${id}Trend`).textContent=label;
+    if($(`trusted${id}Bar`))$(`trusted${id}Bar`).style.width=`${value==null?0:clamp(value,0,100)}%`;
+  });
+  renderTrustedTrendChart(trips);
+  const box=$('trustedTripHistory');
+  if(!box)return;
+  if(!trips.length){box.innerHTML='<div class="small">هنوز سفر GPS واقعی ذخیره نشده است.</div>';return}
+  box.innerHTML=trips.slice().reverse().map(trip=>{
+    const scoreText=Number.isFinite(Number(trip.score))?Number(trip.score).toLocaleString('fa-IR'):'داده کافی نیست';
+    const status=trip.scoreStatus||'insufficient';
+    const route=`${trip.originLabel||"مبدأ"} ← ${trip.destinationLabel||"مقصد"}`;
+    const replayAvailable=Array.isArray(trip.replayTrack)&&trip.replayTrack.length>=2;
+    const brake=trip.brakeScore==null?'—':Number(trip.brakeScore).toLocaleString('fa-IR');
+    const corner=trip.cornerScore==null?'—':Number(trip.cornerScore).toLocaleString('fa-IR');
+    return`<div class="trusted-trip-card">
+      <div class="trusted-trip-card-head">
+        <div class="trusted-trip-route">
+          <b>${route}</b>
+          <span>${trustedDateTime(trip.savedAt)}</span>
+          <span class="trusted-trip-status ${status}">${trustedStatusLabel(status)}</span>
+        </div>
+        <div class="trusted-trip-score ${status==='insufficient'?'insufficient':''}">
+          <b>${scoreText}</b><span>Safety Score</span>
+        </div>
+      </div>
+      <div class="trusted-trip-metrics">
+        <div><b>${Math.round(Number(trip.scoreConfidence||0)).toLocaleString('fa-IR')}٪</b><span>Confidence</span></div>
+        <div><b>${Number(trip.scoreExposureKm||trip.routeKm||0).toLocaleString('fa-IR',{maximumFractionDigits:1})}</b><span>km</span></div>
+        <div><b>${brake}</b><span>ترمز</span></div>
+        <div><b>${corner}</b><span>پیچ</span></div>
+      </div>
+      <div class="trusted-trip-footer">
+        <span>${trip.coachTitle||trip.topRiskEvent||"تحلیل سفر واقعی"}</span>
+        ${replayAvailable?`<button class="trusted-replay-btn" data-trusted-replay="${trip.id}">Replay</button>`:""}
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-trusted-replay]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.getAttribute('data-trusted-replay');
+      if(typeof window.openTrustedTripReplay==="function")window.openTrustedTripReplay(id);
+    });
+  });
+}
+
 function coachActionForWeakness(weakest,status,eventCount=0){
   if(status==="insufficient"){
     return{
@@ -10998,9 +11338,8 @@ function buildRealTelemetryResult(){
     ]
   };
 
-  // Real telemetry scores are intentionally NOT persisted into the
-  // gamified driver profile yet. Otherwise an experimental score could
-  // change streaks, XP or mission logic.
+  // Real telemetry scores stay separate from the gamified profile.
+  persistTrustedRealTrip(lastTripResult);
 }
 
 function stopRealGps(){
@@ -11397,21 +11736,35 @@ async function triggerRealGpsReroute(rawPoint){
   }
 }
 function buildRealGpsNavigationResult(){
+  const tripConf=gpsRouteConfidence(
+    Number(realGpsState.accuracy||999),
+    Number(realGpsState.distanceFromRoute||999)
+  );
+
   lastTripResult={
     navigationOnly:true,
+    telemetryOnly:false,
     navigationMode:"real-gps",
     score:null,
+    scoreStatus:"insufficient",
+    scoreConfidence:Math.min(44,Number(tripConf||0)),
+    scoreExposureKm:Number((realTelemetryActualDistanceM()/1000).toFixed(2)),
+    scoreDurationS:Math.round(realTelemetryDurationS()),
     speedScore:null,
     brakeScore:null,
     accelScore:null,
     cornerScore:null,
-    tripConfidence:gpsRouteConfidence(
-      Number(realGpsState.accuracy||999),
-      Number(realGpsState.distanceFromRoute||999)
-    ),
+    tripConfidence:tripConf,
     speedCompliance:null,
     maxExcess:null,
     topRiskEvent:null,
+    weakestBehavior:null,
+    coachTitle:"داده بیشتری لازم است",
+    coachAction:"این سفر برای ساخت Safety Score معتبر نمونه کافی نداشت؛ Navigation و Track سفر ذخیره شده‌اند.",
+    replayTrack:(realGpsState.track||[])
+      .filter(p=>Array.isArray(p)&&p.length>=2)
+      .map(p=>[Number(p[0]),Number(p[1])]),
+    replayEvents:[],
     routeKm:Number((Number(routeDistanceM||0)/1000).toFixed(1)),
     originLabel:(navOrigin&&navOrigin.label)||"مبدأ",
     destinationLabel:(navDestination&&navDestination.label)||"مقصد",
@@ -11424,8 +11777,13 @@ function buildRealGpsNavigationResult(){
     dataIntegrity:null,
     fraudRisk:null,
     eligibilityConfidence:null,
-    eligibilityReasons:["حالت GPS واقعی در نسخه وب فعلاً فقط Navigation را ارزیابی می‌کند."]
+    eligibilityReasons:[
+      "Insufficient telemetry for Safety Score.",
+      "Navigation trace kept in separate real-trip history."
+    ]
   };
+
+  persistTrustedRealTrip(lastTripResult);
 }
 
 function bearingDeg(a,b){
@@ -12801,6 +13159,7 @@ function tripComparisonText(current,p){
 
 function renderProfile(){
   const p=driverProfile,trips=p.trips||[];
+  renderTrustedRealTrips();
   renderDriverInsights(p);
   $('pTrips').textContent=trips.length;
   $('pStreak').textContent=p.safeStreak||0;
@@ -13399,6 +13758,12 @@ document.querySelectorAll('.marketFilter').forEach(btn=>{
   };
 });
 
+$('clearTrustedTripsBtn')?.addEventListener('click',()=>{
+  if(!confirm("تاریخچه سفرهای GPS واقعی پاک شود؟"))return;
+  localStorage.removeItem(TRUSTED_REAL_TRIPS_KEY);
+  renderTrustedRealTrips();
+});
+
 $('resetProfile').onclick=()=>{
   if(confirm('پروفایل آزمایشی و تاریخچه سفرهای ذخیره‌شده در این مرورگر پاک شود؟')){
     localStorage.removeItem(PROFILE_KEY);
@@ -13408,6 +13773,11 @@ $('resetProfile').onclick=()=>{
 };
 
 window.addEventListener('resize',()=>fixMapSize(false));
+window.addEventListener('resize',()=>{
+  if(document.getElementById('screen-profile')?.classList.contains('active')){
+    renderTrustedRealTrips();
+  }
+});
 window.addEventListener('load',()=>fixMapSize(false));
 setTimeout(()=>fixMapSize(false),150);
 renderProfile();
@@ -13439,6 +13809,9 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
     }
     if(name==='rewards'){
       try{ renderMarketplace(); }catch(e){}
+    }
+    if(name==='profile'){
+      try{ renderTrustedRealTrips(); }catch(e){}
     }
   }
 
@@ -13683,6 +14056,17 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       fitTripReplay();
     },90);
   }
+
+  window.openTrustedTripReplay=(id)=>{
+    const stored=getTrustedRealTrip(id);
+    if(!stored)return;
+    lastTripResult={
+      ...stored,
+      navigationMode:"real-gps",
+      telemetryOnly:!stored.navigationOnly
+    };
+    openTripReplay();
+  };
 
   function closeTripReplay(){
     document.body.classList.remove('trip-replay-mode');
