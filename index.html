@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۳.۹ Smart Guidance Engine</title>
+<title>POL | نسخه ۴.۰ Live ETA Engine</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2600,6 +2600,37 @@ body.driving-mode #turnCard.guidance-now .turn-arrow{
   transform:scale(1.06);
 }
 
+
+/* ===== v4.0 Live ETA Engine ===== */
+.live-eta-source{
+  margin-top:5px;
+  text-align:center;
+  font-size:7px;
+  color:#8393a8;
+  line-height:1.4;
+}
+body.driving-mode .live-eta-source{
+  color:#7f91a8;
+}
+.eta-debug-box{
+  border-color:rgba(34,197,94,.18)!important;
+}
+.eta-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.eta-debug-box .eligibilityStatus.warn{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.eta-debug-box .eligibilityStatus.review{
+  background:#172334;
+  border-color:#3b526f;
+  color:#bfdbfe;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -3295,6 +3326,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <div><b id="liveArrival">--</b><span>رسیدن</span></div>
                 </div>
                 <div class="route-progress-rail"><div id="routeProgressFill" class="route-progress-fill"></div></div>
+                <div id="liveEtaSource" class="live-eta-source">ETA تخمینی • بدون ترافیک زنده</div>
               </div>
 
               <div id="destinationMapLabel" class="destination-map-label" style="display:none">مقصد: تجریش</div>
@@ -3320,9 +3352,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v3.9</span>
+              <span class="lab-version-chip">v4.0</span>
               <div>
-                <b>Smart Guidance Engine</b>
+                <b>Live ETA & Remaining Route Engine</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -3341,6 +3373,24 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="eligibilityCell"><b id="guidanceDebugStep">--</b><span>شماره مانور</span></div>
               </div>
               <div id="guidanceDebugText" class="reasonList">هنوز Navigation شروع نشده است.</div>
+            </div>
+
+            <div class="eligibilityBox eta-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Live ETA Engine</b>
+                  <div class="small">فقط آزمایشگاه — ETA زنده بدون Traffic Provider</div>
+                </div>
+                <div id="etaDebugStatus" class="eligibilityStatus review">در انتظار</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="etaDebugRemaining">--</b><span>فاصله باقی‌مانده</span></div>
+                <div class="eligibilityCell"><b id="etaDebugPace">--</b><span>Pace Factor</span></div>
+                <div class="eligibilityCell"><b id="etaDebugConfidence">--</b><span>اطمینان ETA</span></div>
+              </div>
+
+              <div id="etaDebugText" class="reasonList">هنوز سفر شروع نشده است.</div>
             </div>
 
             <div class="eligibilityBox temporal-debug-box">
@@ -3827,6 +3877,19 @@ let destinationSearchCache=[];
 let navigationSteps=[];
 let voiceGuidanceEnabled=true;
 let lastSpokenStepIndex=-1;
+let liveEtaState={
+  initialized:false,
+  lastProgress:0,
+  lastUpdateAt:0,
+  lastRemainingM:null,
+  smoothedRemainingSeconds:null,
+  paceFactor:1,
+  confidence:0,
+  stableSamples:0,
+  rerouteGeneration:0,
+  source:"base"
+};
+
 let smartGuidanceState={
   steps:{},
   activeStepIndex:null,
@@ -4878,16 +4941,270 @@ function processSmartGuidance(next){
 
   maybeVibrateForManeuver(stage);
 }
+
+function resetLiveEtaEngine({reroute=false}={}){
+  liveEtaState={
+    initialized:false,
+    lastProgress:0,
+    lastUpdateAt:0,
+    lastRemainingM:null,
+    smoothedRemainingSeconds:null,
+    paceFactor:1,
+    confidence:0,
+    stableSamples:0,
+    rerouteGeneration:Number(liveEtaState?.rerouteGeneration||0)+(reroute?1:0),
+    source:"base"
+  };
+  renderEtaDiagnostics(null);
+}
+
+function expectedRouteSpeedKmh(){
+  const dist=Number(routeDistanceM||0);
+  const dur=Number(routeDurationS||0);
+  if(dist<=0||dur<=0)return null;
+  return (dist/dur)*3.6;
+}
+
+function etaObservedPaceFactor(speedKmh){
+  const expected=expectedRouteSpeedKmh();
+  const speed=Math.max(0,Number(speedKmh||0));
+
+  if(!Number.isFinite(expected)||expected<=5)return 1;
+  if(speed<5)return null;
+
+  // slower than expected => factor > 1
+  // faster than expected => factor < 1
+  return clamp(expected/speed,.68,1.75);
+}
+
+function etaCurrentSpeedKmh(){
+  if(isRealGpsMode()&&realGpsState?.firstFix){
+    return Math.max(0,Number(realGpsState.speedKmh||0));
+  }
+
+  const last=rows?.length?rows[rows.length-1]:null;
+  if(last&&Number.isFinite(Number(last.speed))){
+    return Math.max(0,Number(last.speed));
+  }
+
+  const ui=Number($('speed')?.textContent||0);
+  return Number.isFinite(ui)?Math.max(0,ui):0;
+}
+
+function etaConfidenceScore({
+  speedKmh=0,
+  progress=0,
+  progressDelta=0,
+  remainingM=0
+}={}){
+  let score=45;
+
+  if(isRealGpsMode()){
+    const accuracy=Number(realGpsState?.accuracy||999);
+    const temporal=Number(realGpsState?.temporalMatch?.confidence||0);
+
+    if(accuracy<=15)score+=18;
+    else if(accuracy<=25)score+=12;
+    else if(accuracy<=40)score+=5;
+    else score-=12;
+
+    score+=Math.round((temporal-50)*.22);
+  }else{
+    score+=18;
+  }
+
+  if(Number(speedKmh)>=8)score+=8;
+  if(progressDelta>=0)score+=5;
+  if(liveEtaState.stableSamples>=8)score+=7;
+  if(remainingM<500)score-=4;
+
+  return clamp(Math.round(score),20,95);
+}
+
+function computeLiveEta(progress){
+  const p=clamp(Number(progress||0),0,1);
+  const now=Date.now();
+
+  const remainingM=Math.max(0,Number(routeDistanceM||0)*(1-p));
+  const baseRemainingSeconds=Math.max(
+    0,
+    Number(routeDurationS||0)*(1-p)
+  );
+
+  const speedKmh=etaCurrentSpeedKmh();
+  const paceSample=etaObservedPaceFactor(speedKmh);
+
+  const dt=liveEtaState.lastUpdateAt
+    ?Math.max(.05,(now-liveEtaState.lastUpdateAt)/1000)
+    :0;
+
+  const progressDelta=p-Number(liveEtaState.lastProgress||0);
+
+  // Smooth pace factor heavily. We want useful movement, not jitter.
+  if(Number.isFinite(paceSample)){
+    const alpha=
+      liveEtaState.stableSamples<4?.20:
+      speedKmh>=50?.10:.075;
+
+    liveEtaState.paceFactor=
+      liveEtaState.paceFactor*(1-alpha)+paceSample*alpha;
+
+    liveEtaState.source="pace";
+    liveEtaState.stableSamples+=1;
+  }else{
+    // When stopped / GPS uncertain, slowly drift toward provider baseline.
+    liveEtaState.paceFactor=
+      liveEtaState.paceFactor*.985+1*.015;
+    liveEtaState.source="base";
+  }
+
+  // Don't allow local pace to wildly rewrite the whole route.
+  const adjustedRemainingSeconds=
+    baseRemainingSeconds *
+    clamp(liveEtaState.paceFactor,.78,1.45);
+
+  let targetSeconds=adjustedRemainingSeconds;
+
+  // Near destination, distance / current pace becomes more useful,
+  // but still clamp to avoid absurd estimates.
+  if(remainingM<=1800 && speedKmh>=6){
+    const localSeconds=remainingM/(speedKmh/3.6);
+    const localBlend=remainingM<=600?.40:.20;
+    targetSeconds=
+      adjustedRemainingSeconds*(1-localBlend)+
+      localSeconds*localBlend;
+  }
+
+  // First sample or reroute: accept immediately.
+  if(!liveEtaState.initialized || liveEtaState.smoothedRemainingSeconds==null){
+    liveEtaState.smoothedRemainingSeconds=targetSeconds;
+    liveEtaState.initialized=true;
+  }else{
+    const prev=Number(liveEtaState.smoothedRemainingSeconds||0);
+
+    // ETA can decrease steadily; upward jumps are intentionally slower.
+    const rising=targetSeconds>prev;
+    const alpha=
+      rising
+        ?(dt>1.5?.16:.08)
+        :(dt>1.5?.24:.14);
+
+    liveEtaState.smoothedRemainingSeconds=
+      prev*(1-alpha)+targetSeconds*alpha;
+
+    // Remaining time should not oscillate upward for tiny noise.
+    if(
+      targetSeconds<prev+20 &&
+      progressDelta>=0 &&
+      liveEtaState.smoothedRemainingSeconds>prev+4
+    ){
+      liveEtaState.smoothedRemainingSeconds=prev+4;
+    }
+  }
+
+  const confidence=etaConfidenceScore({
+    speedKmh,
+    progress:p,
+    progressDelta,
+    remainingM
+  });
+
+  liveEtaState.confidence=confidence;
+  liveEtaState.lastProgress=p;
+  liveEtaState.lastUpdateAt=now;
+  liveEtaState.lastRemainingM=remainingM;
+
+  const remainingSeconds=Math.max(
+    0,
+    Math.min(
+      Number(liveEtaState.smoothedRemainingSeconds||0),
+      Math.max(60,Number(routeDurationS||0)*1.8)
+    )
+  );
+
+  const result={
+    progress:p,
+    remainingM,
+    remainingSeconds,
+    arrivalAt:Date.now()+remainingSeconds*1000,
+    paceFactor:Number(liveEtaState.paceFactor||1),
+    speedKmh,
+    confidence,
+    source:liveEtaState.source
+  };
+
+  renderEtaDiagnostics(result);
+  return result;
+}
+
+function formatArrivalFromTimestamp(timestamp){
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{
+    hour:'2-digit',
+    minute:'2-digit'
+  }).format(new Date(timestamp));
+}
+
+function renderEtaDiagnostics(result){
+  const status=$('etaDebugStatus');
+  const remaining=$('etaDebugRemaining');
+  const pace=$('etaDebugPace');
+  const conf=$('etaDebugConfidence');
+  const text=$('etaDebugText');
+
+  if(!result){
+    if(status){
+      status.className='eligibilityStatus review';
+      status.textContent='در انتظار';
+    }
+    if(remaining)remaining.textContent='--';
+    if(pace)pace.textContent='--';
+    if(conf)conf.textContent='--';
+    if(text)text.textContent='هنوز سفر شروع نشده است.';
+    return;
+  }
+
+  if(remaining)remaining.textContent=distanceTextFa(result.remainingM);
+  if(pace)pace.textContent=`${result.paceFactor.toFixed(2)}×`;
+  if(conf)conf.textContent=`${Math.round(result.confidence).toLocaleString('fa-IR')}٪`;
+
+  if(status){
+    if(result.confidence>=78){
+      status.className='eligibilityStatus good';
+      status.textContent='پایدار';
+    }else if(result.confidence>=58){
+      status.className='eligibilityStatus warn';
+      status.textContent='متوسط';
+    }else{
+      status.className='eligibilityStatus review';
+      status.textContent='در حال تثبیت';
+    }
+  }
+
+  if(text){
+    const mode=result.source==='pace'
+      ?'Pace اخیر در ETA لحاظ شده'
+      :'ETA نزدیک به زمان پایه Route است';
+
+    text.textContent=
+      `${mode} • سرعت ${Math.round(result.speedKmh).toLocaleString('fa-IR')} km/h • `+
+      `ETA بدون ترافیک زنده`;
+  }
+}
+
 function updateTurnByTurn(progress){
-  const travelled=routeDistanceM*clamp(progress,0,1);
-  const remaining=Math.max(0,routeDistanceM-travelled);
-  const remainingSeconds=Math.max(0,routeDurationS*(1-clamp(progress,0,1)));
+  const stableProgress=clamp(Number(progress||0),0,1);
+  const travelled=routeDistanceM*stableProgress;
+  const eta=computeLiveEta(stableProgress);
+  const remaining=eta.remainingM;
+  const remainingSeconds=eta.remainingSeconds;
   const next=nextNavigationStep(travelled);
 
   if($('remainingDistance'))$('remainingDistance').textContent=distanceTextFa(remaining);
   if($('remainingEta'))$('remainingEta').textContent=formatDurationFa(remainingSeconds);
-  if($('liveArrival'))$('liveArrival').textContent=formatArrivalFa(remainingSeconds);
-  if($('routeProgressFill'))$('routeProgressFill').style.width=`${Math.round(progress*100)}%`;
+  if($('liveArrival'))$('liveArrival').textContent=formatArrivalFromTimestamp(eta.arrivalAt);
+  if($('routeProgressFill'))$('routeProgressFill').style.width=`${Math.round(stableProgress*100)}%`;
+
+  progress=stableProgress;
 
   if(!next)return;
   if($('turnArrow'))$('turnArrow').textContent=next.step.arrow||"↑";
@@ -4910,6 +5227,7 @@ function updateTurnByTurn(progress){
   if(banner)banner.classList.toggle('show',progress>=.995);
 }
 function resetTurnByTurn(){
+  resetLiveEtaEngine();
   if($('turnArrow'))$('turnArrow').textContent="↑";
   if($('turnDistance'))$('turnDistance').textContent="آماده حرکت";
   if($('turnInstruction'))$('turnInstruction').textContent="مسیر را انتخاب کن";
@@ -5427,6 +5745,7 @@ function selectRouteAlternative(index){
   routeDistanceM=route.distance||totalDistance(routeCoords);
   routeDurationS=route.duration||0;
   buildNavigationSteps(route);
+  resetLiveEtaEngine();
 
   if(routeLine)map.removeLayer(routeLine);
   if(trackLine)map.removeLayer(trackLine);
@@ -5462,6 +5781,7 @@ function selectRouteAlternative(index){
   $('segment').textContent=segmentMeta(0).id;
   $('status').textContent=`مسیر انتخاب شد • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`;
   resetTurnByTurn();
+  resetLiveEtaEngine();
   updateTurnByTurn(0);
   renderRouteDecision();
   renderRouteIntegrity();
@@ -8664,6 +8984,7 @@ async function triggerRealGpsReroute(rawPoint){
     routeAlternatives=validCandidates.slice(0,3);
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
+    resetLiveEtaEngine({reroute:true});
 
     rerouteState.count++;
     rerouteState.rerouted=true;
@@ -9149,6 +9470,7 @@ async function triggerReroute(pos,simProgress){
     routeAlternatives=validCandidates.slice(0,3);
     selectedRouteIndex=Math.max(0,routeAlternatives.indexOf(route));
     buildNavigationSteps(route);
+    resetLiveEtaEngine({reroute:true});
 
     tripJourneyDistanceM=Math.max(
       travelledBefore + routeDistanceM,
