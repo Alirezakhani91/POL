@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>سامانه رانندگی ایمن ایران | نسخه ۲.۹ تجربه مسیریابی نقشه‌محور</title>
+<title>POL | نسخه ۳.۰ بنیاد تجربه مسیریابی</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1413,6 +1413,175 @@ body.driving-mode .drive-control-cluster{
   }
 }
 
+
+/* ===== v3.0 Waze-inspired UX foundation ===== */
+body.map-first-mode .bottom-nav{display:none!important}
+body.map-first-mode #screen-trip{min-height:100vh!important}
+body.map-first-mode #map{height:100vh!important;min-height:640px!important}
+body.map-first-mode #tripMapCard{position:fixed!important;inset:0!important;z-index:100!important}
+body.map-first-mode #screen-trip .screen-inner{height:100vh!important}
+body.map-first-mode:not(.setup-open) #mapFirstSearchPanel{display:none!important}
+
+.nav-launcher{
+  position:absolute;z-index:946;left:50%;bottom:18px;transform:translateX(-50%);
+  width:min(92%,560px)
+}
+.nav-launcher-button{
+  width:100%!important;min-height:58px!important;display:grid!important;
+  grid-template-columns:42px 1fr!important;gap:9px!important;align-items:center!important;
+  text-align:right!important;padding:8px 12px!important;border:0!important;
+  border-radius:20px!important;background:rgba(255,255,255,.98)!important;color:#111827!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.28)!important
+}
+.nav-launcher-icon{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:#eef3f8;font-size:19px
+}
+.nav-launcher-copy b{display:block;font-size:13px;color:#111827}
+.nav-launcher-copy small{display:block;font-size:8px;color:#667085;margin-top:2px}
+
+.nav-search-sheet{
+  position:fixed;inset:0;z-index:3500;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(3,8,14,.38);backdrop-filter:blur(3px)
+}
+.nav-search-sheet.open{display:flex}
+.nav-sheet-card{
+  width:min(100%,620px);max-height:88vh;overflow:auto;background:#f8fafc;color:#111827;
+  border-radius:26px 26px 0 0;padding:10px 14px 18px;box-shadow:0 -18px 54px rgba(0,0,0,.28)
+}
+.nav-sheet-handle{width:42px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px}
+.nav-sheet-search-row{display:grid;grid-template-columns:40px 1fr 42px;gap:7px;align-items:center}
+.nav-sheet-search-row input{
+  height:50px;border-radius:16px;border:1px solid #d8e0ea;background:#fff;
+  padding:0 13px;font-family:inherit;font-size:13px;color:#111827;outline:none
+}
+.nav-sheet-back,.nav-sheet-search-btn{
+  width:40px!important;height:44px!important;min-height:44px!important;padding:0!important;
+  border-radius:14px!important;background:#e9eff6!important;color:#16202c!important;border:0!important
+}
+.nav-sheet-back{font-size:20px!important}.nav-sheet-search-btn{font-size:17px!important}
+.nav-sheet-current{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 4px;color:#334155}
+.nav-current-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.nav-sheet-current small{display:block;font-size:7px;color:#94a3b8}
+.nav-sheet-current b{display:block;font-size:9px;margin-top:1px}
+.nav-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
+.nav-quick-actions button{
+  min-height:58px!important;display:grid!important;grid-template-columns:34px 1fr!important;
+  gap:8px!important;text-align:right!important;align-items:center!important;border-radius:15px!important;
+  background:#fff!important;color:#111827!important;border:1px solid #e2e8f0!important;padding:8px 10px!important
+}
+.nav-quick-actions button>span{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#edf2f7}
+.nav-quick-actions b{display:block;font-size:9px}
+.nav-quick-actions small{display:block;font-size:7px;color:#94a3b8;margin-top:2px}
+.nav-sheet-results{display:grid;gap:6px;margin-top:10px}
+.nav-sheet-result{
+  width:100%!important;display:grid!important;grid-template-columns:36px 1fr auto!important;gap:9px!important;
+  align-items:center!important;text-align:right!important;min-height:58px!important;padding:8px 9px!important;
+  border:0!important;border-bottom:1px solid #e7edf4!important;border-radius:0!important;
+  background:transparent!important;color:#111827!important
+}
+.nav-sheet-result-icon{width:34px;height:34px;border-radius:50%;background:#edf2f7;display:grid;place-items:center}
+.nav-sheet-result b{display:block;font-size:10px}
+.nav-sheet-result span{display:block;font-size:8px;color:#64748b;line-height:1.55;margin-top:2px}
+.nav-sheet-result-meta{font-size:7px!important;color:#94a3b8!important;direction:ltr}
+.nav-sheet-section{margin-top:14px}
+.nav-sheet-section-title{display:flex;justify-content:space-between;gap:8px;align-items:center;padding-bottom:7px;border-bottom:1px solid #e2e8f0}
+.nav-sheet-section-title b{font-size:10px}
+.nav-sheet-section-title button{width:auto!important;min-height:28px!important;padding:3px 6px!important;border:0!important;background:transparent!important;color:#64748b!important;font-size:8px!important}
+.nav-sheet-recent-list{display:grid}
+.nav-sheet-recent-item{
+  width:100%!important;display:grid!important;grid-template-columns:35px 1fr!important;gap:9px!important;
+  text-align:right!important;align-items:center!important;min-height:54px!important;border:0!important;
+  border-bottom:1px solid #e7edf4!important;background:transparent!important;color:#111827!important;padding:8px 4px!important
+}
+.nav-sheet-recent-item>span{width:34px;height:34px;border-radius:50%;background:#edf2f7;display:grid;place-items:center}
+.nav-sheet-recent-item b{display:block;font-size:10px}
+.nav-sheet-recent-item small{display:block;font-size:7px;color:#64748b;margin-top:2px}
+
+.floating-map-controls{top:auto!important;bottom:96px!important;right:14px!important}
+#mapSavedBtn{display:none!important}
+
+.route-alt-labels{pointer-events:none!important}
+.route-alt-label{pointer-events:auto!important;cursor:pointer!important;padding:6px 9px!important;font-size:9px!important;border:0!important}
+
+.map-route-primary{display:grid;grid-template-columns:1.2fr 1fr;gap:9px;align-items:end;margin-top:7px}
+.map-route-eta-block b{display:block;font-size:27px;line-height:1;color:#60a5fa}
+.map-route-eta-block span{display:block;font-size:9px;color:#cbd5e1;margin-top:5px}
+.map-route-secondary{text-align:left}
+.map-route-secondary b{display:block;font-size:12px}
+.map-route-secondary span{display:block;font-size:7px;color:#8fa1b7;margin-top:3px}
+.map-route-actions{grid-template-columns:.75fr .75fr 1.7fr!important;margin-top:9px!important}
+#mapStartBtn{min-height:50px!important;font-size:13px!important;border-radius:16px!important}
+
+.map-dev-btn{opacity:.28!important;bottom:14px!important;left:14px!important;right:auto!important}
+body.route-selection-mode .nav-launcher{display:none!important}
+body.route-selection-mode .floating-map-controls{bottom:205px!important}
+
+body.driving-mode .nav-launcher,
+body.driving-mode .nav-search-sheet,
+body.driving-mode .map-route-sheet,
+body.driving-mode .route-alt-labels,
+body.driving-mode .map-dev-btn{display:none!important}
+
+body.driving-mode #turnCard{
+  display:grid!important;grid-template-columns:72px 1fr!important;min-height:96px!important;
+  padding:11px 13px!important;align-items:center!important
+}
+body.driving-mode .turn-arrow{width:64px!important;height:64px!important;font-size:40px!important}
+body.driving-mode .turn-distance{font-size:13px!important;font-weight:900!important}
+body.driving-mode .turn-instruction{font-size:17px!important;line-height:1.3!important}
+body.driving-mode .turn-street{font-size:9px!important;margin-top:3px!important}
+body.driving-mode .nav-bottom-strip{
+  left:50%!important;transform:translateX(-50%)!important;width:min(calc(100% - 150px),500px)!important;
+  bottom:12px!important;border-radius:18px!important;background:rgba(12,22,33,.96)!important;border:0!important
+}
+body.driving-mode #currentSpeedGauge{
+  width:64px!important;height:64px!important;border-radius:50%!important;background:rgba(255,255,255,.97)!important;
+  color:#111827!important;border:3px solid #d8dee8!important
+}
+body.driving-mode #currentSpeedGauge.over{border-color:#ef4444!important;color:#b91c1c!important}
+body.driving-mode #currentSpeedGauge b{font-size:21px!important}
+body.driving-mode #currentSpeedGauge span{font-size:6px!important}
+body.driving-mode .mapHUD{left:22px!important;bottom:89px!important}
+body.driving-mode .speedSign{
+  width:42px!important;height:42px!important;border-radius:50%!important;border:4px solid #ef4444!important;
+  background:#fff!important;color:#111827!important;display:grid!important;place-items:center!important;font-size:12px!important
+}
+.drive-report-btn{
+  display:none;position:absolute;z-index:1010;right:16px;bottom:88px;width:56px!important;height:56px!important;
+  min-height:56px!important;padding:0!important;border-radius:50%!important;background:#f59e0b!important;
+  color:#111827!important;border:0!important;font-size:24px!important;font-weight:900!important;
+  box-shadow:0 9px 26px rgba(0,0,0,.28)!important
+}
+body.driving-mode .drive-report-btn{display:block}
+body.driving-mode .drive-control-cluster{right:16px!important;bottom:155px!important}
+body.driving-mode #safetyCoachPill{display:none!important}
+
+.drive-report-sheet{
+  position:fixed;inset:0;z-index:3900;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(3,8,14,.45);backdrop-filter:blur(4px)
+}
+.drive-report-sheet.open{display:flex}
+.drive-report-card{width:min(100%,520px);background:#f8fafc;color:#111827;border-radius:25px 25px 0 0;padding:10px 14px 18px}
+.drive-report-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.drive-report-head small{font-size:8px;color:#64748b}
+.drive-report-head h3{margin:3px 0 0;font-size:16px}
+.drive-report-head button{width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;border-radius:50%!important;background:#e7edf4!important;color:#111827!important;border:0!important}
+.drive-report-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px}
+.drive-report-grid button{min-height:72px!important;border-radius:16px!important;background:#fff!important;color:#111827!important;border:1px solid #e2e8f0!important;padding:8px!important}
+.drive-report-grid span{display:block;font-size:21px}
+.drive-report-grid b{display:block;font-size:8px;margin-top:5px}
+.drive-report-note{margin-top:10px;padding:8px;border-radius:11px;background:#edf2f7;color:#64748b;font-size:8px;line-height:1.6}
+
+@media(max-width:650px){
+  .nav-launcher{bottom:10px;width:calc(100% - 20px)}
+  .nav-sheet-card{max-height:92vh}
+  .map-route-sheet{left:8px!important;right:8px!important;bottom:8px!important}
+  body.route-selection-mode .floating-map-controls{bottom:202px!important}
+  body.driving-mode .nav-bottom-strip{width:calc(100% - 148px)!important}
+  .drive-report-grid{grid-template-columns:repeat(2,1fr)}
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -1879,6 +2048,58 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div class="live-chip"><span id="progress">۰%</span> • <span id="timeNow">۰ ثانیه</span></div>
             </div>
             <div style="position:relative">
+              <div id="navLauncher" class="nav-launcher">
+                <button id="navLauncherButton" class="nav-launcher-button">
+                  <span class="nav-launcher-icon">⌕</span>
+                  <span class="nav-launcher-copy">
+                    <b>کجا می‌خوای بری؟</b>
+                    <small>جست‌وجوی مقصد یا انتخاب روی نقشه</small>
+                  </span>
+                </button>
+              </div>
+
+              <div id="navSearchSheet" class="nav-search-sheet">
+                <div class="nav-sheet-card">
+                  <div class="nav-sheet-handle"></div>
+
+                  <div class="nav-sheet-search-row">
+                    <button id="navSearchBackBtn" class="nav-sheet-back">‹</button>
+                    <input id="navSheetSearchInput" type="search" autocomplete="off"
+                           placeholder="نام مکان یا آدرس">
+                    <button id="navSheetSearchBtn" class="nav-sheet-search-btn">⌕</button>
+                  </div>
+
+                  <div class="nav-sheet-current">
+                    <span class="nav-current-dot"></span>
+                    <div>
+                      <small>شروع از</small>
+                      <b id="navSheetOriginText">در حال پیدا کردن موقعیت فعلی...</b>
+                    </div>
+                  </div>
+
+                  <div class="nav-quick-actions">
+                    <button id="navPickOnMapAction">
+                      <span>⌖</span>
+                      <div><b>انتخاب روی نقشه</b><small>نقطه دقیق مقصد</small></div>
+                    </button>
+                    <button id="navRecentAction">
+                      <span>↺</span>
+                      <div><b>مقصدهای اخیر</b><small>انتخاب سریع</small></div>
+                    </button>
+                  </div>
+
+                  <div id="navSheetResults" class="nav-sheet-results"></div>
+
+                  <div id="navSheetRecentSection" class="nav-sheet-section">
+                    <div class="nav-sheet-section-title">
+                      <b>مقصدهای اخیر</b>
+                      <button id="navSheetClearRecent">پاک‌کردن</button>
+                    </div>
+                    <div id="navSheetRecentList" class="nav-sheet-recent-list"></div>
+                  </div>
+                </div>
+              </div>
+
               <div id="floatingMapControls" class="floating-map-controls">
                 <button id="mapCenterBtn" title="موقعیت من">◎</button>
                 <button id="mapSavedBtn" title="مقصدهای اخیر">★</button>
@@ -1918,13 +2139,18 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <button id="mapRouteCloseBtn" class="map-route-close">×</button>
                 </div>
 
-                <div class="map-route-metrics">
-                  <div><b id="mapRouteEta">--</b><span>زمان</span></div>
-                  <div><b id="mapRouteDistance">--</b><span>مسافت</span></div>
-                  <div><b id="mapRouteArrival">--</b><span>رسیدن</span></div>
+                <div class="map-route-primary">
+                  <div class="map-route-eta-block">
+                    <b id="mapRouteEta">--</b>
+                    <span id="mapRouteArrival">--</span>
+                  </div>
+                  <div class="map-route-secondary">
+                    <b id="mapRouteDistance">--</b>
+                    <span>ETA فعلی بدون ترافیک زنده</span>
+                  </div>
                 </div>
 
-                <div id="mapRouteReason" class="map-route-reason">در حال بررسی Route...</div>
+                <div id="mapRouteReason" class="map-route-reason">در حال بررسی مسیر...</div>
 
                 <div class="map-route-actions">
                   <button id="mapRouteCompareBtn">مسیرها</button>
@@ -2004,9 +2230,12 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
 
               <div class="drive-control-cluster">
+                <button id="driveRecenterBtn" class="drive-circle-btn" title="مرکز کردن نقشه">◎</button>
                 <button id="driveVoiceBtn" class="drive-circle-btn" title="راهنمای صوتی">🔊</button>
                 <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر">■</button>
               </div>
+
+              <button id="driveReportBtn" class="drive-report-btn" title="گزارش مسیر">!</button>
 
               <div id="currentSpeedGauge" class="current-speed-gauge">
                 <b id="driveCurrentSpeed">۰</b>
@@ -2312,6 +2541,28 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
         <span>«پیشنهادی» یعنی انتخاب مناسب‌تر بین Routeهای معتبر همین موتور و همین داده فعلی؛ نه بهترین مسیر مطلق در دنیای واقعی.</span>
       </div>
       <button id="confirmRouteCompareBtn" class="primary">تأیید مسیر</button>
+    </div>
+  </div>
+</div>
+
+<div id="driveReportSheet" class="drive-report-sheet">
+  <div class="drive-report-card">
+    <div class="ready-handle"></div>
+    <div class="drive-report-head">
+      <div>
+        <small>گزارش سریع</small>
+        <h3>چه چیزی در مسیر دیدی؟</h3>
+      </div>
+      <button id="closeDriveReportBtn">×</button>
+    </div>
+    <div class="drive-report-grid">
+      <button data-drive-report="خطر در مسیر"><span>⚠</span><b>خطر</b></button>
+      <button data-drive-report="حادثه"><span>◆</span><b>حادثه</b></button>
+      <button data-drive-report="مسیر بسته"><span>⛔</span><b>بسته بودن</b></button>
+      <button data-drive-report="مشکل سطح راه"><span>⌁</span><b>سطح راه</b></button>
+    </div>
+    <div class="drive-report-note">
+      در نسخه آزمایشی، گزارش روی همین دستگاه ثبت می‌شود و هنوز به شبکه عمومی ارسال نمی‌شود.
     </div>
   </div>
 </div>
@@ -3062,7 +3313,8 @@ function showRouteFailure(message){
   if($('navEta'))$('navEta').textContent="--";
   if($('navArrival'))$('navArrival').textContent="--";
   if($('start'))$('start').disabled=true;
-  closeMapRouteSheet();
+  $('mapRouteSheet')?.classList.remove('show');
+  setRouteSelectionMode(false);
   showMapStatus(message,"bad");
   const pill=$('routeIntegrityPill');
   if(pill){pill.className="route-integrity-pill bad";pill.textContent="Route نامعتبر";}
@@ -3089,9 +3341,11 @@ function renderRouteAlternatives(){
   routeAltLayers=[];
   routeAlternatives.forEach((r,i)=>{
     if(i===selectedRouteIndex)return;
-    const layer=L.polyline(routeToCoords(r),{
-      color:'#64748b',weight:5,opacity:.42,dashArray:'8 8'
-    }).addTo(map);
+    const layer=L.polyline(routeToCoords(r),{color:'#64748b',weight:7,opacity:.52}).addTo(map);
+    layer.on('click',()=>{
+      selectRouteAlternative(i);
+      renderMapRouteSheet();
+    });
     routeAltLayers.push(layer);
   });
 }
@@ -3900,6 +4154,7 @@ function confirmPendingOrigin(){
   updateNavLabels();
   renderPendingOrigin();
   syncMapOriginStatus("good",navOrigin.label||"موقعیت فعلی");
+  syncNavSheetOrigin();
   $('status').textContent="مبدأ تأیید شد.";
 }
 async function searchOrigin(){
@@ -4263,7 +4518,9 @@ function clearExistingRouteForDestinationChange(){
   $('routeSummary').classList.remove('show');
   $('tripInfo').style.display="none";
   $('start').disabled=true;
-  closeMapRouteSheet();
+  $('mapRouteSheet')?.classList.remove('show');
+  setRouteSelectionMode(false);
+  clearRouteAltLabels();
 }
 function confirmPendingDestination(){
   if(!pendingDestination || pendingDestination.accessState==="bad")return;
@@ -4317,6 +4574,181 @@ async function handleDestinationMapPick(latlng){
 
 
 let mapStatusTimer=null;
+
+
+let navSearchSheetOpen=false;
+let userManuallyMovedDrivingMap=false;
+let driveReportEvents=[];
+
+function openNavSearchSheet({showRecent=true}={}){
+  navSearchSheetOpen=true;
+  $('navSearchSheet')?.classList.add('open');
+  $('navSheetSearchInput').value="";
+  $('navSheetResults').innerHTML="";
+  syncNavSheetOrigin();
+  renderNavSheetRecents();
+  $('navSheetRecentSection').style.display=showRecent?"block":"none";
+  setTimeout(()=>$('navSheetSearchInput')?.focus(),100);
+}
+function closeNavSearchSheet(){
+  navSearchSheetOpen=false;
+  $('navSearchSheet')?.classList.remove('open');
+}
+function syncNavSheetOrigin(){
+  const el=$('navSheetOriginText');
+  if(!el)return;
+  el.textContent=originConfirmed?(navOrigin.label||"موقعیت فعلی"):"در حال پیدا کردن موقعیت فعلی...";
+}
+function renderNavSheetRecents(){
+  const box=$('navSheetRecentList');
+  if(!box)return;
+  const list=loadRecentDestinations();
+
+  if(!list.length){
+    box.innerHTML='<div style="padding:12px 2px;color:#94a3b8;font-size:9px">هنوز مقصد اخیری نداری.</div>';
+    return;
+  }
+
+  box.innerHTML=list.map((d,i)=>`
+    <button class="nav-sheet-recent-item" data-v3-recent="${i}">
+      <span>↺</span>
+      <div><b>${escapeHtml(d.label||"مقصد")}</b><small>${escapeHtml(d.address||"")}</small></div>
+    </button>
+  `).join("");
+
+  box.querySelectorAll('[data-v3-recent]').forEach(btn=>{
+    btn.onclick=()=>{
+      const d=list[Number(btn.dataset.v3Recent)];
+      if(!d)return;
+      closeNavSearchSheet();
+      stageDestination(d,{source:"recent",autoRoute:true});
+    };
+  });
+}
+async function searchDestinationV3(){
+  const q=($('navSheetSearchInput')?.value||"").trim();
+  const box=$('navSheetResults');
+
+  if(!q){
+    box.innerHTML="";
+    $('navSheetRecentSection').style.display="block";
+    return;
+  }
+
+  $('navSheetRecentSection').style.display="none";
+  box.innerHTML='<div style="padding:12px 3px;color:#64748b;font-size:9px">در حال جست‌وجو...</div>';
+
+  try{
+    const url=
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&countrycodes=ir`+
+      `&addressdetails=1&accept-language=fa&q=${encodeURIComponent(q)}`;
+
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error(`search ${res.status}`);
+
+    const results=await res.json();
+
+    if(!Array.isArray(results)||!results.length){
+      box.innerHTML='<div style="padding:12px 3px;color:#64748b;font-size:9px">نتیجه‌ای در ایران پیدا نشد.</div>';
+      return;
+    }
+
+    box.innerHTML=results.map((x,i)=>`
+      <button class="nav-sheet-result" data-v3-result="${i}">
+        <span class="nav-sheet-result-icon">⌖</span>
+        <div>
+          <b>${escapeHtml(destinationLabelFromItem(x))}</b>
+          <span>${escapeHtml(destinationAddressFromItem(x))}</span>
+        </div>
+        <span class="nav-sheet-result-meta">${escapeHtml([x.type,x.category].filter(Boolean).join(" • "))}</span>
+      </button>
+    `).join("");
+
+    box.querySelectorAll('[data-v3-result]').forEach(btn=>{
+      btn.onclick=()=>{
+        const x=results[Number(btn.dataset.v3Result)];
+        if(!x)return;
+        closeNavSearchSheet();
+        stageDestination({
+          lat:Number(x.lat),lng:Number(x.lon),
+          label:destinationLabelFromItem(x),
+          address:destinationAddressFromItem(x)
+        },{source:"search",autoRoute:true});
+      };
+    });
+  }catch(e){
+    box.innerHTML='<div style="padding:12px 3px;color:#b91c1c;font-size:9px">جست‌وجوی مقصد فعلاً در دسترس نیست.</div>';
+  }
+}
+function setRouteSelectionMode(active){
+  document.body.classList.toggle('route-selection-mode',!!active);
+  if(active)closeNavSearchSheet();
+}
+function nextTurnDistanceAtProgress(progress){
+  const travelled=routeDistanceM*clamp(progress,0,1);
+  const next=nextNavigationStep(travelled);
+  return next?Number(next.distance||0):Infinity;
+}
+function desiredDrivingZoom(progress,speedKmh=0){
+  const d=nextTurnDistanceAtProgress(progress);
+  if(d<=80)return 18;
+  if(d<=180)return 17;
+  if(d<=420)return 16;
+  if(speedKmh>=80)return 14;
+  return 15;
+}
+function navigationLookAheadPoint(progress,zoom){
+  const lookAhead=zoom>=18?.010:zoom>=17?.018:zoom>=16?.028:zoom>=15?.045:.065;
+  return interpolateOnRoute(clamp(progress+lookAhead,0,1));
+}
+function updateDrivingCamera(progress,currentPoint,speedKmh=0,{force=false}={}){
+  if(!document.body.classList.contains('driving-mode'))return;
+  if(userManuallyMovedDrivingMap&&!force)return;
+  const zoom=desiredDrivingZoom(progress,speedKmh);
+  const lookAhead=navigationLookAheadPoint(progress,zoom);
+  try{map.setView(lookAhead,zoom,{animate:true,duration:.25})}
+  catch(e){try{map.panTo(lookAhead,{animate:true,duration:.22})}catch(_){}}
+}
+function recenterDrivingCamera(){
+  userManuallyMovedDrivingMap=false;
+
+  if(isRealGpsMode()&&realGpsState.firstFix){
+    const point=realGpsState.matchedPoint||[realGpsState.lat,realGpsState.lng];
+    updateDrivingCamera(Number(realGpsState.routeProgress||0),point,Number(realGpsState.speedKmh||0),{force:true});
+    return;
+  }
+
+  const dur=Math.max(1,Number($('duration')?.value||1));
+  const simP=clamp(Number(t||0)/dur,0,1);
+  updateDrivingCamera(currentNavigationProgress(simP),currentRoutePosition(simP),Number($('speed')?.textContent||0),{force:true});
+}
+async function smartStartTrip(){
+  if(!routeAlternatives.length||!routeCoords.length){
+    showMapStatus("ابتدا یک مقصد انتخاب کن.","bad");
+    return;
+  }
+
+  const integrity=analyzeSelectedRoute();
+  if(integrity.critical){
+    openRoutePreview();
+    return;
+  }
+
+  if(isRealGpsMode()){
+    openTripReadiness();
+    return;
+  }
+
+  await startDrivingConfirmed();
+}
+function openDriveReport(){$('driveReportSheet')?.classList.add('open')}
+function closeDriveReport(){$('driveReportSheet')?.classList.remove('open')}
+function registerLocalDriveReport(type){
+  const point=carMarker?.getLatLng?.();
+  driveReportEvents.push({type,at:Date.now(),lat:point?.lat??null,lng:point?.lng??null});
+  closeDriveReport();
+  showRerouteNotice("گزارش ثبت شد",`${type} روی همین دستگاه ذخیره شد.`,true);
+}
 
 function showMapStatus(message,state=""){
   const el=$('mapStatusToast');
@@ -4413,19 +4845,22 @@ function renderRouteAltLabels(){
   const box=$('routeAltLabels');
   if(!box)return;
   box.innerHTML="";
-
   if(!routeAlternatives.length)return;
 
   routeAlternatives.slice(0,3).forEach((route,index)=>{
     const p=routeMidpointLatLng(route);
     if(!p)return;
-
     const pt=map.latLngToContainerPoint(p);
-    const el=document.createElement('div');
+    const el=document.createElement('button');
     el.className=`route-alt-label ${index===selectedRouteIndex?'active':''}`;
     el.style.left=`${pt.x}px`;
     el.style.top=`${pt.y}px`;
     el.textContent=formatDurationFa(route.duration);
+    el.onclick=(ev)=>{
+      ev.stopPropagation();
+      selectRouteAlternative(index);
+      renderMapRouteSheet();
+    };
     box.appendChild(el);
   });
 }
@@ -4459,24 +4894,29 @@ function renderMapRouteSheet(){
 
   $('mapRouteKicker').textContent=
     integrity.critical
-      ?"Route نیاز به اصلاح دارد"
+      ?"مسیر نیاز به بررسی دارد"
       :routeAlternatives.length>1
-        ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر`
+        ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر`
         :"مسیر آماده است";
 
   $('mapRouteReason').textContent=
     integrity.critical
-      ?"این Route برای Navigation تأیید نشده است. جزئیات را بررسی کن."
-      :decision.body+" ETA فعلی بدون ترافیک زنده.";
+      ?"این مسیر نیاز به بررسی دارد."
+      :selectedRouteIndex===0
+        ?"مسیر پیشنهادی بر اساس زمان فعلی این موتور مسیریابی."
+        :"مسیر جایگزین انتخاب‌شده.";
 
   $('mapStartBtn').disabled=integrity.critical;
   $('mapStartBtn').textContent=integrity.critical?"Route نامعتبر":"بزن بریم";
 
   sheet.classList.add('show');
+  setRouteSelectionMode(true);
   $('mapDevBtn').style.display='none';
 }
 function closeMapRouteSheet(){
   $('mapRouteSheet')?.classList.remove('show');
+  setRouteSelectionMode(false);
+  clearExistingRouteForDestinationChange();
   if($('mapDevBtn'))$('mapDevBtn').style.display='';
 }
 function openMapFirstOriginPicker(){
@@ -4486,7 +4926,7 @@ function openMapFirstOriginPicker(){
 }
 async function bootstrapMapFirstExperience(){
   document.body.classList.add('map-first-mode');
-
+  setRouteSelectionMode(false);
   try{
     window.scrollTo(0,0);
     fixMapSize(true);
@@ -4498,6 +4938,7 @@ async function bootstrapMapFirstExperience(){
   // Use current location automatically. If permission is denied, the map
   // remains fully usable and the origin chip becomes the manual fallback.
   await autoLocateOriginMapFirst({silent:true});
+  syncNavSheetOrigin();
 
   try{
     if(originConfirmed){
@@ -5382,17 +5823,20 @@ function enterDrivingMode(){
   $('driveVoiceBtn').textContent=voiceGuidanceEnabled?"🔊":"🔇";
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
+  userManuallyMovedDrivingMap=false;
+  driveReportEvents=[];
+  setRouteSelectionMode(false);
   setTimeout(()=>{
     try{
       map.invalidateSize(true);
-      if(routeCoords.length)map.setView(routeCoords[0],16,{animate:false});
+      if(routeCoords.length)updateDrivingCamera(0,routeCoords[0],0,{force:true});
     }catch(e){}
   },80);
 }
 function exitDrivingMode(){
   document.body.classList.remove('driving-mode');
+  userManuallyMovedDrivingMap=false;
   $('offlineDriveBanner')?.classList.remove('show');
-  if(routeAlternatives.length)renderMapRouteSheet();
   $('speedAlertBanner')?.classList.remove('show');
   $('rerouteBanner')?.classList.remove('show');
   setTimeout(()=>{try{map.invalidateSize(true)}catch(e){}},80);
@@ -5581,8 +6025,7 @@ async function processRealGps(position){
   if(realGpsState.track.length>1500)realGpsState.track.shift();
   if(trackLine)trackLine.setLatLngs(realGpsState.track);
 
-  try{map.panTo(displayPoint,{animate:true,duration:.25})}catch(e){}
-
+  updateDrivingCamera(realGpsState.routeProgress,displayPoint,Number(speed||0));
   updateTurnByTurn(realGpsState.routeProgress);
 
   // Only current speed is authoritative in this prototype.
@@ -6234,7 +6677,7 @@ function step(){
   handleOffRoute(s,pos);
 
   if(document.body.classList.contains('driving-mode') && Math.round(t*4)%4===0){
-    try{map.panTo(pos,{animate:true,duration:.18})}catch(e){}
+    updateDrivingCamera(navProgress,pos,Number(s.speed||0));
   }
 
   drawChart();
@@ -7273,6 +7716,37 @@ $('reset').onclick=()=>reset(true);
 $('csv').onclick=exportCSV;
 $('fitMap').onclick=()=>{fixMapSize(true)};
 $('routePreset').onchange=()=>applyPresetSelection(true);
+$('navLauncherButton').onclick=()=>openNavSearchSheet({showRecent:true});
+$('navSearchBackBtn').onclick=closeNavSearchSheet;
+$('navSearchSheet').onclick=e=>{if(e.target===$('navSearchSheet'))closeNavSearchSheet()};
+$('navSheetSearchBtn').onclick=searchDestinationV3;
+$('navSheetSearchInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();searchDestinationV3()}
+});
+$('navSheetSearchInput').addEventListener('input',()=>{
+  if(!$('navSheetSearchInput').value.trim()){
+    $('navSheetResults').innerHTML="";
+    $('navSheetRecentSection').style.display="block";
+  }
+});
+$('navPickOnMapAction').onclick=()=>{
+  closeNavSearchSheet();
+  beginDestinationPick();
+  showMapStatus("روی نقشه نقطه مقصد را انتخاب کن.");
+};
+$('navRecentAction').onclick=()=>{
+  $('navSheetSearchInput').value="";
+  $('navSheetResults').innerHTML="";
+  $('navSheetRecentSection').style.display="block";
+  renderNavSheetRecents();
+};
+$('navSheetClearRecent').onclick=()=>{
+  localStorage.removeItem(RECENT_DESTINATIONS_KEY);
+  renderNavSheetRecents();
+  renderRecentDestinations();
+  renderMapRecentDestinations();
+};
+
 $('mapCenterBtn').onclick=()=>{
   if(originConfirmed){
     try{map.setView([navOrigin.lat,navOrigin.lng],16,{animate:true})}catch(e){}
@@ -7307,7 +7781,7 @@ $('mapOriginChip').onclick=openMapFirstOriginPicker;
 
 $('mapRouteCompareBtn').onclick=openRouteComparison;
 $('mapRoutePreviewBtn').onclick=openRoutePreview;
-$('mapStartBtn').onclick=openTripReadiness;
+$('mapStartBtn').onclick=smartStartTrip;
 $('mapRouteCloseBtn').onclick=closeMapRouteSheet;
 
 $('mapDevBtn').onclick=()=>{
@@ -7364,6 +7838,13 @@ $('destinationSearch').addEventListener('keydown',e=>{
 });
 $('voiceToggle').onclick=toggleVoiceGuidance;
 $('voiceTestBtn').onclick=testVoice;
+$('driveRecenterBtn').onclick=recenterDrivingCamera;
+$('driveReportBtn').onclick=openDriveReport;
+$('closeDriveReportBtn').onclick=closeDriveReport;
+$('driveReportSheet').onclick=e=>{if(e.target===$('driveReportSheet'))closeDriveReport()};
+document.querySelectorAll('[data-drive-report]').forEach(btn=>{
+  btn.onclick=()=>registerLocalDriveReport(btn.dataset.driveReport);
+});
 $('driveVoiceBtn').onclick=()=>{
   if(!voiceGuidanceEnabled){
     voiceGuidanceEnabled=true;
@@ -7408,6 +7889,9 @@ map.on('click',e=>{
   hideMapSearchPanels();
 });
 map.on('moveend zoomend',()=>syncRouteAltLabelsSoon());
+map.on('dragstart zoomstart',()=>{
+  if(document.body.classList.contains('driving-mode'))userManuallyMovedDrivingMap=true;
+});
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
