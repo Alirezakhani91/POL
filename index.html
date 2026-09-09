@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۷.۱ Mobile-First Navigation Stabilization</title>
+<title>POL | نسخه ۷.۱.۱ Speed Compliance & Autocomplete Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8159,6 +8159,99 @@ body.pol-consumer-mode [role="button"]{
 }
 </style>
 
+
+<style id="pol-v7-1-1-search-speed-fix">
+/* ============================================================
+   v7.1.1 — SEARCH AUTOCOMPLETE + SPEED COMPLIANCE
+   ============================================================ */
+
+body.pol-consumer-mode #navSheetResults{
+  display:grid!important;
+  gap:4px!important;
+  min-height:0!important;
+  margin-top:8px!important;
+  padding-bottom:10px!important;
+}
+
+body.pol-consumer-mode #navSheetResults:not(:empty){
+  border-top:1px solid rgba(15,23,42,.07)!important;
+  padding-top:5px!important;
+}
+
+body.pol-consumer-mode .nav-sheet-result.area-result{
+  min-height:60px!important;
+  border-radius:12px!important;
+  padding:8px!important;
+  background:#fff!important;
+  border:1px solid rgba(15,23,42,.07)!important;
+}
+
+body.pol-consumer-mode .nav-sheet-result.area-result:active{
+  background:#edf5ff!important;
+  transform:scale(.995);
+}
+
+body.pol-consumer-mode .nav-live-search-status{
+  min-height:54px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:9px 5px!important;
+  color:#64748b!important;
+}
+
+.nav-search-fallback-note{
+  padding:12px 8px;
+  border-radius:12px;
+  background:#fff8e8;
+  border:1px solid #f4d99a;
+  color:#634d18;
+}
+.nav-search-fallback-note b{
+  display:block;
+  font-size:9px;
+}
+.nav-search-fallback-note span{
+  display:block;
+  margin-top:3px;
+  font-size:7px;
+  line-height:1.6;
+}
+
+@media(max-width:700px){
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row,
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-current,
+  body.pol-consumer-mode #navSearchSheet .nav-quick-actions{
+    flex:0 0 auto!important;
+  }
+
+  body.pol-consumer-mode #navSheetResults{
+    flex:0 1 auto!important;
+    max-height:42dvh!important;
+    overflow:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+
+  body.pol-consumer-mode #navSheetRecentSection{
+    flex:0 1 auto!important;
+    overflow:auto!important;
+    overscroll-behavior:contain!important;
+  }
+}
+
+/* Speed compliance now has a clear available/unavailable state. */
+#summaryCompliance{
+  min-width:56px;
+}
+</style>
+
 </head>
 
 <body>
@@ -8785,7 +8878,7 @@ body.pol-consumer-mode [role="button"]{
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v7.1</span>
+              <span class="lab-version-chip">v7.1.1</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -16892,6 +16985,8 @@ function selectRouteAlternative(index){
   mappedSpeedState.exactProfile.routeRef=null;
   mappedSpeedState.exactProfile.edges=[];
 
+  resetTripSpeedScoringState();
+
   mappedSpeedState.cameraStatus="idle";
   mappedSpeedState.cameraCacheKey="";
   mappedSpeedState.cameraLastError="";
@@ -17914,6 +18009,262 @@ function buildLiveSearchQueries(raw){
 
   return variants.slice(0,4);
 }
+
+const liveSearchCache=
+  new Map();
+
+const LIVE_SEARCH_CACHE_MAX=40;
+
+function photonFeatureToSearchItem(feature){
+  const p=feature?.properties||{};
+  const coords=
+    feature?.geometry?.coordinates||[];
+
+  const lon=Number(coords[0]);
+  const lat=Number(coords[1]);
+
+  if(
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon)
+  ){
+    return null;
+  }
+
+  const name=
+    p.name||
+    p.street||
+    p.district||
+    p.city||
+    p.locality||
+    p.state||
+    "مکان";
+
+  const addressParts=[
+    p.housenumber && p.street
+      ?`${p.street} ${p.housenumber}`
+      :p.street,
+    p.locality,
+    p.district,
+    p.city,
+    p.county,
+    p.state
+  ].filter(Boolean);
+
+  const displayName=
+    [
+      name,
+      ...addressParts.filter(
+        x=>normalizeFaSearch(x)!==
+           normalizeFaSearch(name)
+      )
+    ]
+      .filter(Boolean)
+      .join("، ");
+
+  return{
+    lat:String(lat),
+    lon:String(lon),
+    display_name:displayName,
+    name,
+    type:
+      p.osm_value||
+      p.type||
+      p.osm_key||
+      "place",
+    category:
+      p.osm_key||
+      "place",
+    address:{
+      road:p.street||"",
+      house_number:p.housenumber||"",
+      suburb:
+        p.district||
+        p.locality||
+        "",
+      city:
+        p.city||
+        p.locality||
+        "",
+      county:p.county||"",
+      state:p.state||"",
+      country:p.country||"ایران",
+      country_code:
+        String(
+          p.countrycode||
+          "ir"
+        ).toLowerCase()
+    },
+    namedetails:{
+      name
+    },
+    boundingbox:
+      Array.isArray(p.extent) &&
+      p.extent.length===4
+        ?[
+          String(p.extent[3]),
+          String(p.extent[1]),
+          String(p.extent[0]),
+          String(p.extent[2])
+        ]
+        :null,
+    _provider:"Photon"
+  };
+}
+
+function liveSearchBiasPoint(){
+  if(
+    originConfirmed &&
+    Number.isFinite(Number(navOrigin?.lat)) &&
+    Number.isFinite(Number(navOrigin?.lng))
+  ){
+    return{
+      lat:Number(navOrigin.lat),
+      lon:Number(navOrigin.lng)
+    };
+  }
+
+  try{
+    const center=map?.getCenter?.();
+
+    if(
+      center &&
+      Number.isFinite(Number(center.lat)) &&
+      Number.isFinite(Number(center.lng))
+    ){
+      return{
+        lat:Number(center.lat),
+        lon:Number(center.lng)
+      };
+    }
+  }catch(e){}
+
+  return{
+    lat:35.6892,
+    lon:51.3890
+  };
+}
+
+async function fetchPhotonSuggestions(
+  q,
+  signal
+){
+  const normalized=
+    normalizeFaSearch(q);
+
+  const cacheKey=
+    normalized.toLowerCase();
+
+  if(liveSearchCache.has(cacheKey)){
+    return liveSearchCache.get(cacheKey);
+  }
+
+  const bias=
+    liveSearchBiasPoint();
+
+  const params=
+    new URLSearchParams({
+      q:normalized,
+      limit:"12",
+      lang:"fa",
+      countrycode:"IR",
+      lat:String(bias.lat),
+      lon:String(bias.lon),
+      zoom:"12",
+      location_bias_scale:"0.22"
+    });
+
+  const res=
+    await fetch(
+      `https://photon.komoot.io/api/?${params.toString()}`,
+      {
+        signal,
+        headers:{
+          Accept:"application/json"
+        }
+      }
+    );
+
+  if(!res.ok){
+    throw new Error(
+      `Photon ${res.status}`
+    );
+  }
+
+  const data=
+    await res.json();
+
+  const items=
+    (data?.features||[])
+      .map(
+        photonFeatureToSearchItem
+      )
+      .filter(Boolean);
+
+  liveSearchCache.set(
+    cacheKey,
+    items
+  );
+
+  while(
+    liveSearchCache.size>
+    LIVE_SEARCH_CACHE_MAX
+  ){
+    const firstKey=
+      liveSearchCache.keys().next().value;
+
+    liveSearchCache.delete(
+      firstKey
+    );
+  }
+
+  return items;
+}
+
+async function runExplicitNominatimSearch(
+  rawQuery
+){
+  const q=
+    normalizeFaSearch(rawQuery);
+
+  const controller=
+    new AbortController();
+
+  const timer=
+    setTimeout(
+      ()=>controller.abort(),
+      9000
+    );
+
+  try{
+    const variants=
+      buildLiveSearchQueries(q)
+        .slice(0,2);
+
+    let all=[];
+
+    // Explicit user-triggered search only.
+    // Nominatim is intentionally NOT used for live autocomplete.
+    for(const variant of variants){
+      const items=
+        await fetchNominatimVariant(
+          variant,
+          controller.signal
+        );
+
+      all.push(...items);
+
+      all=
+        dedupeLiveSearchResults(all);
+
+      if(all.length>=8)break;
+    }
+
+    return all;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 async function fetchNominatimVariant(q,signal){
   const viewbox=localSearchViewbox();
   const viewboxArg=viewbox?`&viewbox=${encodeURIComponent(viewbox)}&bounded=0`:"";
@@ -17985,74 +18336,185 @@ function renderLiveSearchResults(results,query){
     };
   });
 }
-async function runLiveDestinationSearch(rawQuery){
+async function runLiveDestinationSearch(
+  rawQuery
+){
   const box=$('navSheetResults');
-  const q=normalizeFaSearch(rawQuery);
-  const mySeq=++liveSearchSeq;
+
+  const q=
+    normalizeFaSearch(
+      rawQuery
+    );
+
+  const mySeq=
+    ++liveSearchSeq;
 
   if(liveSearchAbort){
-    try{liveSearchAbort.abort()}catch(e){}
+    try{
+      liveSearchAbort.abort();
+    }catch(e){}
   }
 
   if(q.length<2){
     box.innerHTML="";
-    $('navSheetRecentSection').style.display="block";
+    $('navSheetRecentSection').style.display=
+      "block";
     return;
   }
 
-  $('navSheetRecentSection').style.display="none";
+  $('navSheetRecentSection').style.display=
+    "none";
+
   box.innerHTML=
     '<div class="nav-live-search-status">'+
-    '<span class="nav-live-search-spinner"></span>'+
-    '<span>در حال پیدا کردن محله و خیابان‌های مرتبط...</span>'+
+      '<span class="nav-live-search-spinner"></span>'+
+      '<span>در حال پیشنهاد مقصدهای نزدیک...</span>'+
     '</div>';
 
-  liveSearchAbort=new AbortController();
+  liveSearchAbort=
+    new AbortController();
 
   try{
-    const variants=buildLiveSearchQueries(q);
-    let all=[];
+    const items=
+      await fetchPhotonSuggestions(
+        q,
+        liveSearchAbort.signal
+      );
 
-    // Query the strongest variant first for responsiveness.
-    for(const variant of variants){
-      if(mySeq!==liveSearchSeq)return;
-
-      try{
-        const items=await fetchNominatimVariant(variant,liveSearchAbort.signal);
-        all.push(...items);
-      }catch(e){
-        if(e?.name==="AbortError")return;
-      }
-
-      all=dedupeLiveSearchResults(all);
-
-      // If we already have a healthy set, render immediately instead of
-      // delaying for all fallback variants.
-      if(all.length>=7)break;
+    if(mySeq!==liveSearchSeq){
+      return;
     }
 
-    if(mySeq!==liveSearchSeq)return;
+    const results=
+      dedupeLiveSearchResults(
+        items
+      )
+        .map(x=>({
+          item:x,
+          score:
+            searchResultPriority(
+              x,
+              q
+            )
+        }))
+        .sort(
+          (a,b)=>b.score-a.score
+        )
+        .slice(0,10)
+        .map(x=>x.item);
 
-    all=dedupeLiveSearchResults(all)
-      .map(x=>({item:x,score:searchResultPriority(x,q)}))
-      .sort((a,b)=>b.score-a.score)
-      .slice(0,10)
-      .map(x=>x.item);
-
-    renderLiveSearchResults(all,q);
-
+    renderLiveSearchResults(
+      results,
+      q
+    );
   }catch(e){
-    if(e?.name==="AbortError")return;
+    if(e?.name==="AbortError"){
+      return;
+    }
+
+    console.warn(
+      "Photon autocomplete failed",
+      e
+    );
+
     box.innerHTML=
-      '<div style="padding:12px 3px;color:#b91c1c;font-size:9px">'+
-      'جست‌وجوی محدوده فعلاً در دسترس نیست.'+
+      '<div class="nav-search-fallback-note">'+
+        '<b>پیشنهاد زنده فعلاً در دسترس نیست</b>'+
+        '<span>نام مقصد را کامل‌تر بنویس و دکمه جست‌وجو را بزن.</span>'+
       '</div>';
   }
 }
 
 async function searchDestinationV3(){
-  const rawQ=($('navSheetSearchInput')?.value||"").trim();
-  await runLiveDestinationSearch(rawQ);
+  const rawQ=
+    (
+      $('navSheetSearchInput')?.value||
+      ""
+    ).trim();
+
+  const q=
+    normalizeFaSearch(rawQ);
+
+  if(q.length<2){
+    return;
+  }
+
+  const box=
+    $('navSheetResults');
+
+  $('navSheetRecentSection').style.display=
+    "none";
+
+  box.innerHTML=
+    '<div class="nav-live-search-status">'+
+      '<span class="nav-live-search-spinner"></span>'+
+      '<span>در حال جست‌وجوی مقصد...</span>'+
+    '</div>';
+
+  if(liveSearchAbort){
+    try{
+      liveSearchAbort.abort();
+    }catch(e){}
+  }
+
+  try{
+    let results=[];
+
+    try{
+      results=
+        await fetchPhotonSuggestions(
+          q,
+          new AbortController().signal
+        );
+    }catch(e){}
+
+    if(results.length<4){
+      try{
+        const fallback=
+          await runExplicitNominatimSearch(
+            q
+          );
+
+        results.push(
+          ...fallback
+        );
+      }catch(e){
+        console.warn(
+          "Explicit Nominatim fallback failed",
+          e
+        );
+      }
+    }
+
+    results=
+      dedupeLiveSearchResults(
+        results
+      )
+        .map(x=>({
+          item:x,
+          score:
+            searchResultPriority(
+              x,
+              q
+            )
+        }))
+        .sort(
+          (a,b)=>b.score-a.score
+        )
+        .slice(0,12)
+        .map(x=>x.item);
+
+    renderLiveSearchResults(
+      results,
+      q
+    );
+  }catch(e){
+    box.innerHTML=
+      '<div class="nav-search-fallback-note">'+
+        '<b>جست‌وجوی مقصد پاسخ نداد</b>'+
+        '<span>اتصال اینترنت را بررسی کن یا مقصد را روی نقشه انتخاب کن.</span>'+
+      '</div>';
+  }
 }
 
 
@@ -18549,6 +19011,133 @@ function exactOpenDataSpeedStats(){
   };
 }
 
+
+
+let tripSpeedScoringState={
+  prepared:false,
+  active:false,
+  mode:"LOCKED",
+  coverage:0,
+  average:null,
+  preparedAt:0,
+  routeRef:null,
+  reason:""
+};
+
+function resetTripSpeedScoringState(){
+  tripSpeedScoringState={
+    prepared:false,
+    active:false,
+    mode:"LOCKED",
+    coverage:0,
+    average:null,
+    preparedAt:0,
+    routeRef:null,
+    reason:""
+  };
+}
+
+async function prepareTripSpeedScoring({
+  force=false
+}={}){
+  if(!routeCoords?.length){
+    resetTripSpeedScoringState();
+
+    tripSpeedScoringState.reason=
+      "Route وجود ندارد.";
+
+    return tripSpeedScoringState;
+  }
+
+  if(
+    !force &&
+    tripSpeedScoringState.prepared &&
+    tripSpeedScoringState.routeRef===routeCoords
+  ){
+    return tripSpeedScoringState;
+  }
+
+  try{
+    if(
+      mappedSpeedState.exactProfile.status!=="ready" ||
+      mappedSpeedState.exactProfile.routeRef!==routeCoords
+    ){
+      await Promise.race([
+        prefetchExactRouteSpeedProfile({
+          force
+        }),
+        new Promise(resolve=>
+          setTimeout(resolve,8500)
+        )
+      ]);
+    }
+  }catch(e){}
+
+  const stats=
+    routeDataPilotSpeedStats();
+
+  tripSpeedScoringState={
+    prepared:true,
+    active:!!stats.ready,
+    mode:
+      stats.ready
+        ?"ROUTE_DATA_PILOT"
+        :"LOCKED",
+    coverage:Number(
+      stats.coverage||0
+    ),
+    average:
+      Number.isFinite(
+        Number(stats.average)
+      )
+        ?Number(stats.average)
+        :null,
+    preparedAt:Date.now(),
+    routeRef:routeCoords,
+    reason:
+      stats.ready
+        ?`Exact Route Speed Profile با پوشش ${Math.round(stats.coverage).toLocaleString('fa-IR')}٪ برای همین سفر قفل شد.`
+        :`Speed Profile فقط ${Math.round(stats.coverage||0).toLocaleString('fa-IR')}٪ پوشش دارد.`
+  };
+
+  return tripSpeedScoringState;
+}
+
+function tripSpeedAtProgress(progress){
+  if(
+    !tripSpeedScoringState.active ||
+    tripSpeedScoringState.routeRef!==routeCoords
+  ){
+    return null;
+  }
+
+  const exact=
+    exactSpeedProfileAtProgress(
+      progress
+    );
+
+  if(
+    !exact ||
+    !Number.isFinite(Number(exact.limit)) ||
+    Number(exact.limit)<10 ||
+    Number(exact.limit)>160
+  ){
+    return null;
+  }
+
+  return{
+    ...exact,
+    confidence:96,
+    scoreEligible:true,
+    authorityVerified:false,
+    pilotScoring:true,
+    tripSpeedSnapshot:true,
+    scoreAuthority:
+      "ROUTE_DATA_PILOT",
+    runtimeSource:
+      "trip-speed-snapshot"
+  };
+}
 
 function routeDataPilotSpeedStats(){
   const stats=
@@ -20370,7 +20959,7 @@ async function startDrivingConfirmed(){
     }
   }catch(e){}
 
-  startCoreDrive();
+  await startCoreDrive();
 }
 function updateOfflineDrivingBanner(){
   const box=$('offlineDriveBanner');
@@ -23691,10 +24280,23 @@ function matchMappedSpeedLimit(
     }
   }
 
-  // Pilot scoring:
-  // exact selected-route speed profile may enter score when route coverage
-  // is high enough. This remains explicitly non-official.
+  // Trip-scoped scoring snapshot.
+  // Once a trip starts, the exact route speed profile used for that trip
+  // stays stable instead of being re-evaluated on every GPS sample.
   if(Number.isFinite(Number(routeProgress))){
+    const frozen=
+      tripSpeedAtProgress(
+        routeProgress
+      );
+
+    if(frozen){
+      return{
+        ...frozen,
+        exactEdge:true,
+        openDataLimit:Number(frozen.limit)
+      };
+    }
+
     const pilot=
       pilotSpeedAtProgress(
         routeProgress
@@ -24013,6 +24615,16 @@ function runtimeRouteSpeedAtProgress(
   }
 
   if(allowOpenDataDisplay){
+    const frozenTripSpeed=
+      tripSpeedAtProgress(p);
+
+    if(frozenTripSpeed){
+      return{
+        ...frozenTripSpeed,
+        displayEligible:true
+      };
+    }
+
     const pilot=
       pilotSpeedAtProgress(p);
 
@@ -27593,7 +28205,14 @@ function step(){
     mockLocation:!!s.mockLocation,integritySignal:Number(s.integritySignal||100),
     offRoute:!!s.offRoute,
     coachState:safetyCoach.state,
-    excess:det.excess,validSpeed:det.validSpeed
+    excess:det.excess,
+    validSpeed:det.validSpeed,
+    speedScoringEligible:
+      s.runtimeSpeedMatch?.scoreEligible===true,
+    speedSource:
+      s.runtimeSpeedMatch?.runtimeSource||
+      s.runtimeSpeedMatch?.source||
+      ""
   };
   const prev=rows.length?rows[rows.length-1]:null;rows.push(row);
 
@@ -27671,7 +28290,7 @@ function start(){
 
   openPreTripMission();
 }
-function startCoreDrive(){
+async function startCoreDrive(){
   if(!routeCoords.length){loadRoute().then(()=>start());return}
 
   // IMPORTANT:
@@ -27684,6 +28303,12 @@ function startCoreDrive(){
       : null;
 
   reset(false,true);
+
+  // Freeze the Speed Profile for this trip before the first telemetry sample.
+  // This prevents Compliance from silently becoming unavailable at finish.
+  await prepareTripSpeedScoring({
+    force:false
+  });
 
   if(preparedOffRouteState){
     offRouteTestState={...preparedOffRouteState};
@@ -28057,8 +28682,19 @@ function renderEligibility(e){
 }
 
 function buildScore(){
-  const valid=rows.filter(r=>r.validSpeed);
-  const speeding=valid.filter(r=>r.excess>5&&r.excess/r.limit*100>8);
+  const valid=
+    rows.filter(r=>
+      r.validSpeed===true &&
+      r.speedScoringEligible===true &&
+      Number.isFinite(Number(r.limit)) &&
+      Number(r.limit)>=10
+    );
+
+  const speeding=
+    valid.filter(r=>
+      r.excess>5 &&
+      r.excess/r.limit*100>8
+    );
   const compliance=valid.length?100*(1-speeding.length/valid.length):100;
   const maxExcess=valid.length?Math.max(0,...valid.map(r=>r.excess)):0;
 
@@ -28079,9 +28715,10 @@ function buildScore(){
 
   // Speed is only scoreable if verified legal-speed samples actually exist.
   const speedIncluded=
+    tripSpeedScoringState.active &&
     valid.length>=Math.max(
-      6,
-      Math.round(rows.length*.12)
+      5,
+      Math.round(rows.length*.05)
     );
 
   const speedScore=
@@ -28226,8 +28863,12 @@ function buildScore(){
     `بزرگ‌ترین فرصت بهبود: ${worst[0]}. `+
     (
       speedIncluded
-        ?"Speed با منبع تأییدشده داخل Score بوده است. "
-        :"Speed هنوز از Score خارج است و امتیاز از ترمز، شتاب و پیچ با وزن نرمال‌شده ساخته شده است. "
+        ?(
+          tripSpeedScoringState.mode==="ROUTE_DATA_PILOT"
+            ?"رعایت سرعت با Speed Profile همین Route در حالت Pilot داخل Score بوده است. "
+            :"Speed با منبع تأییدشده داخل Score بوده است. "
+        )
+        :"Speed برای این سفر داده کافی نداشت و امتیاز از ترمز، شتاب و پیچ با وزن نرمال‌شده ساخته شده است. "
     )+
     `GPS/Map Match نامطمئن همچنان از جریمه حذف می‌شود.`;
 
@@ -28251,6 +28892,16 @@ function buildScore(){
       speedIncluded
         ?Math.round(compliance)
         :null,
+    speedCoverage:
+      Number(
+        tripSpeedScoringState.coverage||0
+      ),
+    speedScoringMode:
+      tripSpeedScoringState.mode,
+    speedValidSamples:
+      valid.length,
+    speedTotalSamples:
+      rows.length,
     maxExcess:
       speedIncluded
         ?Math.round(maxExcess)
@@ -29199,7 +29850,7 @@ $('navSheetSearchInput').addEventListener('input',()=>{
 
   liveSearchTimer=setTimeout(()=>{
     runLiveDestinationSearch(value);
-  },350);
+  },220);
 });
 $('navPickOnMapAction').onclick=()=>{
   closeNavSearchSheet();
@@ -30273,7 +30924,7 @@ setTimeout(
         document.getElementById('summaryScore').textContent=fa(r.score||0);
         document.getElementById('summaryCompliance').textContent=
           r.speedCompliance==null
-            ?'—'
+            ?'داده کافی نبود'
             :fa(r.speedCompliance)+'٪';
         document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
         document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
@@ -31139,6 +31790,68 @@ setTimeout(
 
   updateVisualViewport();
 })();
+</script>
+
+
+<script id="pol-v7-1-1-diagnostics">
+window.POL_SPEED_SCORE_DEBUG=()=>{
+  return{
+    tripSpeedScoringState:
+      typeof tripSpeedScoringState!=="undefined"
+        ?{...tripSpeedScoringState}
+        :null,
+    rows:
+      typeof rows!=="undefined"
+        ?rows.length
+        :0,
+    validSpeedRows:
+      typeof rows!=="undefined"
+        ?rows.filter(
+          r=>
+            r.validSpeed===true &&
+            r.speedScoringEligible===true
+        ).length
+        :0,
+    lastTrip:
+      typeof lastTripResult!=="undefined"
+        ?{
+          speedCompliance:
+            lastTripResult?.speedCompliance,
+          speedScore:
+            lastTripResult?.speedScore,
+          speedScoreIncluded:
+            lastTripResult?.speedScoreIncluded,
+          speedCoverage:
+            lastTripResult?.speedCoverage,
+          speedScoringMode:
+            lastTripResult?.speedScoringMode,
+          speedValidSamples:
+            lastTripResult?.speedValidSamples,
+          speedTotalSamples:
+            lastTripResult?.speedTotalSamples
+        }
+        :null
+  };
+};
+
+window.POL_SEARCH_DEBUG=()=>{
+  return{
+    liveCacheSize:
+      typeof liveSearchCache!=="undefined"
+        ?liveSearchCache.size
+        :0,
+    query:
+      document.getElementById(
+        'navSheetSearchInput'
+      )?.value||"",
+    resultsHtmlLength:
+      document.getElementById(
+        'navSheetResults'
+      )?.innerHTML?.length||0,
+    provider:
+      "Photon live autocomplete + explicit Nominatim fallback"
+  };
+};
 </script>
 
 </body>
