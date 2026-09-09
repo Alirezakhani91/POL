@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۱.۵ Smooth Navigation & Instant Search</title>
+<title>POL | نسخه ۷.۲ Search & Navigation Visual Polish</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -9247,6 +9247,669 @@ body.pol-consumer-mode #navSheetResults{
 }
 </style>
 
+
+<style id="pol-v7-2-navigation-visual-polish">
+/* ============================================================
+   POL v7.2 — consumer navigation skin
+   Inspired by familiar map-navigation interaction patterns,
+   using POL's own colors, icons and assets.
+   No routing/scoring/navigation process is changed.
+   ============================================================ */
+
+@media(max-width:700px){
+
+  /* ----- Calm the OSM planning map ----- */
+  body.pol-consumer-mode #map .leaflet-tile-pane{
+    filter:
+      saturate(.72)
+      brightness(1.035)
+      contrast(.91);
+  }
+
+  /* ----- HOME: white bottom dock ----- */
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher{
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+
+    height:104px!important;
+    width:100%!important;
+
+    padding:
+      24px
+      14px
+      calc(12px + env(safe-area-inset-bottom,0px))!important;
+
+    border-radius:26px 26px 0 0!important;
+
+    background:#fff!important;
+
+    box-shadow:
+      0 -10px 32px rgba(15,23,42,.12)!important;
+  }
+
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher::before{
+    content:"";
+    position:absolute;
+    top:8px;
+    left:50%;
+    width:44px;
+    height:5px;
+    border-radius:999px;
+    transform:translateX(-50%);
+    background:#a8b2be;
+    opacity:.78;
+  }
+
+  body.pol-consumer-mode #navLauncherButton{
+    height:56px!important;
+    min-height:56px!important;
+
+    grid-template-columns:42px minmax(0,1fr)!important;
+    gap:8px!important;
+
+    padding:5px 10px!important;
+
+    border:0!important;
+    border-radius:19px!important;
+
+    background:#f1f3f6!important;
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-icon{
+    width:38px!important;
+    height:38px!important;
+
+    border-radius:50%!important;
+
+    background:transparent!important;
+    color:#7d8896!important;
+
+    font-size:22px!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy b{
+    font-size:15px!important;
+    font-weight:800!important;
+    color:#24303e!important;
+  }
+
+  /* ----- Floating controls ----- */
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) .floating-map-controls{
+    right:14px!important;
+    bottom:122px!important;
+    gap:10px!important;
+  }
+
+  body.pol-consumer-mode .floating-map-controls button,
+  body.pol-consumer-mode #map .leaflet-control-zoom a{
+    background:#fff!important;
+    color:#253140!important;
+
+    border:0!important;
+
+    box-shadow:
+      0 7px 18px rgba(15,23,42,.18),
+      0 1px 3px rgba(15,23,42,.08)!important;
+  }
+
+  body.pol-consumer-mode .floating-map-controls button{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+
+    border-radius:50%!important;
+
+    font-size:19px!important;
+  }
+
+  body.pol-consumer-mode #map .leaflet-control-zoom{
+    border:0!important;
+    border-radius:18px!important;
+    overflow:hidden!important;
+
+    box-shadow:
+      0 7px 18px rgba(15,23,42,.16)!important;
+  }
+
+  body.pol-consumer-mode #map .leaflet-control-zoom a{
+    width:44px!important;
+    height:44px!important;
+    line-height:44px!important;
+  }
+
+  /* ----- SEARCH: full white destination finder ----- */
+  body.pol-consumer-mode #navSearchSheet{
+    background:#fff!important;
+    backdrop-filter:none!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+    top:0!important;
+    bottom:0!important;
+
+    height:100%!important;
+    min-height:100%!important;
+    max-height:100%!important;
+
+    padding:
+      calc(12px + env(safe-area-inset-top,0px))
+      14px
+      calc(8px + env(safe-area-inset-bottom,0px))!important;
+
+    border-radius:0!important;
+
+    background:#fff!important;
+    color:#14191f!important;
+
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-handle{
+    display:none!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row{
+    direction:ltr!important;
+    grid-template-columns:42px minmax(0,1fr)!important;
+    gap:8px!important;
+
+    padding:0!important;
+  }
+
+  body.pol-consumer-mode #navSearchBackBtn{
+    grid-column:1!important;
+
+    width:42px!important;
+    height:54px!important;
+    min-height:54px!important;
+
+    border:0!important;
+    border-radius:18px!important;
+
+    background:transparent!important;
+    color:#697481!important;
+
+    font-size:30px!important;
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #navSheetSearchInput{
+    grid-column:2!important;
+
+    width:100%!important;
+    height:54px!important;
+    min-height:54px!important;
+
+    padding:0 15px!important;
+
+    border:0!important;
+    border-radius:22px!important;
+
+    background:#f1f3f6!important;
+    color:#111820!important;
+
+    font-size:18px!important;
+    font-weight:650!important;
+
+    direction:rtl!important;
+    text-align:right!important;
+
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #navSheetSearchInput:focus{
+    outline:0!important;
+    box-shadow:
+      0 0 0 3px rgba(47,117,224,.13)!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-current{
+    margin-top:10px!important;
+    padding:8px 10px!important;
+
+    border-radius:15px!important;
+    background:#f7f9fb!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-current small{
+    color:#8b96a3!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-current b{
+    color:#263341!important;
+    font-size:9px!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-quick-actions{
+    margin-top:10px!important;
+  }
+
+  body.pol-consumer-mode #navPickOnMapAction{
+    min-height:48px!important;
+    border:1px solid #e4e8ed!important;
+    background:#fff!important;
+    color:#17202a!important;
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #navPickOnMapAction>span{
+    background:#f0f3f6!important;
+    color:#344150!important;
+  }
+
+  /* While typing, remove all secondary UI and devote screen to results. */
+  body.pol-consumer-mode #navSearchSheet.has-query .nav-sheet-current,
+  body.pol-consumer-mode #navSearchSheet.has-query .nav-quick-actions,
+  body.pol-consumer-mode #navSearchSheet.has-query #navSheetRecentSection{
+    display:none!important;
+  }
+
+  body.pol-consumer-mode #navSheetResults{
+    margin-top:12px!important;
+    padding:0!important;
+
+    border-top:1px solid #edf0f3!important;
+
+    background:#fff!important;
+  }
+
+  body.pol-consumer-mode .pol-search-result{
+    min-height:76px!important;
+
+    display:grid!important;
+    grid-template-columns:46px minmax(0,1fr) auto!important;
+    gap:10px!important;
+    align-items:center!important;
+
+    padding:8px 4px!important;
+
+    border:0!important;
+    border-bottom:1px solid #edf0f3!important;
+    border-radius:0!important;
+
+    background:#fff!important;
+    color:#111820!important;
+
+    text-align:right!important;
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode .pol-result-leading{
+    width:42px!important;
+    height:42px!important;
+
+    display:grid!important;
+    place-items:center!important;
+
+    border-radius:50%!important;
+
+    background:#f2f4f6!important;
+    color:#17202a!important;
+
+    font-size:21px!important;
+  }
+
+  body.pol-consumer-mode .pol-result-copy{
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+
+  body.pol-consumer-mode .pol-result-copy b{
+    display:block!important;
+
+    max-width:100%!important;
+
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+
+    color:#111820!important;
+
+    font-size:16px!important;
+    font-weight:820!important;
+    line-height:1.25!important;
+  }
+
+  body.pol-consumer-mode .pol-result-copy span{
+    display:block!important;
+
+    max-width:100%!important;
+    margin-top:4px!important;
+
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+
+    color:#6c747d!important;
+
+    font-size:12px!important;
+    font-weight:500!important;
+  }
+
+  body.pol-consumer-mode .pol-result-distance{
+    color:#606a74!important;
+
+    font-size:12px!important;
+    font-style:normal!important;
+    white-space:nowrap!important;
+  }
+
+  body.pol-consumer-mode .pol-search-empty{
+    padding:24px 8px!important;
+    text-align:center!important;
+  }
+
+  body.pol-consumer-mode .pol-search-empty b{
+    display:block!important;
+    color:#1f2933!important;
+    font-size:14px!important;
+  }
+
+  body.pol-consumer-mode .pol-search-empty span{
+    display:block!important;
+    margin-top:5px!important;
+    color:#87919c!important;
+    font-size:11px!important;
+  }
+
+  /* Recent list: clean Waze-like rows */
+  body.pol-consumer-mode .nav-sheet-section-title{
+    margin-top:8px!important;
+    padding:8px 4px!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-section-title b{
+    color:#59636e!important;
+    font-size:12px!important;
+    font-weight:700!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-recent-item{
+    min-height:68px!important;
+
+    grid-template-columns:44px minmax(0,1fr)!important;
+    gap:10px!important;
+
+    padding:7px 4px!important;
+
+    border:0!important;
+    border-bottom:1px solid #edf0f3!important;
+    border-radius:0!important;
+
+    background:#fff!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-recent-item>span{
+    width:42px!important;
+    height:42px!important;
+
+    display:grid!important;
+    place-items:center!important;
+
+    border-radius:50%!important;
+    background:#f2f4f6!important;
+
+    color:#17202a!important;
+    font-size:20px!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-recent-item b{
+    color:#151b22!important;
+    font-size:15px!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-recent-item small{
+    color:#777f88!important;
+    font-size:11px!important;
+  }
+
+  /* ----- ROUTE SELECTION ----- */
+  body.pol-consumer-mode #mapRouteSheet{
+    border-radius:25px 25px 0 0!important;
+
+    background:#fff!important;
+    color:#17202a!important;
+
+    border:0!important;
+
+    box-shadow:
+      0 -10px 30px rgba(15,23,42,.15)!important;
+  }
+
+  body.pol-consumer-mode #mapRouteSheet::before{
+    content:"";
+    display:block;
+
+    width:44px;
+    height:5px;
+
+    margin:0 auto 9px;
+
+    border-radius:999px;
+    background:#aeb6bf;
+  }
+
+  body.pol-consumer-mode #mapRouteKicker,
+  body.pol-consumer-mode #mapRouteArrival,
+  body.pol-consumer-mode .map-route-secondary span{
+    color:#7b8793!important;
+  }
+
+  body.pol-consumer-mode #mapRouteDestination,
+  body.pol-consumer-mode #mapRouteDistance{
+    color:#1c2630!important;
+  }
+
+  body.pol-consumer-mode #mapRouteEta{
+    color:#2e78de!important;
+  }
+
+  body.pol-consumer-mode .map-route-vehicle-btn{
+    background:#f3f5f7!important;
+    color:#27323d!important;
+    border:0!important;
+  }
+
+  body.pol-consumer-mode #mapStartBtn{
+    background:#2e78de!important;
+    border:0!important;
+    color:#fff!important;
+
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode #mapRouteCompareBtn,
+  body.pol-consumer-mode #mapRoutePreviewBtn{
+    background:#f0f3f6!important;
+    color:#283541!important;
+    border:0!important;
+  }
+
+  /* ----- DRIVING CONTROLS: light, circular, map-first ----- */
+  body.pol-consumer-mode.driving-mode .drive-circle-btn{
+    background:#fff!important;
+    color:#202a34!important;
+    border:0!important;
+
+    box-shadow:
+      0 7px 18px rgba(15,23,42,.18)!important;
+  }
+
+  body.pol-consumer-mode.driving-mode .nav-bottom-strip{
+    background:#fff!important;
+    color:#202a34!important;
+
+    border:0!important;
+
+    box-shadow:
+      0 8px 24px rgba(15,23,42,.18)!important;
+  }
+
+  body.pol-consumer-mode.driving-mode .nav-bottom-main b{
+    color:#202a34!important;
+  }
+
+  body.pol-consumer-mode.driving-mode .nav-bottom-main span{
+    color:#7d8791!important;
+  }
+
+  body.pol-consumer-mode.driving-mode #liveArrival{
+    color:#2e78de!important;
+  }
+
+  body.pol-consumer-mode.driving-mode #driveCurrentRoadBar{
+    background:#fff!important;
+    border:0!important;
+
+    box-shadow:
+      0 6px 18px rgba(15,23,42,.18)!important;
+  }
+
+  body.pol-consumer-mode.driving-mode #driveCurrentRoad{
+    color:#202a34!important;
+  }
+}
+
+/* ============================================================
+   DESKTOP LIVE SEARCH — familiar navigation dropdown
+   ============================================================ */
+
+@media(min-width:701px){
+  body.pol-consumer-mode #mapFirstSearchPanel{
+    width:min(620px,calc(100% - 40px))!important;
+  }
+
+  body.pol-consumer-mode .map-first-search-row{
+    min-height:62px!important;
+
+    border-radius:22px!important;
+
+    background:#fff!important;
+
+    box-shadow:
+      0 8px 28px rgba(15,23,42,.16)!important;
+  }
+
+  body.pol-consumer-mode #mapDestinationSearch{
+    font-size:16px!important;
+    font-weight:700!important;
+  }
+
+  body.pol-consumer-mode #mapSearchResults.open{
+    display:block!important;
+
+    max-height:430px!important;
+    margin-top:8px!important;
+    padding:4px 10px!important;
+
+    overflow-y:auto!important;
+
+    border-radius:20px!important;
+    border:1px solid rgba(15,23,42,.07)!important;
+
+    background:#fff!important;
+
+    box-shadow:
+      0 14px 38px rgba(15,23,42,.18)!important;
+  }
+
+  .map-live-result{
+    width:100%;
+    min-height:64px;
+
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr) auto;
+    gap:10px;
+    align-items:center;
+
+    padding:7px 2px;
+
+    border:0;
+    border-bottom:1px solid #edf0f3;
+
+    background:#fff;
+    color:#151b22;
+
+    text-align:right;
+    cursor:pointer;
+  }
+
+  .map-live-result:last-child{
+    border-bottom:0;
+  }
+
+  .map-live-result-icon{
+    width:38px;
+    height:38px;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:50%;
+
+    background:#f1f3f6;
+    color:#263441;
+
+    font-size:18px;
+  }
+
+  .map-live-result-copy{
+    min-width:0;
+  }
+
+  .map-live-result-copy b,
+  .map-live-result-copy small{
+    display:block;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .map-live-result-copy b{
+    color:#141a20;
+    font-size:13px;
+    font-weight:800;
+  }
+
+  .map-live-result-copy small{
+    margin-top:3px;
+
+    color:#77818c;
+    font-size:9px;
+  }
+
+  .map-live-result em{
+    color:#69737e;
+
+    font-size:9px;
+    font-style:normal;
+    white-space:nowrap;
+  }
+
+  .map-live-search-loading,
+  .map-live-search-empty{
+    min-height:54px;
+
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    padding:8px 4px;
+
+    color:#77818c;
+    font-size:9px;
+  }
+
+  body.pol-consumer-mode.map-search-active #mapRecentWrap{
+    display:none!important;
+  }
+}
+</style>
+
 </head>
 
 <body>
@@ -9873,7 +10536,7 @@ body.pol-consumer-mode #navSheetResults{
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v7.1.5</span>
+              <span class="lab-version-chip">v7.2</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -19170,7 +19833,14 @@ let liveSearchAbort=null;
 
 function openNavSearchSheet({showRecent=true}={}){
   navSearchSheetOpen=true;
-  $('navSearchSheet')?.classList.add('open');
+
+  $('navSearchSheet')?.classList.remove(
+    'has-query'
+  );
+
+  $('navSearchSheet')?.classList.add(
+    'open'
+  );
   $('navSheetSearchInput').value="";
   $('navSheetResults').innerHTML="";
   clearTimeout(liveSearchTimer);
@@ -19182,6 +19852,11 @@ function openNavSearchSheet({showRecent=true}={}){
 }
 function closeNavSearchSheet(){
   navSearchSheetOpen=false;
+
+  $('navSearchSheet')?.classList.remove(
+    'has-query'
+  );
+
   clearTimeout(liveSearchTimer);
   liveSearchSeq++;
   if(liveSearchAbort){
@@ -19576,6 +20251,52 @@ function liveSearchBiasPoint(){
   };
 }
 
+async function fetchPhotonSingleQuery(
+  query,
+  bias,
+  signal
+){
+  const params=
+    new URLSearchParams({
+      q:query,
+      limit:"14",
+      lat:String(bias.lat),
+      lon:String(bias.lon),
+      zoom:"13",
+      location_bias_scale:"0.18"
+    });
+
+  /* Do not force lang=fa on the public Photon instance.
+     The typed Persian query itself is preserved. This avoids making
+     autocomplete depend on one response-language configuration. */
+  const res=
+    await fetch(
+      `https://photon.komoot.io/api/?${params.toString()}`,
+      {
+        signal,
+        headers:{
+          Accept:"application/json"
+        }
+      }
+    );
+
+  if(!res.ok){
+    throw new Error(
+      `Photon ${res.status}`
+    );
+  }
+
+  const data=await res.json();
+
+  return(
+    data?.features||[]
+  )
+    .map(
+      photonFeatureToSearchItem
+    )
+    .filter(Boolean);
+}
+
 async function fetchPhotonSuggestions(
   q,
   signal
@@ -19601,47 +20322,87 @@ async function fetchPhotonSuggestions(
   }
 
   const request=(async()=>{
-    const params=
-      new URLSearchParams({
-        q:normalized,
-        limit:"14",
-        lang:"fa",
-        lat:String(bias.lat),
-        lon:String(bias.lon),
-        zoom:"13",
-        location_bias_scale:"0.18"
-      });
+    const variants=[];
+    const push=value=>{
+      const v=normalizeFaSearch(value);
 
-    const res=
-      await fetch(
-        `https://photon.komoot.io/api/?${params.toString()}`,
-        {
-          signal,
-          headers:{
-            Accept:"application/json"
-          }
-        }
-      );
+      if(
+        v &&
+        !variants.includes(v)
+      ){
+        variants.push(v);
+      }
+    };
 
-    if(!res.ok){
-      throw new Error(
-        `Photon ${res.status}`
+    push(normalized);
+
+    const inferred=
+      inferredSearchCity();
+
+    if(
+      inferred &&
+      !normalized.includes(inferred)
+    ){
+      push(
+        `${normalized} ${inferred}`
       );
     }
 
-    const data=
-      await res.json();
+    /* Tehran is only a recall fallback for the current Iran prototype.
+       It runs only when the exact query returns too few candidates. */
+    if(
+      !normalized.includes("تهران")
+    ){
+      push(
+        `${normalized} تهران`
+      );
+    }
 
-    const items=
-      (data?.features||[])
-        .map(
-          photonFeatureToSearchItem
-        )
-        .filter(Boolean);
+    let combined=[];
+    let lastError=null;
+
+    for(
+      let i=0;
+      i<Math.min(3,variants.length);
+      i++
+    ){
+      try{
+        const part=
+          await fetchPhotonSingleQuery(
+            variants[i],
+            bias,
+            signal
+          );
+
+        combined.push(...part);
+
+        combined=
+          dedupeLiveSearchResults(
+            combined
+          );
+
+        if(combined.length>=8){
+          break;
+        }
+      }catch(e){
+        if(e?.name==="AbortError"){
+          throw e;
+        }
+
+        lastError=e;
+      }
+    }
+
+    if(
+      !combined.length &&
+      lastError
+    ){
+      throw lastError;
+    }
 
     liveSearchCache.set(
       cacheKey,
-      items
+      combined
     );
 
     while(
@@ -19657,7 +20418,7 @@ async function fetchPhotonSuggestions(
       );
     }
 
-    return items;
+    return combined;
   })();
 
   liveSearchInFlight.set(
@@ -19673,6 +20434,7 @@ async function fetchPhotonSuggestions(
     );
   }
 }
+
 
 function instantRecentSuggestions(q){
   const query=
@@ -19800,40 +20562,162 @@ function dedupeLiveSearchResults(items){
 
   return out;
 }
-function renderLiveSearchResults(results,query){
-  const box=$('navSheetResults');
+
+function searchResultDistanceKm(item){
+  const lat=Number(item?.lat);
+  const lng=Number(item?.lon);
+
+  if(
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ){
+    return null;
+  }
+
+  let origin=null;
+
+  if(
+    originConfirmed &&
+    Number.isFinite(Number(navOrigin?.lat)) &&
+    Number.isFinite(Number(navOrigin?.lng))
+  ){
+    origin=[
+      Number(navOrigin.lat),
+      Number(navOrigin.lng)
+    ];
+  }else{
+    try{
+      const center=map?.getCenter?.();
+
+      if(center){
+        origin=[
+          Number(center.lat),
+          Number(center.lng)
+        ];
+      }
+    }catch(e){}
+  }
+
+  if(
+    !origin ||
+    !origin.every(Number.isFinite)
+  ){
+    return null;
+  }
+
+  const meters=
+    hav(
+      origin,
+      [lat,lng]
+    );
+
+  if(!Number.isFinite(meters)){
+    return null;
+  }
+
+  return meters/1000;
+}
+
+function searchResultDistanceText(item){
+  const km=
+    searchResultDistanceKm(item);
+
+  if(!Number.isFinite(km)){
+    return"";
+  }
+
+  if(km<1){
+    return`${Math.max(
+      50,
+      Math.round(km*1000/50)*50
+    ).toLocaleString('fa-IR')} متر`;
+  }
+
+  const rounded=
+    km<10
+      ?Math.round(km*10)/10
+      :Math.round(km);
+
+  return`${rounded.toLocaleString('fa-IR')} km`;
+}
+
+function renderLiveSearchResults(
+  results,
+  query
+){
+  const box=
+    $('navSheetResults');
 
   if(!results.length){
     box.innerHTML=
-      '<div style="padding:12px 3px;color:#64748b;font-size:9px;line-height:1.8">'+
-      'نتیجه نزدیکی پیدا نشد. نام خیابان یا محله را کمی کامل‌تر بنویس؛ مثلاً «نارمک تهران».'+
+      '<div class="pol-search-empty">'+
+        '<b>نتیجه‌ای پیدا نشد</b>'+
+        '<span>نام محله، خیابان یا مکان را کمی کامل‌تر بنویس.</span>'+
       '</div>';
+
     return;
   }
 
   box.innerHTML=
-    `<div class="search-area-hint">
-      <b>محدوده موردنظر را انتخاب کن</b><br>
-      بعد از انتخاب، نقشه روی همان محدوده می‌رود و نقطه دقیق مقصد را روی Map مشخص می‌کنی.
-    </div>`+
-    results.map((x,i)=>`
-      <button class="nav-sheet-result area-result" data-v32-area="${i}">
-        <span class="nav-sheet-result-icon">⌖</span>
-        <div>
-          <b>${highlightSearchMatch(destinationLabelFromItem(x),query)}</b>
-          <span>${highlightSearchMatch(destinationAddressFromItem(x),query)}</span>
-        </div>
-        <span class="area-result-action">${escapeHtml(resultAreaKind(x))}</span>
-      </button>
-    `).join("");
+    results.map((x,i)=>{
+      const distance=
+        searchResultDistanceText(x);
 
-  box.querySelectorAll('[data-v32-area]').forEach(btn=>{
+      const providerRecent=
+        x?._provider==="Recent";
+
+      return`
+        <button
+          class="nav-sheet-result area-result pol-search-result"
+          data-v32-area="${i}"
+        >
+          <span class="pol-result-leading">
+            ${providerRecent?"↺":"⌖"}
+          </span>
+
+          <div class="pol-result-copy">
+            <b>
+              ${highlightSearchMatch(
+                destinationLabelFromItem(x),
+                query
+              )}
+            </b>
+
+            <span>
+              ${highlightSearchMatch(
+                destinationAddressFromItem(x),
+                query
+              )}
+            </span>
+          </div>
+
+          ${
+            distance
+              ?`<em class="pol-result-distance">${escapeHtml(distance)}</em>`
+              :""
+          }
+        </button>
+      `;
+    }).join("");
+
+  box.querySelectorAll(
+    '[data-v32-area]'
+  ).forEach(btn=>{
     btn.onclick=()=>{
-      const x=results[Number(btn.dataset.v32Area)];
-      if(x)focusSearchArea(x);
+      const x=
+        results[
+          Number(
+            btn.dataset.v32Area
+          )
+        ];
+
+      if(x){
+        focusSearchArea(x);
+      }
     };
   });
 }
+
 async function runLiveDestinationSearch(
   rawQuery
 ){
@@ -21088,6 +21972,242 @@ function renderMapRecentDestinations(){
     };
   });
 }
+
+let mapLiveSearchTimer=null;
+let mapLiveSearchAbort=null;
+let mapLiveSearchSeq=0;
+
+function closeMapLiveResults(){
+  $('mapSearchResults')?.classList.remove(
+    'open'
+  );
+}
+
+function renderMapLiveSearchResults(
+  results,
+  query
+){
+  const target=
+    $('mapSearchResults');
+
+  if(!target)return;
+
+  if(!results.length){
+    target.innerHTML=
+      '<div class="map-live-search-empty">نتیجه‌ای پیدا نشد؛ عبارت را کامل‌تر بنویس.</div>';
+
+    target.classList.add('open');
+    return;
+  }
+
+  target.innerHTML=
+    results.slice(0,8)
+      .map((item,index)=>{
+        const distance=
+          searchResultDistanceText(
+            item
+          );
+
+        return`
+          <button
+            class="map-live-result"
+            data-map-live-result="${index}"
+          >
+            <span class="map-live-result-icon">⌖</span>
+
+            <span class="map-live-result-copy">
+              <b>
+                ${highlightSearchMatch(
+                  destinationLabelFromItem(item),
+                  query
+                )}
+              </b>
+
+              <small>
+                ${highlightSearchMatch(
+                  destinationAddressFromItem(item),
+                  query
+                )}
+              </small>
+            </span>
+
+            ${
+              distance
+                ?`<em>${escapeHtml(distance)}</em>`
+                :""
+            }
+          </button>
+        `;
+      })
+      .join("");
+
+  target.classList.add('open');
+
+  target.querySelectorAll(
+    '[data-map-live-result]'
+  ).forEach(btn=>{
+    btn.onclick=()=>{
+      const item=
+        results[
+          Number(
+            btn.dataset.mapLiveResult
+          )
+        ];
+
+      if(!item)return;
+
+      closeMapLiveResults();
+      focusSearchArea(item);
+    };
+  });
+}
+
+async function runMapLiveDestinationSearch(
+  rawQuery
+){
+  const q=
+    normalizeFaSearch(
+      rawQuery
+    );
+
+  const mySeq=
+    ++mapLiveSearchSeq;
+
+  if(mapLiveSearchAbort){
+    try{
+      mapLiveSearchAbort.abort();
+    }catch(e){}
+  }
+
+  if(!q){
+    closeMapLiveResults();
+
+    renderMapRecentDestinations();
+
+    if(loadRecentDestinations().length){
+      $('mapRecentWrap')?.classList.add(
+        'open'
+      );
+    }
+
+    return;
+  }
+
+  $('mapRecentWrap')?.classList.remove(
+    'open'
+  );
+
+  if(q.length<2){
+    closeMapLiveResults();
+    return;
+  }
+
+  const target=
+    $('mapSearchResults');
+
+  if(target){
+    target.innerHTML=
+      '<div class="map-live-search-loading">'+
+        '<span class="nav-live-search-spinner"></span>'+
+        '<span>در حال پیشنهاد مقصد...</span>'+
+      '</div>';
+
+    target.classList.add('open');
+  }
+
+  mapLiveSearchAbort=
+    new AbortController();
+
+  try{
+    const remote=
+      await fetchPhotonSuggestions(
+        q,
+        mapLiveSearchAbort.signal
+      );
+
+    if(mySeq!==mapLiveSearchSeq){
+      return;
+    }
+
+    const local=
+      instantRecentSuggestions(
+        q
+      );
+
+    const results=
+      dedupeLiveSearchResults(
+        [
+          ...local,
+          ...remote
+        ]
+      )
+        .map(item=>({
+          item,
+          score:
+            searchResultPriority(
+              item,
+              q
+            )+
+            (
+              item?._provider==="Recent"
+                ?16
+                :0
+            )
+        }))
+        .sort(
+          (a,b)=>b.score-a.score
+        )
+        .slice(0,8)
+        .map(x=>x.item);
+
+    renderMapLiveSearchResults(
+      results,
+      q
+    );
+  }catch(e){
+    if(e?.name==="AbortError"){
+      return;
+    }
+
+    console.warn(
+      "Map live autocomplete failed",
+      e
+    );
+
+    if(target){
+      target.innerHTML=
+        '<div class="map-live-search-empty">پیشنهاد زنده فعلاً پاسخ نداد. به تایپ ادامه بده یا Enter بزن.</div>';
+
+      target.classList.add('open');
+    }
+  }
+}
+
+function scheduleMapLiveSearch(){
+  const value=
+    $('mapDestinationSearch')?.value||
+    "";
+
+  clearTimeout(
+    mapLiveSearchTimer
+  );
+
+  if(!value.trim()){
+    runMapLiveDestinationSearch("");
+    return;
+  }
+
+  mapLiveSearchTimer=
+    setTimeout(
+      ()=>{
+        runMapLiveDestinationSearch(
+          value
+        );
+      },
+      120
+    );
+}
+
 async function searchDestinationMapFirst(){
   const q=$('mapDestinationSearch').value.trim();
 
@@ -31380,6 +32500,11 @@ function scheduleInstantDestinationSuggestions({
     $('navSheetSearchInput')?.value||
     "";
 
+  $('navSearchSheet')?.classList.toggle(
+    'has-query',
+    !!normalizeFaSearch(value)
+  );
+
   clearTimeout(
     liveSearchTimer
   );
@@ -31527,12 +32652,58 @@ $('mapDestinationSearch').addEventListener('keydown',e=>{
     searchDestinationMapFirst();
   }
 });
-$('mapDestinationSearch').addEventListener('focus',()=>{
-  if(!$('mapDestinationSearch').value.trim()){
-    renderMapRecentDestinations();
-    if(loadRecentDestinations().length)$('mapRecentWrap')?.classList.add('open');
+$('mapDestinationSearch').addEventListener(
+  'focus',
+  ()=>{
+    document.body.classList.add(
+      'map-search-active'
+    );
+
+    if(!$('mapDestinationSearch').value.trim()){
+      renderMapRecentDestinations();
+
+      if(loadRecentDestinations().length){
+        $('mapRecentWrap')?.classList.add(
+          'open'
+        );
+      }
+    }else{
+      scheduleMapLiveSearch();
+    }
   }
-});
+);
+
+$('mapDestinationSearch').addEventListener(
+  'input',
+  ()=>{
+    document.body.classList.add(
+      'map-search-active'
+    );
+
+    scheduleMapLiveSearch();
+  }
+);
+
+$('mapDestinationSearch').addEventListener(
+  'compositionend',
+  ()=>{
+    scheduleMapLiveSearch();
+  }
+);
+
+$('mapDestinationSearch').addEventListener(
+  'blur',
+  ()=>{
+    setTimeout(
+      ()=>{
+        document.body.classList.remove(
+          'map-search-active'
+        );
+      },
+      180
+    );
+  }
+);
 $('mapOriginButton').onclick=()=>autoLocateOriginMapFirst({silent:false});
 $('mapOriginChip').onclick=openMapFirstOriginPicker;
 
@@ -33865,6 +35036,38 @@ window.POL_AUTOCOMPLETE_DEBUG=()=>{
       typeof liveSearchSeq!=="undefined"
         ?liveSearchSeq
         :0
+  };
+};
+</script>
+
+
+<script id="pol-v7-2-search-debug">
+window.POL_V72_SEARCH_DEBUG=()=>{
+  return{
+    mobileQuery:
+      document.getElementById(
+        'navSheetSearchInput'
+      )?.value||"",
+    mapQuery:
+      document.getElementById(
+        'mapDestinationSearch'
+      )?.value||"",
+    cacheSize:
+      typeof liveSearchCache!=="undefined"
+        ?liveSearchCache.size
+        :0,
+    inFlight:
+      typeof liveSearchInFlight!=="undefined"
+        ?liveSearchInFlight.size
+        :0,
+    mobileResults:
+      document.querySelectorAll(
+        '#navSheetResults .pol-search-result'
+      ).length,
+    mapResults:
+      document.querySelectorAll(
+        '#mapSearchResults .map-live-result'
+      ).length
   };
 };
 </script>
