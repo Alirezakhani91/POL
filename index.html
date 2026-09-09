@@ -15573,7 +15573,7 @@ function renderSpeedTruthQuickSheet(){
   if($('quickRouteDataAverage')){
     $('quickRouteDataAverage').textContent=
       Number.isFinite(routeAverage)
-        ?`${Math.round(routeAverage).toLocaleString('fa-IR')} km/h`
+        ?`${Math.round(routeAverage).toLocaleString('fa-IR')} کیلومتر/ساعت`
         :"--";
   }
 
@@ -18549,7 +18549,7 @@ function renderGuidanceDiagnostics(next,stage,speedKmh){
 
   if(distance)distance.textContent=next?distanceTextFa(next.distance):"--";
   if(speed)speed.textContent=Number.isFinite(Number(speedKmh))
-    ?`${Math.round(Number(speedKmh)).toLocaleString('fa-IR')} km/h`
+    ?`${Math.round(Number(speedKmh)).toLocaleString('fa-IR')} کیلومتر/ساعت`
     :"--";
   if(step)step.textContent=next?(next.index+1).toLocaleString('fa-IR'):"--";
 
@@ -18855,7 +18855,7 @@ function renderEtaDiagnostics(result){
       :'ETA نزدیک به زمان پایه Route است';
 
     text.textContent=
-      `${mode} • سرعت ${Math.round(result.speedKmh).toLocaleString('fa-IR')} km/h • `+
+      `${mode} • سرعت ${Math.round(result.speedKmh).toLocaleString('fa-IR')} کیلومتر/ساعت • `+
       `ETA بدون ترافیک زنده`;
   }
 }
@@ -22487,7 +22487,7 @@ function renderPreTripMission(){
 
     $('missionAvgSpeedLimit').textContent=
       Number.isFinite(displayAverage)
-        ?`${Math.round(displayAverage).toLocaleString('fa-IR')} km/h`
+        ?`${Math.round(displayAverage).toLocaleString('fa-IR')} کیلومتر/ساعت`
         :"—";
   }
 
@@ -27946,7 +27946,7 @@ function showMappedSpeedPreviewAlert(speed,limit){
   $('safetyCoachAlertIcon').textContent="↟";
   $('safetyCoachAlertTitle').textContent="سرعت بالاتر از حد ثبت‌شده";
   $('safetyCoachAlertText').textContent=
-    `${Math.round(speed).toLocaleString('fa-IR')} km/h • حد نقشه ${Math.round(limit).toLocaleString('fa-IR')}`;
+    `${Math.round(speed).toLocaleString('fa-IR')} کیلومتر/ساعت • حد نقشه ${Math.round(limit).toLocaleString('fa-IR')}`;
 
   clearTimeout(mappedSpeedState._alertTimer);
   mappedSpeedState._alertTimer=setTimeout(
@@ -34773,10 +34773,10 @@ setTimeout(
 
     // Car should sit below visual center so the driver sees more road ahead.
     let base=
-      speedKmh>=100?.092:
-      speedKmh>=80?.078:
-      speedKmh>=60?.064:
-      speedKmh>=40?.050:.040;
+      speedKmh>=100?.155:
+      speedKmh>=80?.135:
+      speedKmh>=60?.115:
+      speedKmh>=40?.092:.072;
 
     // As the maneuver approaches, reduce look-ahead so the junction itself
     // stays visually stable instead of sliding under the top card.
@@ -35882,6 +35882,116 @@ window.POL_DRIVING_UI_AUDIT=()=>{
     }
   };
 };
+</script>
+
+
+<style id="pol-v7-3-1-route-sheet-refine">
+@media(max-width:700px){
+  /* Route sheet: make the destination header light, clean, and premium.
+     The previous dark block above the ETA competed with the rest of the sheet. */
+  body.pol-consumer-mode.route-selection-mode #mapRouteSheet,
+  body.pol-consumer-mode #mapRouteSheet{
+    background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%)!important;
+  }
+
+  body.pol-consumer-mode #mapRouteSheet .map-route-sheet-main{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 42px!important;
+    align-items:start!important;
+    gap:10px!important;
+    margin:2px 0 10px!important;
+    padding:13px 14px!important;
+    border-radius:18px!important;
+    background:linear-gradient(180deg,rgba(242,247,255,.98),rgba(255,255,255,.98))!important;
+    border:1px solid rgba(46,120,222,.14)!important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.78),
+      0 8px 20px rgba(15,23,42,.07)!important;
+  }
+
+  body.pol-consumer-mode #mapRouteKicker{
+    color:#4b86d9!important;
+    font-size:10px!important;
+    font-weight:800!important;
+    letter-spacing:0!important;
+  }
+
+  body.pol-consumer-mode #mapRouteDestination{
+    color:#162236!important;
+    font-size:18px!important;
+    font-weight:900!important;
+    line-height:1.45!important;
+    margin-top:4px!important;
+    max-width:none!important;
+  }
+
+  body.pol-consumer-mode .map-route-close{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    border-radius:14px!important;
+    background:#eef3f8!important;
+    color:#334155!important;
+    border:1px solid rgba(148,163,184,.28)!important;
+    box-shadow:none!important;
+  }
+
+  body.pol-consumer-mode .map-route-primary{
+    margin-top:2px!important;
+    gap:10px!important;
+  }
+
+  body.pol-consumer-mode #mapRouteReason{
+    display:block!important;
+    margin-top:8px!important;
+    padding:10px 12px!important;
+    border-radius:14px!important;
+    background:#f5f7fb!important;
+    border:1px solid rgba(148,163,184,.16)!important;
+    color:#526172!important;
+    font-size:11px!important;
+    line-height:1.8!important;
+  }
+
+  body.pol-consumer-mode .map-route-vehicle-btn{
+    margin-top:8px!important;
+    border-radius:16px!important;
+    background:#f4f7fb!important;
+  }
+}
+</style>
+
+<script id="pol-v7-3-1-ui-refine">
+(function(){
+  function applyVehicleLowerScreenBias(){
+    try{
+      const car=document.getElementById('driveCurrentRoadBar');
+      if(car && document.body.classList.contains('driving-mode')){
+        car.style.bottom='138px';
+      }
+    }catch(_e){}
+  }
+
+  /* Route card subtitle text should stay human and localized after every route refresh. */
+  const syncSpeedUnitFa=()=>{
+    const mission=document.getElementById('missionAvgSpeedLimit');
+    if(mission && /km\/h/i.test(mission.textContent||'')){
+      mission.textContent=(mission.textContent||'').replace(/km\/h/ig,'کیلومتر/ساعت');
+    }
+    const quick=document.getElementById('quickRouteDataAverage');
+    if(quick && /km\/h/i.test(quick.textContent||'')){
+      quick.textContent=(quick.textContent||'').replace(/km\/h/ig,'کیلومتر/ساعت');
+    }
+  };
+
+  const observer=new MutationObserver(()=>syncSpeedUnitFa());
+  window.addEventListener('load',()=>{
+    syncSpeedUnitFa();
+    applyVehicleLowerScreenBias();
+    observer.observe(document.body,{childList:true,subtree:true,characterData:true});
+  });
+})();
 </script>
 
 </body>
