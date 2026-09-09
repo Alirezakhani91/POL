@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۶ Perspective Navigation Camera</title>
+<title>POL | نسخه ۵.۷ Waze-View Camera Calibration</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4863,6 +4863,120 @@ body.drive-3d-active #drive3dMap .maplibregl-canvas{
   }
 }
 
+
+/* ============================================================
+   v5.7 WAZE-VIEW CAMERA CALIBRATION
+   ============================================================ */
+
+.drive3d-fallback-badge{
+  display:none;
+}
+body.driving-mode:not(.drive-3d-active) .drive3d-fallback-badge.show{
+  position:absolute;
+  z-index:1450;
+  display:block;
+  left:50%;
+  bottom:94px;
+  transform:translateX(-50%);
+  max-width:320px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(70,26,26,.94);
+  border:1px solid rgba(239,68,68,.25);
+  color:#fecaca;
+  font-size:7px;
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+/* Vector basemap can be visually busier than raster.
+   Navigation overlays remain dominant. */
+body.drive-3d-active #drive3dMap{
+  background:#e7ebee!important;
+}
+body.drive-3d-active #drive3dMap .maplibregl-canvas{
+  background:#e7ebee!important;
+}
+
+/* Vehicle visual closer to navigation-app convention. */
+.pol-3d-car-marker{
+  width:48px!important;
+  height:48px!important;
+}
+.pol-3d-car-shell{
+  width:43px!important;
+  height:43px!important;
+  border:3px solid rgba(255,255,255,.98)!important;
+  background:rgba(241,248,255,.98)!important;
+  box-shadow:
+    0 0 0 2px rgba(35,111,211,.24),
+    0 7px 18px rgba(15,23,42,.31)!important;
+}
+.pol-3d-car-arrow{
+  border-left-width:10px!important;
+  border-right-width:10px!important;
+  border-bottom-width:25px!important;
+  border-bottom-color:#37a9dd!important;
+}
+
+/* The current-road pill sits just under the vehicle area,
+   similar to the street label in navigation apps. */
+body.driving-mode.drive-3d-active .drive-current-road-bar{
+  bottom:82px!important;
+  max-width:min(62vw,360px)!important;
+  min-height:32px!important;
+  padding:6px 13px!important;
+  border-radius:999px!important;
+  background:#6d28d9!important;
+  border:2px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 8px 20px rgba(48,26,94,.30)!important;
+}
+body.driving-mode.drive-3d-active .drive-current-road-bar b{
+  font-size:10px!important;
+  font-weight:950!important;
+}
+
+/* At strong pitch the top maneuver should be compact enough
+   not to hide the actual horizon / next streets. */
+body.driving-mode.drive-3d-active #turnCard{
+  top:6px!important;
+  min-height:98px!important;
+  max-width:590px!important;
+}
+body.driving-mode.drive-3d-active .turn-arrow{
+  width:64px!important;
+  height:64px!important;
+  font-size:40px!important;
+}
+body.driving-mode.drive-3d-active .turn-distance{
+  font-size:17px!important;
+}
+body.driving-mode.drive-3d-active .turn-instruction{
+  font-size:18px!important;
+}
+
+/* The old Leaflet speed limit visual remains over the MapLibre renderer,
+   but move it slightly away from the visible route corridor. */
+body.driving-mode.drive-3d-active .mapHUD{
+  left:13px!important;
+  bottom:82px!important;
+}
+
+/* Hide MapLibre compass; heading behavior is controlled by POL. */
+body.drive-3d-active #drive3dMap .maplibregl-ctrl-compass{
+  display:none!important;
+}
+
+@media(max-width:430px){
+  body.driving-mode.drive-3d-active #turnCard{
+    min-height:94px!important;
+  }
+  body.driving-mode.drive-3d-active .drive-current-road-bar{
+    max-width:56vw!important;
+    bottom:78px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5601,6 +5715,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
               <div id="map" dir="ltr"></div>
               <div id="drive3dMap" dir="ltr" aria-label="نقشه سه‌بعدی ناوبری"></div>
+              <div id="drive3dFallbackBadge" class="drive3d-fallback-badge">
+                Perspective فعال نشد • حالت دوبعدی
+              </div>
 
               <div class="nav-bottom-strip">
                 <div class="nav-bottom-main">
@@ -5635,9 +5752,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.6</span>
+              <span class="lab-version-chip">v5.7</span>
               <div>
-                <b>Perspective Navigation Camera</b>
+                <b>Waze-View Camera Calibration</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6545,13 +6662,49 @@ let drive3DLastBearing=0;
 const DRIVE_3D_SOURCE_FULL='pol-drive-full-route';
 const DRIVE_3D_SOURCE_ACTIVE='pol-drive-active-route';
 
-function isDrive3DSupported(){
+async function ensureMapLibreRuntime(){
+  if(
+    typeof window.maplibregl!=="undefined" &&
+    typeof window.maplibregl.Map==="function"
+  ){
+    return window.maplibregl;
+  }
+
+  // v5.7 fallback:
+  // recent MapLibre releases officially support direct ESM CDN loading.
   try{
-    return(
-      typeof window.maplibregl!=="undefined" &&
-      typeof maplibregl.Map==="function" &&
-      (typeof maplibregl.supported!=="function" || maplibregl.supported())
+    const mod=await import(
+      'https://unpkg.com/maplibre-gl@6.8.0/dist/maplibre-gl.mjs'
     );
+
+    window.maplibregl=mod;
+    return mod;
+  }catch(firstError){
+    const mod=await import(
+      'https://cdn.jsdelivr.net/npm/maplibre-gl@6.8.0/dist/maplibre-gl.mjs'
+    );
+
+    window.maplibregl=mod;
+    return mod;
+  }
+}
+
+async function isDrive3DSupported(){
+  try{
+    const runtime=await ensureMapLibreRuntime();
+
+    if(
+      !runtime ||
+      typeof runtime.Map!=="function"
+    ){
+      return false;
+    }
+
+    if(typeof runtime.supported==="function"){
+      return runtime.supported();
+    }
+
+    return true;
   }catch(e){
     return false;
   }
@@ -6593,95 +6746,86 @@ function drive3DEmptyLine(){
 }
 
 function drive3DStyle(){
-  return{
-    version:8,
-    name:'POL Navigation Raster',
-    sources:{
-      'osm-raster':{
-        type:'raster',
-        tiles:[
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-        ],
-        tileSize:256,
-        minzoom:0,
-        maxzoom:19,
-        attribution:'© OpenStreetMap contributors'
-      },
-      [DRIVE_3D_SOURCE_FULL]:{
-        type:'geojson',
-        data:drive3DEmptyLine()
-      },
-      [DRIVE_3D_SOURCE_ACTIVE]:{
-        type:'geojson',
-        data:drive3DEmptyLine()
-      }
-    },
-    layers:[
-      {
-        id:'pol-background',
-        type:'background',
-        paint:{
-          'background-color':'#e7ebee'
-        }
-      },
-      {
-        id:'osm-raster-layer',
-        type:'raster',
-        source:'osm-raster',
-        paint:{
-          'raster-opacity':1,
-          'raster-fade-duration':0,
-          'raster-saturation':-.08,
-          'raster-contrast':.04,
-          'raster-brightness-min':.08,
-          'raster-brightness-max':.98
-        }
-      },
-      {
-        id:'pol-full-route',
-        type:'line',
-        source:DRIVE_3D_SOURCE_FULL,
-        layout:{
-          'line-cap':'round',
-          'line-join':'round'
-        },
-        paint:{
-          'line-color':'#2f72c4',
-          'line-width':5,
-          'line-opacity':.24
-        }
-      },
-      {
-        id:'pol-active-route-halo',
-        type:'line',
-        source:DRIVE_3D_SOURCE_ACTIVE,
-        layout:{
-          'line-cap':'round',
-          'line-join':'round'
-        },
-        paint:{
-          'line-color':'#ffffff',
-          'line-width':14,
-          'line-opacity':.94
-        }
-      },
-      {
-        id:'pol-active-route',
-        type:'line',
-        source:DRIVE_3D_SOURCE_ACTIVE,
-        layout:{
-          'line-cap':'round',
-          'line-join':'round'
-        },
-        paint:{
-          'line-color':'#2563eb',
-          'line-width':9,
-          'line-opacity':1
-        }
-      }
-    ]
-  };
+  // Vector style is essential for a convincing pitched navigation view.
+  // OpenFreeMap is keyless and OSM-based.
+  return'https://tiles.openfreemap.org/styles/bright';
 }
+
+function installDrive3DRouteLayers(){
+  if(!drive3DMap || !drive3DMapLoaded)return;
+
+  if(!drive3DMap.getSource(DRIVE_3D_SOURCE_FULL)){
+    drive3DMap.addSource(
+      DRIVE_3D_SOURCE_FULL,
+      {
+        type:'geojson',
+        data:drive3DEmptyLine()
+      }
+    );
+  }
+
+  if(!drive3DMap.getSource(DRIVE_3D_SOURCE_ACTIVE)){
+    drive3DMap.addSource(
+      DRIVE_3D_SOURCE_ACTIVE,
+      {
+        type:'geojson',
+        data:drive3DEmptyLine()
+      }
+    );
+  }
+
+  if(!drive3DMap.getLayer('pol-full-route')){
+    drive3DMap.addLayer({
+      id:'pol-full-route',
+      type:'line',
+      source:DRIVE_3D_SOURCE_FULL,
+      layout:{
+        'line-cap':'round',
+        'line-join':'round'
+      },
+      paint:{
+        'line-color':'#2563eb',
+        'line-width':5,
+        'line-opacity':.24
+      }
+    });
+  }
+
+  if(!drive3DMap.getLayer('pol-active-route-halo')){
+    drive3DMap.addLayer({
+      id:'pol-active-route-halo',
+      type:'line',
+      source:DRIVE_3D_SOURCE_ACTIVE,
+      layout:{
+        'line-cap':'round',
+        'line-join':'round'
+      },
+      paint:{
+        'line-color':'#ffffff',
+        'line-width':15,
+        'line-opacity':.96
+      }
+    });
+  }
+
+  if(!drive3DMap.getLayer('pol-active-route')){
+    drive3DMap.addLayer({
+      id:'pol-active-route',
+      type:'line',
+      source:DRIVE_3D_SOURCE_ACTIVE,
+      layout:{
+        'line-cap':'round',
+        'line-join':'round'
+      },
+      paint:{
+        'line-color':'#5b21b6',
+        'line-width':9,
+        'line-opacity':1
+      }
+    });
+  }
+}
+
 
 function createDrive3DCarMarker(){
   const root=document.createElement('div');
@@ -6711,6 +6855,8 @@ function createDrive3DCarMarker(){
 function syncDrive3DFullRoute({force=false}={}){
   if(!drive3DMapLoaded || !drive3DMap)return;
 
+  installDrive3DRouteLayers();
+
   if(!force && drive3DRouteRef===routeCoords)return;
   drive3DRouteRef=routeCoords;
 
@@ -6728,6 +6874,7 @@ function syncDrive3DFullRoute({force=false}={}){
 function syncDrive3DActiveCorridor(progress,speedKmh=0){
   if(!drive3DMapLoaded || !drive3DMap)return;
 
+  installDrive3DRouteLayers();
   syncDrive3DFullRoute();
 
   const source=drive3DMap.getSource(DRIVE_3D_SOURCE_ACTIVE);
@@ -6783,57 +6930,58 @@ function updateDrive3DCar(point,progress,speedKmh=0){
 
 function drive3DPitchForState(progress,speedKmh=0){
   const d=nextTurnDistanceAtProgress(progress);
-  const speed=Math.max(0,Number(speedKmh||0));
 
-  if(d<55)return 48;
-  if(d<150)return 52;
-  if(speed>=95)return 58;
-  if(speed>=65)return 57;
-  return 56;
+  // MapLibre GL JS CameraOptions currently caps pitch at 60°.
+  // We deliberately stay close to that limit for navigation mode.
+  if(d<35)return 57.5;
+  if(d<90)return 58.5;
+  return 60;
 }
 
 function drive3DZoomForState(progress,speedKmh=0){
   const d=nextTurnDistanceAtProgress(progress);
   const speed=Math.max(0,Number(speedKmh||0));
 
-  if(d<=35)return 18.7;
-  if(d<=80)return 18.4;
-  if(d<=160)return 18.05;
-  if(d<=300)return 17.65;
-  if(d<=500)return 17.25;
+  if(d<=30)return 19.05;
+  if(d<=70)return 18.75;
+  if(d<=140)return 18.45;
+  if(d<=260)return 18.05;
+  if(d<=450)return 17.65;
 
-  if(speed<30)return 17.15;
-  if(speed<50)return 16.9;
-  if(speed<70)return 16.55;
-  if(speed<90)return 16.1;
-  return 15.7;
+  if(speed<25)return 17.65;
+  if(speed<45)return 17.45;
+  if(speed<65)return 17.10;
+  if(speed<85)return 16.65;
+  return 16.15;
 }
 
-function drive3DCenterTarget(progress,speedKmh=0){
-  const travelled=
-    routeDistanceM*clamp(Number(progress||0),0,1);
+function drive3DVehicleOffsetPx(){
+  const container=drive3DMap?.getContainer?.();
 
-  const d=nextTurnDistanceAtProgress(progress);
-  const speed=Math.max(0,Number(speedKmh||0));
-
-  let ahead=
-    speed>=100?410:
-    speed>=80?330:
-    speed>=60?255:
-    speed>=40?185:
-    speed>=20?125:
-    82;
-
-  if(Number.isFinite(d) && d<550){
-    ahead=Math.min(
-      ahead,
-      Math.max(16,d*.44)
-    );
-  }
-
-  return routePointAtDistanceM(
-    travelled+clamp(ahead,16,430)
+  const h=Math.max(
+    420,
+    Number(container?.clientHeight||window.innerHeight||700)
   );
+
+  // Positive Y means the tracked location finishes below screen center.
+  // 0.25–0.27 of viewport height puts the car around 75–78% down.
+  return clamp(
+    Math.round(h*.265),
+    118,
+    255
+  );
+}
+
+function drive3DRouteBearing(progress,currentPoint,speedKmh=0){
+  const heading=navigationHeadingForState(
+    progress,
+    currentPoint,
+    speedKmh
+  );
+
+  return Number.isFinite(Number(heading))
+    ?Number(heading)
+    :Number(drive3DLastBearing||0);
 }
 
 function updateDrive3DCamera(
@@ -6847,7 +6995,6 @@ function updateDrive3DCamera(
   syncDrive3DActiveCorridor(progress,speedKmh);
   updateDrive3DCar(currentPoint,progress,speedKmh);
 
-  // During manual exploration only vehicle/route keep updating.
   if(
     (manualExploreLock || userManuallyMovedDrivingMap) &&
     !force
@@ -6857,57 +7004,98 @@ function updateDrive3DCamera(
 
   const now=performance.now();
 
-  if(!force && now-drive3DLastCameraAt<160){
+  if(!force && now-drive3DLastCameraAt<150){
     return;
   }
 
   drive3DLastCameraAt=now;
 
-  const target=drive3DCenterTarget(progress,speedKmh);
   const zoom=drive3DZoomForState(progress,speedKmh);
   const pitch=drive3DPitchForState(progress,speedKmh);
 
-  const heading=navigationHeadingForState(
+  const heading=drive3DRouteBearing(
     progress,
     currentPoint,
     speedKmh
   );
 
   const bearing=
-    headingUpEnabled && Number.isFinite(Number(heading))
-      ?Number(heading)
+    headingUpEnabled
+      ?heading
       :0;
 
   drive3DLastBearing=bearing;
 
+  const carOffsetY=drive3DVehicleOffsetPx();
+
+  const center=
+    Array.isArray(currentPoint) && currentPoint.length>=2
+      ?[Number(currentPoint[1]),Number(currentPoint[0])]
+      :[
+        Number(routePointAtDistanceM(routeDistanceM*progress)[1]),
+        Number(routePointAtDistanceM(routeDistanceM*progress)[0])
+      ];
+
   try{
     drive3DMap.easeTo({
-      center:[Number(target[1]),Number(target[0])],
+      // v5.7 key change:
+      // track the VEHICLE itself, then place it below center via offset.
+      center,
+      offset:[0,carOffsetY],
       zoom,
       bearing,
       pitch,
-      // More top than bottom padding places the tracked vehicle
-      // in the lower part of the viewport.
       padding:{
-        top:185,
-        right:24,
-        bottom:76,
-        left:24
+        top:0,
+        right:0,
+        bottom:0,
+        left:0
       },
-      duration:force?420:235,
+      duration:force?430:225,
       easing:t=>1-Math.pow(1-t,3),
-      essential:true
+      essential:true,
+      noMoveStart:true
     });
   }catch(e){
     try{
       drive3DMap.jumpTo({
-        center:[Number(target[1]),Number(target[0])],
+        center,
         zoom,
         bearing,
         pitch
       });
+
+      drive3DMap.panBy(
+        [0,carOffsetY],
+        {
+          animate:false,
+          essential:true
+        }
+      );
     }catch(_e){}
   }
+
+  // Verification guard: if another camera action flattened the view,
+  // restore navigation pitch immediately.
+  setTimeout(()=>{
+    if(
+      !isDrive3DActive() ||
+      manualExploreLock ||
+      userManuallyMovedDrivingMap
+    )return;
+
+    try{
+      if(Number(drive3DMap.getPitch()||0)<54){
+        drive3DMap.easeTo({
+          pitch,
+          bearing,
+          duration:180,
+          essential:true,
+          noMoveStart:true
+        });
+      }
+    }catch(e){}
+  },80);
 }
 
 function drive3DFitRoute(){
@@ -6935,7 +7123,7 @@ function drive3DFitRoute(){
     });
 
     drive3DMap.easeTo({
-      pitch:35,
+      pitch:28,
       bearing:0,
       duration:380,
       essential:true
@@ -7029,76 +7217,97 @@ async function ensureDrive3DMap(){
     return drive3DInitPromise;
   }
 
-  drive3DInitPromise=new Promise((resolve,reject)=>{
-    if(!isDrive3DSupported()){
-      reject(new Error("WebGL/MapLibre unavailable"));
-      return;
+  drive3DInitPromise=(async()=>{
+    const supported=await isDrive3DSupported();
+
+    if(!supported){
+      throw new Error("WebGL/MapLibre unavailable");
     }
 
-    try{
-      const first=
-        routeCoords[0] ||
-        [navOrigin.lat,navOrigin.lng];
+    const first=
+      routeCoords[0] ||
+      [navOrigin.lat,navOrigin.lng];
 
-      drive3DMap=new maplibregl.Map({
-        container:'drive3dMap',
-        style:drive3DStyle(),
-        center:[Number(first[1]),Number(first[0])],
-        zoom:17,
-        bearing:0,
-        pitch:56,
-        minZoom:3,
-        maxZoom:19,
-        maxPitch:60,
-        attributionControl:false,
-        dragRotate:true,
-        touchPitch:true,
-        antialias:true,
-        renderWorldCopies:false
-      });
+    drive3DMap=new maplibregl.Map({
+      container:'drive3dMap',
+      style:drive3DStyle(),
+      center:[Number(first[1]),Number(first[0])],
+      zoom:17.25,
+      bearing:0,
+      pitch:60,
+      minZoom:3,
+      maxZoom:20,
+      maxPitch:60,
+      attributionControl:false,
+      dragRotate:true,
+      touchPitch:true,
+      antialias:true,
+      renderWorldCopies:false
+    });
 
-      drive3DMap.addControl(
-        new maplibregl.NavigationControl({
-          showCompass:false,
-          showZoom:true,
-          visualizePitch:false
-        }),
-        'top-left'
-      );
+    drive3DMap.addControl(
+      new maplibregl.NavigationControl({
+        showCompass:false,
+        showZoom:true,
+        visualizePitch:false
+      }),
+      'top-left'
+    );
 
-      drive3DMap.addControl(
-        new maplibregl.AttributionControl({
-          compact:true,
-          customAttribution:'POL Navigation Prototype'
-        }),
-        'bottom-right'
-      );
+    drive3DMap.addControl(
+      new maplibregl.AttributionControl({
+        compact:true,
+        customAttribution:'POL Navigation Prototype'
+      }),
+      'bottom-right'
+    );
+
+    await new Promise((resolve,reject)=>{
+      let settled=false;
+
+      const timer=setTimeout(()=>{
+        if(settled)return;
+        settled=true;
+        reject(new Error("MapLibre load timeout"));
+      },9000);
 
       drive3DMap.once('load',()=>{
+        if(settled)return;
+        settled=true;
+        clearTimeout(timer);
+
         drive3DMapLoaded=true;
+        installDrive3DRouteLayers();
         syncDrive3DFullRoute({force:true});
         bindDrive3DManualGestures();
         ensureDrive3DExplorationEnabled();
-        resolve(drive3DMap);
+
+        resolve();
       });
 
-      drive3DMap.once('error',e=>{
-        // Tile errors alone should not destroy navigation.
-        // Only reject if the renderer never became ready.
-        if(!drive3DMapLoaded && e?.error){
-          console.warn("MapLibre navigation renderer:",e.error);
+      drive3DMap.on('error',e=>{
+        if(e?.error){
+          console.warn("MapLibre renderer:",e.error);
         }
       });
-    }catch(e){
-      reject(e);
-    }
-  });
+    });
 
-  return drive3DInitPromise;
+    return drive3DMap;
+  })();
+
+  try{
+    return await drive3DInitPromise;
+  }catch(e){
+    drive3DInitPromise=null;
+    throw e;
+  }
 }
 
 async function activateDrive3DMap(){
   if(!document.body.classList.contains('driving-mode'))return false;
+
+  const fallback=$('drive3dFallbackBadge');
+  fallback?.classList.remove('show');
 
   try{
     await ensureDrive3DMap();
@@ -7109,26 +7318,50 @@ async function activateDrive3DMap(){
 
     document.body.classList.add('drive-3d-active');
 
-    try{drive3DMap.resize()}catch(e){}
+    try{
+      drive3DMap.resize();
+      drive3DMap.setMaxPitch?.(60);
+    }catch(e){}
 
+    installDrive3DRouteLayers();
     syncDrive3DFullRoute({force:true});
 
     setTimeout(()=>{
       try{
         drive3DMap.resize();
         drive3DRecenterFromState();
+
+        // Hard verification: active renderer must visibly be pitched.
+        setTimeout(()=>{
+          try{
+            const actualPitch=Number(drive3DMap.getPitch()||0);
+
+            if(actualPitch<54){
+              const state=drive3DCurrentState();
+
+              updateDrive3DCamera(
+                state.progress,
+                state.point,
+                state.speed,
+                {force:true}
+              );
+            }
+          }catch(e){}
+        },280);
       }catch(e){}
-    },60);
+    },80);
 
     return true;
   }catch(e){
     document.body.classList.remove('drive-3d-active');
+    fallback?.classList.add('show');
 
     showMapStatus(
-      "نمای Perspective در این دستگاه در دسترس نیست؛ Navigation دوبعدی ادامه دارد.",
+      "Perspective فعال نشد؛ Navigation دوبعدی ادامه دارد.",
       "warn"
     );
 
+    console.warn("Perspective renderer failed:",e);
     return false;
   }
 }
@@ -11304,8 +11537,12 @@ function detectHeadingRotationSupport(){
 
   const btn=$('driveHeadingBtn');
   if(btn){
-    btn.classList.toggle('rotation-unavailable',!headingRotationAvailable);
+    btn.classList.toggle(
+      'rotation-unavailable',
+      !headingRotationAvailable
+    );
   }
+
   return headingRotationAvailable;
 }
 
