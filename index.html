@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۳ Road Context & Speed Boundary Audit</title>
+<title>POL | نسخه ۶.۲.۴ Runtime Speed & Camera Integrity Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5909,6 +5909,27 @@ body.driving-mode .traffic-camera-pill b{
   }
 }
 
+
+/* ============================================================
+   v6.2.4 RUNTIME SPEED & CAMERA INTEGRITY FIX
+   ============================================================ */
+
+.pretrip-metric.camera small{
+  display:block!important;
+  margin-top:4px!important;
+  min-height:17px!important;
+  color:#8d9caf!important;
+  font-size:6px!important;
+  line-height:1.35!important;
+}
+
+.speed-limit-source-badge.fallback{
+  max-width:150px!important;
+  white-space:normal!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6713,7 +6734,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.3</span>
+              <span class="lab-version-chip">v6.2.4</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -7447,14 +7468,15 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
       </div>
 
       <div class="pretrip-metric speed">
-        <span>میانگین حد مجاز معتبر</span>
+        <span>میانگین حد سرعت مسیر</span>
         <b id="missionAvgSpeedLimit">--</b>
-        <small id="missionSpeedOpenData">در حال بررسی</small>
+        <small id="missionSpeedOpenData">در حال بررسی Route Data</small>
       </div>
 
       <div class="pretrip-metric camera">
-        <span>دوربین ثبت‌شده</span>
+        <span>دوربین ثبت‌شده در مسیر</span>
         <b id="missionCameraCount">--</b>
+        <small id="missionCameraStatus">در حال بررسی</small>
       </div>
 
       <div class="pretrip-metric points">
@@ -10428,6 +10450,9 @@ async function refreshSpeedTruthQuickSheet({
     }),
     prefetchMappedSpeedLimits({
       force
+    }),
+    prefetchRouteTrafficCameras({
+      force
     })
   ]);
 
@@ -11071,6 +11096,11 @@ let mappedSpeedState={
   grid:new Map(),
   current:null,
   cameras:[],
+  cameraStatus:"idle",
+  cameraRequestSeq:0,
+  cameraCacheKey:"",
+  cameraLastError:"",
+  cameraUpdatedAt:0,
   lastCameraAlertId:null,
   lastCameraVoiceStage:{},
 
@@ -14580,6 +14610,12 @@ function selectRouteAlternative(index){
   mappedSpeedState.exactProfile.routeRef=null;
   mappedSpeedState.exactProfile.edges=[];
 
+  mappedSpeedState.cameraStatus="idle";
+  mappedSpeedState.cameraCacheKey="";
+  mappedSpeedState.cameraLastError="";
+  mappedSpeedState.cameras=[];
+  clearTrafficCameraMarkers();
+
   speedTruthState.status="idle";
   speedTruthState.profile=[];
   speedTruthState.coverage=0;
@@ -14626,17 +14662,32 @@ function selectRouteAlternative(index){
   $('distance').textContent=formatKm(routeDistanceM);
   $('segmentCount').textContent="۵";
   $('tripInfo').style.display="block";
-  if(isRealGpsMode()){
-    $('limit').textContent="--";
-    $('speedSign').textContent="--";
-    if($('speedLimitSourceBadge'))$('speedLimitSourceBadge').textContent="در حال دریافت";
-  }else{
-    $('limit').textContent=segmentMeta(0).limit;
-    $('speedSign').textContent=segmentMeta(0).limit;
-  }
-  $('segment').textContent=segmentMeta(0).id;
+  $('limit').textContent="--";
+  $('speedSign').textContent="--";
 
-  prefetchMappedSpeedLimits({force:false});
+  if($('speedLimitSourceBadge')){
+    $('speedLimitSourceBadge').textContent=
+      "در حال دریافت Speed Profile مسیر";
+  }
+
+  $('segment').textContent="--";
+
+  prefetchExactRouteSpeedProfile({
+    force:false
+  }).then(()=>{
+    syncRuntimeRouteSpeedAtProgress(
+      0,
+      {speedKmh:0}
+    );
+  });
+
+  prefetchMappedSpeedLimits({
+    force:false
+  });
+
+  prefetchRouteTrafficCameras({
+    force:false
+  });
   $('status').textContent=`مسیر انتخاب شد • ${formatKm(routeDistanceM)} • ${formatDurationFa(routeDurationS)}`;
   resetTurnByTurn();
   resetLiveEtaEngine();
@@ -16259,23 +16310,67 @@ function renderPreTripMission(){
   }
 
   if($('missionCameraCount')){
+    const status=
+      mappedSpeedState.cameraStatus;
+
     $('missionCameraCount').textContent=
-      cameraCount.toLocaleString('fa-IR');
+      status==="ready"
+        ?cameraCount.toLocaleString('fa-IR')
+        :status==="loading"
+          ?"…"
+          :"--";
+  }
+
+  if($('missionCameraStatus')){
+    const status=
+      mappedSpeedState.cameraStatus;
+
+    $('missionCameraStatus').textContent=
+      status==="ready"
+        ?`${cameraCount.toLocaleString('fa-IR')} دوربین روی Route ثبت شده`
+        :status==="loading"
+          ?"در حال بررسی مستقل دوربین‌ها"
+          :status==="error"
+            ?"داده دوربین دریافت نشد؛ صفر فرض نمی‌شود"
+            :"هنوز بررسی نشده";
   }
 
   if($('missionAvgSpeedLimit')){
-    $('missionAvgSpeedLimit').textContent=
+    const displayAverage=
       verified.scoreReady &&
       Number.isFinite(Number(verified.average))
-        ?`${Math.round(verified.average).toLocaleString('fa-IR')} km/h`
+        ?Number(verified.average)
+        :Number.isFinite(Number(openData.average))
+          ?Number(openData.average)
+          :null;
+
+    $('missionAvgSpeedLimit').textContent=
+      Number.isFinite(displayAverage)
+        ?`${Math.round(displayAverage).toLocaleString('fa-IR')} km/h`
         :"—";
   }
 
   if($('missionSpeedOpenData')){
-    $('missionSpeedOpenData').textContent=
+    if(
+      verified.scoreReady &&
+      Number.isFinite(Number(verified.average))
+    ){
+      $('missionSpeedOpenData').textContent=
+        `Verified • پوشش ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪`;
+    }else if(
       Number.isFinite(Number(openData.average))
-        ?`Open Data: ${Math.round(openData.average).toLocaleString('fa-IR')} • پوشش ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪`
-        :"Open Data کافی نیست";
+    ){
+      $('missionSpeedOpenData').textContent=
+        `Route Data • میانگین وزنی Edgeها • پوشش ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪ • بدون امتیاز`;
+    }else if(
+      mappedSpeedState.exactProfile.status==="loading"
+    ){
+      $('missionSpeedOpenData').textContent=
+        "در حال محاسبه Speed Profile مسیر";
+    }else{
+      $('missionSpeedOpenData').textContent=
+        "Speed Profile مسیر کافی نیست";
+    }
   }
 
   if($('missionPossibleScore')){
@@ -16325,6 +16420,9 @@ async function refreshPreTripMissionIntel(){
       force:false
     }),
     prefetchMappedSpeedLimits({
+      force:false
+    }),
+    prefetchRouteTrafficCameras({
       force:false
     })
   ]);
@@ -16984,39 +17082,255 @@ function closeEvent(holder,type){
   return null;
 }
 function detect(s){
-  const excess=s.speed-s.meta.limit,pct=excess/s.meta.limit*100;
-  const validSpeed=s.match>=70&&s.gps<=35;
-  const speeding=validSpeed&&excess>5&&pct>8;
-  if(speeding){
-    let sev=(excess>=30||pct>=40)?"critical":(excess>=20||pct>=25)?"severe":"moderate";
-    if(!activeSpeed)activeSpeed={title:"سرعت غیرمجاز",sev,start:t,end:t,peak:excess,conf:s.match,context:s.meta.context,riskMult:s.meta.mult.speed,reason:s.meta.reason};
-    else{activeSpeed.end=t;activeSpeed.peak=Math.max(activeSpeed.peak,excess);activeSpeed.conf=Math.min(activeSpeed.conf,s.match);if(sev==="critical")activeSpeed.sev="critical";else if(sev==="severe"&&activeSpeed.sev!=="critical")activeSpeed.sev="severe"}
-  }else if(activeSpeed){activeSpeed=closeEvent(activeSpeed,"speeding");renderEvents()}
+  const runtime=
+    s?.runtimeSpeedMatch||null;
 
-  const badGPS=s.gps>40||s.match<55;
+  const limit=
+    runtime &&
+    runtime.scoreEligible===true &&
+    Number.isFinite(Number(runtime.limit))
+      ?Number(runtime.limit)
+      :null;
+
+  const excess=
+    Number.isFinite(limit)
+      ?s.speed-limit
+      :0;
+
+  const pct=
+    Number.isFinite(limit) &&
+    limit>0
+      ?excess/limit*100
+      :0;
+
+  const validSpeed=
+    Number.isFinite(limit) &&
+    s.match>=70 &&
+    s.gps<=35;
+
+  const speeding=
+    validSpeed &&
+    excess>5 &&
+    pct>8;
+
+  if(speeding){
+    let sev=
+      (excess>=30||pct>=40)
+        ?"critical"
+        :(excess>=20||pct>=25)
+          ?"severe"
+          :"moderate";
+
+    if(!activeSpeed){
+      activeSpeed={
+        title:"سرعت غیرمجاز",
+        sev,
+        start:t,
+        end:t,
+        peak:excess,
+        conf:s.match,
+        context:s.meta.context,
+        riskMult:s.meta.mult.speed,
+        reason:
+          "Speed Limit از منبع تأییدشده Route"
+      };
+    }else{
+      activeSpeed.end=t;
+      activeSpeed.peak=
+        Math.max(
+          activeSpeed.peak,
+          excess
+        );
+
+      activeSpeed.conf=
+        Math.min(
+          activeSpeed.conf,
+          s.match
+        );
+
+      if(sev==="critical"){
+        activeSpeed.sev="critical";
+      }else if(
+        sev==="severe" &&
+        activeSpeed.sev!=="critical"
+      ){
+        activeSpeed.sev="severe";
+      }
+    }
+  }else if(activeSpeed){
+    activeSpeed=
+      closeEvent(
+        activeSpeed,
+        "speeding"
+      );
+
+    renderEvents();
+  }
+
+  const badGPS=
+    s.gps>40||
+    s.match<55;
+
   if(badGPS){
-    if(!activeGPS)activeGPS={title:"اختلال موقعیت / GPS",sev:"moderate",start:t,end:t,peak:Math.max(s.gps,100-s.match),conf:s.match,context:s.meta.context,riskMult:0,reason:"داده نامطمئن از Safety Score حذف می‌شود"};
-    else{activeGPS.end=t;activeGPS.peak=Math.max(activeGPS.peak,s.gps,100-s.match);activeGPS.conf=Math.min(activeGPS.conf,s.match)}
-  }else if(activeGPS){activeGPS=closeEvent(activeGPS,"gps");renderEvents()}
+    if(!activeGPS){
+      activeGPS={
+        title:"اختلال موقعیت / GPS",
+        sev:"moderate",
+        start:t,
+        end:t,
+        peak:Math.max(
+          s.gps,
+          100-s.match
+        ),
+        conf:s.match,
+        context:s.meta.context,
+        riskMult:0,
+        reason:
+          "داده نامطمئن از Safety Score حذف می‌شود"
+      };
+    }else{
+      activeGPS.end=t;
+      activeGPS.peak=
+        Math.max(
+          activeGPS.peak,
+          s.gps,
+          100-s.match
+        );
+
+      activeGPS.conf=
+        Math.min(
+          activeGPS.conf,
+          s.match
+        );
+    }
+  }else if(activeGPS){
+    activeGPS=
+      closeEvent(
+        activeGPS,
+        "gps"
+      );
+
+    renderEvents();
+  }
 
   if(s.longA<=-2.5){
-    let sev=s.longA<=-5?"critical":s.longA<=-3.5?"severe":"moderate";
-    if(!activeBrake)activeBrake={title:sev==="critical"?"ترمز بحرانی":"ترمز شدید",sev,start:t,end:t,peak:Math.abs(s.longA),conf:95,context:s.meta.context,riskMult:s.meta.mult.brake,reason:s.meta.reason};
-    else{activeBrake.end=t;activeBrake.peak=Math.max(activeBrake.peak,Math.abs(s.longA));if(sev==="critical")activeBrake.sev="critical"}
-  }else if(activeBrake){activeBrake=closeEvent(activeBrake,"brake");renderEvents()}
+    let sev=
+      s.longA<=-5
+        ?"critical"
+        :s.longA<=-3.5
+          ?"severe"
+          :"moderate";
+
+    if(!activeBrake){
+      activeBrake={
+        title:
+          sev==="critical"
+            ?"ترمز بحرانی"
+            :"ترمز شدید",
+        sev,
+        start:t,
+        end:t,
+        peak:Math.abs(s.longA),
+        conf:95,
+        context:s.meta.context,
+        riskMult:s.meta.mult.brake,
+        reason:s.meta.reason
+      };
+    }else{
+      activeBrake.end=t;
+      activeBrake.peak=
+        Math.max(
+          activeBrake.peak,
+          Math.abs(s.longA)
+        );
+
+      if(sev==="critical"){
+        activeBrake.sev="critical";
+      }
+    }
+  }else if(activeBrake){
+    activeBrake=
+      closeEvent(
+        activeBrake,
+        "brake"
+      );
+
+    renderEvents();
+  }
 
   if(s.longA>=3){
-    if(!activeAccel)activeAccel={title:"شتاب شدید",sev:"severe",start:t,end:t,peak:s.longA,conf:95,context:s.meta.context,riskMult:s.meta.mult.accel,reason:s.meta.reason};
-    else{activeAccel.end=t;activeAccel.peak=Math.max(activeAccel.peak,s.longA)}
-  }else if(activeAccel){activeAccel=closeEvent(activeAccel,"accel");renderEvents()}
+    if(!activeAccel){
+      activeAccel={
+        title:"شتاب شدید",
+        sev:"severe",
+        start:t,
+        end:t,
+        peak:s.longA,
+        conf:95,
+        context:s.meta.context,
+        riskMult:s.meta.mult.accel,
+        reason:s.meta.reason
+      };
+    }else{
+      activeAccel.end=t;
+      activeAccel.peak=
+        Math.max(
+          activeAccel.peak,
+          s.longA
+        );
+    }
+  }else if(activeAccel){
+    activeAccel=
+      closeEvent(
+        activeAccel,
+        "accel"
+      );
 
-  if(Math.abs(s.latA)>=3&&s.speed>35){
-    if(!activeCorner)activeCorner={title:"پیچ شدید",sev:"severe",start:t,end:t,peak:Math.abs(s.latA),conf:95,context:s.meta.context,riskMult:s.meta.mult.corner,reason:s.meta.reason};
-    else{activeCorner.end=t;activeCorner.peak=Math.max(activeCorner.peak,Math.abs(s.latA))}
-  }else if(activeCorner){activeCorner=closeEvent(activeCorner,"corner");renderEvents()}
+    renderEvents();
+  }
 
-  return{excess,pct,validSpeed};
+  if(
+    Math.abs(s.latA)>=3 &&
+    s.speed>35
+  ){
+    if(!activeCorner){
+      activeCorner={
+        title:"پیچ شدید",
+        sev:"severe",
+        start:t,
+        end:t,
+        peak:Math.abs(s.latA),
+        conf:95,
+        context:s.meta.context,
+        riskMult:s.meta.mult.corner,
+        reason:s.meta.reason
+      };
+    }else{
+      activeCorner.end=t;
+      activeCorner.peak=
+        Math.max(
+          activeCorner.peak,
+          Math.abs(s.latA)
+        );
+    }
+  }else if(activeCorner){
+    activeCorner=
+      closeEvent(
+        activeCorner,
+        "corner"
+      );
+
+    renderEvents();
+  }
+
+  return{
+    excess,
+    pct,
+    validSpeed,
+    runtimeLimit:limit
+  };
 }
+
 function flush(){
   if(activeSpeed){activeSpeed=closeEvent(activeSpeed,"speeding")}
   if(activeGPS){activeGPS=closeEvent(activeGPS,"gps")}
@@ -17028,7 +17342,16 @@ function flush(){
 
 function drawTrackSegment(prevRow,row){
   if(!prevRow)return;
-  const speeding=row.validSpeed&&row.excess>5&&(row.excess/row.limit*100)>8;
+
+  const speeding=
+    row.validSpeed &&
+    Number.isFinite(Number(row.limit)) &&
+    Number(row.limit)>0 &&
+    row.excess>5 &&
+    (
+      row.excess/
+      Number(row.limit)*100
+    )>8;
   const uncertain=row.mapMatch<70||row.gps>35;
   let color=speeding?'#ef4444':uncertain?'#f59e0b':'#22c55e';
   let l=L.polyline([prevRow.pos,row.pos],{color,weight:7,opacity:.8}).addTo(map);
@@ -19260,6 +19583,334 @@ function parseCameraDirection(value){
   return map[raw]??null;
 }
 
+
+const TRAFFIC_CAMERA_CACHE_KEY=
+  "pol_route_camera_cache_v1";
+
+const TRAFFIC_CAMERA_CACHE_TTL=
+  6*60*60*1000;
+
+function routeCameraCacheKey(){
+  if(!routeCoords?.length)return"";
+
+  const start=routeCoords[0];
+  const end=routeCoords.at(-1);
+
+  return[
+    Number(start?.[0]||0).toFixed(3),
+    Number(start?.[1]||0).toFixed(3),
+    Number(end?.[0]||0).toFixed(3),
+    Number(end?.[1]||0).toFixed(3),
+    Math.round(Number(routeDistanceM||0)/1000)
+  ].join("|");
+}
+
+function loadTrafficCameraCache(key){
+  if(!key)return null;
+
+  try{
+    const all=JSON.parse(
+      localStorage.getItem(
+        TRAFFIC_CAMERA_CACHE_KEY
+      )||"{}"
+    );
+
+    const item=all?.[key];
+
+    if(!item)return null;
+
+    if(
+      Date.now()-Number(item.savedAt||0)>
+      TRAFFIC_CAMERA_CACHE_TTL
+    ){
+      return null;
+    }
+
+    return Array.isArray(item.elements)
+      ?item.elements
+      :null;
+  }catch(e){
+    return null;
+  }
+}
+
+function saveTrafficCameraCache(key,elements){
+  if(!key)return;
+
+  try{
+    let all={};
+
+    try{
+      all=JSON.parse(
+        localStorage.getItem(
+          TRAFFIC_CAMERA_CACHE_KEY
+        )||"{}"
+      );
+    }catch(e){}
+
+    all[key]={
+      savedAt:Date.now(),
+      elements:Array.isArray(elements)
+        ?elements
+        :[]
+    };
+
+    const newest=
+      Object.entries(all)
+        .sort(
+          (a,b)=>
+            Number(b[1]?.savedAt||0)-
+            Number(a[1]?.savedAt||0)
+        )
+        .slice(0,6);
+
+    localStorage.setItem(
+      TRAFFIC_CAMERA_CACHE_KEY,
+      JSON.stringify(
+        Object.fromEntries(newest)
+      )
+    );
+  }catch(e){}
+}
+
+function sampledRouteForCameraQuery(
+  everyM=1100,
+  maxPoints=32
+){
+  if(!routeCoords?.length)return[];
+
+  const total=Math.max(
+    1,
+    Number(routeDistanceM||0)
+  );
+
+  const points=[];
+
+  for(
+    let d=0;
+    d<=total &&
+    points.length<maxPoints;
+    d+=everyM
+  ){
+    const p=routePointAtDistanceM(d);
+
+    if(
+      Array.isArray(p) &&
+      p.length>=2
+    ){
+      points.push(p);
+    }
+  }
+
+  const last=routePointAtDistanceM(total);
+
+  if(
+    last &&
+    (
+      !points.length ||
+      hav(points.at(-1),last)>250
+    )
+  ){
+    points.push(last);
+  }
+
+  return points;
+}
+
+async function fetchRouteTrafficCameraNodes(){
+  const points=
+    sampledRouteForCameraQuery();
+
+  if(!points.length)return[];
+
+  const clauses=[];
+
+  for(const [lat,lng] of points){
+    const around=
+      `(around:260,${Number(lat).toFixed(6)},${Number(lng).toFixed(6)})`;
+
+    clauses.push(
+      `node["highway"="speed_camera"]${around};`
+    );
+
+    clauses.push(
+      `node["enforcement"~"maxspeed|traffic_signals|average_speed"]${around};`
+    );
+  }
+
+  const query=
+    `[out:json][timeout:18];(`+
+    clauses.join("")+
+    `);out tags;`;
+
+  const endpoints=[
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const controller=
+        new AbortController();
+
+      const timeout=setTimeout(
+        ()=>controller.abort(),
+        20000
+      );
+
+      const res=await fetch(
+        `${endpoint}?data=${encodeURIComponent(query)}`,
+        {
+          signal:controller.signal,
+          headers:{
+            Accept:"application/json"
+          }
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if(!res.ok){
+        throw new Error(
+          `Camera Overpass ${res.status}`
+        );
+      }
+
+      const data=await res.json();
+
+      if(!Array.isArray(data?.elements)){
+        throw new Error(
+          "Camera response invalid"
+        );
+      }
+
+      const dedupe=new Map();
+
+      for(const el of data.elements){
+        if(
+          el?.type==="node" &&
+          el?.id!=null
+        ){
+          dedupe.set(
+            String(el.id),
+            el
+          );
+        }
+      }
+
+      return[
+        ...dedupe.values()
+      ];
+    }catch(e){
+      lastError=e;
+    }
+  }
+
+  throw lastError||
+    new Error(
+      "Traffic camera source unavailable"
+    );
+}
+
+async function prefetchRouteTrafficCameras({
+  force=false
+}={}){
+  if(!routeCoords?.length)return false;
+
+  const key=routeCameraCacheKey();
+
+  if(
+    !force &&
+    mappedSpeedState.cameraStatus==="ready" &&
+    mappedSpeedState.cameraCacheKey===key
+  ){
+    return true;
+  }
+
+  mappedSpeedState.cameraCacheKey=key;
+  mappedSpeedState.cameraLastError="";
+
+  const cached=
+    !force
+      ?loadTrafficCameraCache(key)
+      :null;
+
+  if(cached){
+    buildMappedTrafficCameras(cached);
+
+    mappedSpeedState.cameraStatus="ready";
+    mappedSpeedState.cameraUpdatedAt=
+      Date.now();
+
+    if(typeof renderPreTripMission==="function"){
+      renderPreTripMission();
+    }
+
+    return true;
+  }
+
+  mappedSpeedState.cameraStatus="loading";
+
+  if(typeof renderPreTripMission==="function"){
+    renderPreTripMission();
+  }
+
+  const seq=
+    ++mappedSpeedState.cameraRequestSeq;
+
+  try{
+    const elements=
+      await fetchRouteTrafficCameraNodes();
+
+    if(
+      seq!==
+      mappedSpeedState.cameraRequestSeq
+    ){
+      return false;
+    }
+
+    saveTrafficCameraCache(
+      key,
+      elements
+    );
+
+    buildMappedTrafficCameras(elements);
+
+    mappedSpeedState.cameraStatus="ready";
+    mappedSpeedState.cameraLastError="";
+    mappedSpeedState.cameraUpdatedAt=
+      Date.now();
+
+    if(typeof renderPreTripMission==="function"){
+      renderPreTripMission();
+    }
+
+    return true;
+  }catch(e){
+    if(
+      seq!==
+      mappedSpeedState.cameraRequestSeq
+    ){
+      return false;
+    }
+
+    mappedSpeedState.cameraStatus="error";
+    mappedSpeedState.cameraLastError=
+      String(e?.message||e);
+
+    mappedSpeedState.cameras=[];
+    clearTrafficCameraMarkers();
+
+    if(typeof renderPreTripMission==="function"){
+      renderPreTripMission();
+    }
+
+    return false;
+  }
+}
+
 function buildMappedTrafficCameras(elements){
   const routeSamples=sampledCurrentRouteMeta(150);
   const cameras=[];
@@ -20300,6 +20951,171 @@ function updateMappedSpeedPreview({
     reliable
   });
   renderMappedSpeedDiagnostics();
+
+  return match;
+}
+
+
+function runtimeRouteSpeedAtProgress(
+  progress,
+  {
+    allowOpenDataDisplay=true
+  }={}
+){
+  const p=
+    clamp(
+      Number(progress||0),
+      0,
+      1
+    );
+
+  const truth=
+    speedTruthAtProgress(p);
+
+  if(truth){
+    return{
+      ...truth,
+      displayEligible:true,
+      scoreEligible:true,
+      authorityVerified:true,
+      runtimeSource:"verified-truth"
+    };
+  }
+
+  if(allowOpenDataDisplay){
+    const exact=
+      exactSpeedProfileAtProgress(p);
+
+    if(
+      exact &&
+      Number.isFinite(Number(exact.limit)) &&
+      Number(exact.limit)>=10 &&
+      Number(exact.limit)<=160
+    ){
+      return{
+        ...exact,
+        displayEligible:true,
+        scoreEligible:false,
+        authorityVerified:false,
+        runtimeSource:"exact-route-open-data"
+      };
+    }
+  }
+
+  return null;
+}
+
+function renderRuntimeNavigationSpeedLimit(
+  match,
+  {
+    speedKmh=0
+  }={}
+){
+  const sign=$('speedSign');
+  const badge=$('speedLimitSourceBadge');
+
+  if(!sign||!badge)return;
+
+  sign.classList.remove(
+    'mapped-limit',
+    'mapped-limit-low'
+  );
+
+  badge.classList.remove(
+    'good','warn','exact','fallback',
+    'blocked','authority-locked',
+    'truth-verified','truth-missing'
+  );
+
+  if(
+    !match ||
+    !Number.isFinite(Number(match.limit))
+  ){
+    sign.textContent="--";
+    badge.textContent=
+      "Speed Limit مسیر نامشخص";
+
+    badge.classList.add(
+      'truth-missing'
+    );
+
+    if($('limit')){
+      $('limit').textContent="--";
+    }
+
+    if($('excess')){
+      $('excess').textContent="۰";
+    }
+
+    return;
+  }
+
+  const limit=
+    Math.round(Number(match.limit));
+
+  sign.textContent=
+    limit.toLocaleString('fa-IR');
+
+  sign.classList.add(
+    match.authorityVerified
+      ?'mapped-limit'
+      :'mapped-limit-low'
+  );
+
+  if(match.authorityVerified){
+    badge.textContent=
+      `${match.road||"مسیر"} • تأییدشده`;
+
+    badge.classList.add(
+      'truth-verified'
+    );
+  }else{
+    badge.textContent=
+      `${match.road||"Route"} • Route Data • بدون امتیاز`;
+
+    badge.classList.add(
+      'fallback'
+    );
+  }
+
+  if($('limit')){
+    $('limit').textContent=
+      limit.toLocaleString('fa-IR');
+  }
+
+  if($('excess')){
+    const excess=
+      match.scoreEligible
+        ?Math.max(
+          0,
+          Number(speedKmh||0)-limit
+        )
+        :0;
+
+    $('excess').textContent=
+      Math.round(excess)
+        .toLocaleString('fa-IR');
+  }
+}
+
+function syncRuntimeRouteSpeedAtProgress(
+  progress,
+  {
+    speedKmh=0
+  }={}
+){
+  const match=
+    runtimeRouteSpeedAtProgress(
+      progress
+    );
+
+  mappedSpeedState.current=
+    match;
+
+  renderRuntimeNavigationSpeedLimit(
+    match,
+    {speedKmh}
+  );
 
   return match;
 }
@@ -22692,15 +23508,27 @@ async function processRealGps(position){
   // Prototype speed-limit layer:
   // only explicit OSM maxspeed is displayed.
   // It does NOT enter rewards/final Safety Score.
-  updateMappedSpeedPreview({
-    point:temporal.point||roadDecisionPoint,
-    heading,
-    speedKmh:speed,
-    accuracy,
-    temporalConfidence:Number(temporal.confidence||0),
-    routeProgress:Number(realGpsState.routeProgress||0),
-    timestamp:stamp
-  });
+  const mappedRuntime=
+    updateMappedSpeedPreview({
+      point:temporal.point||roadDecisionPoint,
+      heading,
+      speedKmh:speed,
+      accuracy,
+      temporalConfidence:Number(temporal.confidence||0),
+      routeProgress:Number(realGpsState.routeProgress||0),
+      timestamp:stamp
+    });
+
+  if(
+    !mappedRuntime?.authorityVerified
+  ){
+    syncRuntimeRouteSpeedAtProgress(
+      Number(realGpsState.routeProgress||0),
+      {
+        speedKmh:speed
+      }
+    );
+  }
 
   updateTrafficCameraApproach(
     Number(realGpsState.routeProgress||0),
@@ -23627,20 +24455,82 @@ function updateDrivingSpeedUI(s,det){
   const gauge=$('currentSpeedGauge');
   const speedEl=$('driveCurrentSpeed');
   const alert=$('speedAlertBanner');
-  if(speedEl)speedEl.textContent=Math.round(s.speed).toLocaleString('fa-IR');
-  const over=det.validSpeed && det.excess>5 && (det.excess/s.meta.limit*100)>8;
-  if(gauge)gauge.classList.toggle('over',over);
-  if(alert)alert.classList.remove('show');
+
+  if(speedEl){
+    speedEl.textContent=
+      Math.round(s.speed)
+        .toLocaleString('fa-IR');
+  }
+
+  const runtime=
+    s?.runtimeSpeedMatch||null;
+
+  const over=
+    runtime?.scoreEligible===true &&
+    det.validSpeed &&
+    det.excess>5 &&
+    Number(runtime.limit)>0 &&
+    (
+      det.excess/
+      Number(runtime.limit)*100
+    )>8;
+
+  if(gauge){
+    gauge.classList.toggle(
+      'over',
+      over
+    );
+  }
+
+  if(alert){
+    alert.classList.remove('show');
+  }
 }
 
 function step(){
-  const dur=Number($('duration').value),s=simulatedState(t,dur),det=detect(s);
-  const navProgress=currentNavigationProgress(s.p);
-  const routePos=currentRoutePosition(s.p);
-  const pos=simulatedOffRoutePosition(routePos,s.p);
+  const dur=
+    Number($('duration').value);
+
+  const s=
+    simulatedState(t,dur);
+
+  const navProgress=
+    currentNavigationProgress(s.p);
+
+  const routePos=
+    currentRoutePosition(s.p);
+
+  const pos=
+    simulatedOffRoutePosition(
+      routePos,
+      s.p
+    );
+
+  s.runtimeSpeedMatch=
+    runtimeRouteSpeedAtProgress(
+      navProgress
+    );
+
+  const det=detect(s);
   const tc=tripConfidence(s.gps,s.match);
   const row={
-    time:t,pos,speed:s.speed,limit:s.meta.limit,segment:s.meta.id,
+    time:t,
+    pos,
+    speed:s.speed,
+    limit:
+      Number.isFinite(
+        Number(
+          s.runtimeSpeedMatch?.limit
+        )
+      )
+        ?Number(
+          s.runtimeSpeedMatch.limit
+        )
+        :null,
+    segment:
+      s.runtimeSpeedMatch?.segmentId||
+      s.runtimeSpeedMatch?.wayId||
+      "--",
     roadContext:s.meta.context,contextReason:s.meta.reason,
     speedMult:s.meta.mult.speed,brakeMult:s.meta.mult.brake,accelMult:s.meta.mult.accel,cornerMult:s.meta.mult.corner,
     mapMatch:s.match,gps:s.gps,longA:s.longA,latA:s.latA,tripConf:tc,
@@ -23655,8 +24545,29 @@ function step(){
   if(trackLine)trackLine.addLatLng(pos);
   drawTrackSegment(prev,row);
 
-  $('speed').textContent=Math.round(s.speed);$('limit').textContent=s.meta.limit;$('speedSign').textContent=s.meta.limit;
-  $('excess').textContent=Math.max(0,Math.round(det.excess));$('segment').textContent=s.meta.id;$('matchConf').textContent=s.match+"%";
+  $('speed').textContent=
+    Math.round(s.speed);
+
+  syncRuntimeRouteSpeedAtProgress(
+    navProgress,
+    {
+      speedKmh:Number(s.speed||0)
+    }
+  );
+
+  $('excess').textContent=
+    Math.max(
+      0,
+      Math.round(det.excess)
+    );
+
+  $('segment').textContent=
+    s.runtimeSpeedMatch?.segmentId||
+    s.runtimeSpeedMatch?.wayId||
+    "--";
+
+  $('matchConf').textContent=
+    s.match+"%";
   $('gpsAcc').textContent=Math.round(s.gps);$('longA').textContent=s.longA.toFixed(2);$('tripConf').textContent=tc;
   $('roadContext').textContent=s.meta.context;
   const liveRisk=Math.max(s.meta.mult.speed,s.meta.mult.brake,s.meta.mult.accel,s.meta.mult.corner);
