@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۹ Vehicle-Aware Routing & Road Rules</title>
+<title>POL | نسخه ۶.۰ Speed Integrity & Free Zoom</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5310,6 +5310,46 @@ body.driving-mode .traffic-camera-pill.show{
   }
 }
 
+
+/* ============================================================
+   v6.0 SPEED INTEGRITY & FREE ZOOM
+   ============================================================ */
+
+body.driving-mode .drive-zoom-btn{
+  font-size:23px!important;
+  font-weight:500!important;
+  line-height:1!important;
+}
+
+/* Hide MapLibre's native +/- while POL controls keep Follow semantics. */
+body.drive-3d-active #drive3dMap .maplibregl-ctrl-zoom-in,
+body.drive-3d-active #drive3dMap .maplibregl-ctrl-zoom-out{
+  display:none!important;
+}
+
+.speed-limit-source-badge.exact{
+  background:#12351d!important;
+  border-color:#28543c!important;
+  color:#86efac!important;
+}
+.speed-limit-source-badge.fallback{
+  background:#3b2d0d!important;
+  border-color:#6d551d!important;
+  color:#fde68a!important;
+}
+.speed-limit-source-badge.blocked{
+  background:#441717!important;
+  border-color:#7d3030!important;
+  color:#fecaca!important;
+}
+
+/* User zoom stays in Follow Mode, so recenter pill appears only for actual pan. */
+body.driving-mode.zoom-follow-active #driveRecenterBtn:not(.is-needed){
+  box-shadow:
+    0 9px 26px rgba(2,8,23,.22),
+    0 0 0 2px rgba(77,163,255,.10)!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6022,6 +6062,8 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <b class="drive-recenter-label">برگشت به موقعیت من</b>
                 </button>
                 <button id="driveOverviewBtn" class="drive-circle-btn drive-overview-btn" title="نمایش کل مسیر" aria-label="نمایش کل مسیر">↔</button>
+                <button id="driveZoomInBtn" class="drive-circle-btn drive-zoom-btn" title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">+</button>
+                <button id="driveZoomOutBtn" class="drive-circle-btn drive-zoom-btn" title="کوچک‌نمایی" aria-label="کوچک‌نمایی">−</button>
                 <button id="driveHeadingBtn" class="drive-circle-btn drive-heading-btn active" title="جهت حرکت بالا" aria-label="تغییر جهت نقشه">🧭</button>
                 <button id="driveVoiceBtn" class="drive-circle-btn drive-voice-btn" title="قطع یا وصل راهنمای صوتی" aria-label="راهنمای صوتی">🔊</button>
                 <button id="driveEndBtn" class="drive-circle-btn end" title="پایان سفر" aria-label="پایان سفر">■</button>
@@ -6102,9 +6144,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.9</span>
+              <span class="lab-version-chip">v6.0</span>
               <div>
-                <b>Vehicle-Aware Routing & Road Rules</b>
+                <b>Speed Integrity & Free Zoom</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -7088,6 +7130,11 @@ baseTiles.on('tileerror',()=>{ $('status').textContent='بعضی Tileهای نق
    Only active driving swaps to WebGL perspective.
    ============================================================ */
 
+let drive3DManualZoomDelta=0;
+let drive3DUserZooming=false;
+let drive3DZoomCaptureStart=null;
+let drive3DProgrammaticCameraUntil=0;
+
 let drive3DMap=null;
 let drive3DMapLoaded=false;
 let drive3DInitPromise=null;
@@ -7544,7 +7591,11 @@ function drive3DZoomForState(progress,speedKmh=0){
     zoom+=.12;
   }
 
-  return clamp(zoom,3,19.8);
+  return clamp(
+    zoom+Number(drive3DManualZoomDelta||0),
+    3,
+    19.8
+  );
 }
 
 function drive3DVehicleOffsetPx(){
@@ -7647,6 +7698,12 @@ function updateDrive3DCamera(
     return;
   }
 
+  // User zoom is allowed while Follow remains active.
+  // During the gesture, don't fight the zoom animation.
+  if(drive3DUserZooming && !force){
+    return;
+  }
+
   const now=performance.now();
 
   if(!force && now-drive3DLastCameraAt<145){
@@ -7695,6 +7752,9 @@ function updateDrive3DCamera(
   ];
 
   try{
+    drive3DProgrammaticCameraUntil=
+      performance.now()+(force?500:300);
+
     drive3DMap.easeTo({
       center,
       offset:[0,carOffsetY],
@@ -7809,6 +7869,9 @@ function drive3DCurrentState(){
 function drive3DRecenterFromState(){
   if(!isDrive3DActive())return false;
 
+  try{drive3DMap.stop()}catch(e){}
+
+  resetDriveNavigationZoom();
   resumeFollowAfterManualExplore();
 
   const s=drive3DCurrentState();
@@ -7826,22 +7889,156 @@ function drive3DRecenterFromState(){
 function bindDrive3DManualGestures(){
   if(!drive3DMap)return;
 
-  const pause=()=>{
-    if(!document.body.classList.contains('driving-mode'))return;
-    pauseFollowForManualExplore("maplibre-gesture");
+  const pausePan=(e)=>{
+    if(
+      !document.body.classList.contains('driving-mode') ||
+      !e?.originalEvent
+    ){
+      return;
+    }
+
+    pauseFollowForManualExplore(
+      "maplibre-pan"
+    );
   };
 
-  drive3DMap.on('dragstart',pause);
+  // Actual viewpoint changes pause Follow.
+  drive3DMap.on('dragstart',pausePan);
+  drive3DMap.on('rotatestart',pausePan);
+  drive3DMap.on('pitchstart',pausePan);
 
-  const container=drive3DMap.getCanvasContainer();
+  // Zoom is different:
+  // user may zoom while vehicle/bearing continue following.
+  drive3DMap.on('zoomstart',e=>{
+    if(
+      !document.body.classList.contains('driving-mode') ||
+      !e?.originalEvent
+    ){
+      return;
+    }
 
-  ['pointerdown','touchstart','wheel','dblclick'].forEach(type=>{
-    container.addEventListener(
-      type,
-      pause,
-      {passive:true}
+    drive3DUserZooming=true;
+    drive3DZoomCaptureStart={
+      zoom:Number(drive3DMap.getZoom()||0),
+      at:performance.now()
+    };
+
+    document.body.classList.add(
+      'zoom-follow-active'
     );
   });
+
+  drive3DMap.on('zoomend',e=>{
+    if(!drive3DUserZooming)return;
+
+    const state=drive3DCurrentState();
+
+    const currentZoom=
+      Number(drive3DMap.getZoom()||0);
+
+    const previousDelta=
+      Number(drive3DManualZoomDelta||0);
+
+    // Temporarily remove old delta to compute the auto target.
+    drive3DManualZoomDelta=0;
+
+    const autoZoom=
+      drive3DZoomForState(
+        state.progress,
+        state.speed
+      );
+
+    drive3DManualZoomDelta=
+      clamp(
+        currentZoom-autoZoom,
+        -2.6,
+        2.6
+      );
+
+    drive3DUserZooming=false;
+    drive3DZoomCaptureStart=null;
+
+    // Continue following immediately, preserving user's chosen scale.
+    setTimeout(()=>{
+      if(
+        !manualExploreLock &&
+        !userManuallyMovedDrivingMap
+      ){
+        updateDrive3DCamera(
+          state.progress,
+          state.point,
+          state.speed,
+          {force:true}
+        );
+      }
+    },40);
+  });
+}
+
+function adjustDriveNavigationZoom(delta){
+  if(!document.body.classList.contains('driving-mode')){
+    return;
+  }
+
+  if(isDrive3DActive()){
+    const state=drive3DCurrentState();
+
+    if(
+      manualExploreLock ||
+      userManuallyMovedDrivingMap
+    ){
+      try{
+        drive3DMap.easeTo({
+          zoom:clamp(
+            Number(drive3DMap.getZoom()||17)+delta,
+            3,
+            19.8
+          ),
+          duration:180,
+          essential:true
+        });
+      }catch(e){}
+      return;
+    }
+
+    drive3DManualZoomDelta=
+      clamp(
+        Number(drive3DManualZoomDelta||0)+delta,
+        -2.6,
+        2.6
+      );
+
+    document.body.classList.add(
+      'zoom-follow-active'
+    );
+
+    updateDrive3DCamera(
+      state.progress,
+      state.point,
+      state.speed,
+      {force:true}
+    );
+
+    return;
+  }
+
+  // Leaflet fallback: zoom without putting the map into permanent manual lock.
+  try{
+    const z=map.getZoom();
+    map.setZoom(
+      clamp(z+delta,3,19),
+      {animate:true}
+    );
+  }catch(e){}
+}
+
+function resetDriveNavigationZoom(){
+  drive3DManualZoomDelta=0;
+  drive3DUserZooming=false;
+  drive3DZoomCaptureStart=null;
+  document.body.classList.remove(
+    'zoom-follow-active'
+  );
 }
 
 function ensureDrive3DExplorationEnabled(){
@@ -8177,6 +8374,16 @@ let mappedSpeedState={
   cameras:[],
   lastCameraAlertId:null,
   lastCameraVoiceStage:{},
+
+  exactProfile:{
+    status:"idle",
+    requestSeq:0,
+    routeRef:null,
+    edges:[],
+    source:"",
+    lastError:""
+  },
+
   lastError:"",
   gpsSamples:0,
   validLimitSamples:0,
@@ -11629,6 +11836,10 @@ function selectRouteAlternative(index){
   const route=routeAlternatives[index];
   routeCoords=routeToCoords(route);
   routeDistanceM=route.distance||totalDistance(routeCoords);
+
+  mappedSpeedState.exactProfile.status="idle";
+  mappedSpeedState.exactProfile.routeRef=null;
+  mappedSpeedState.exactProfile.edges=[];
   routeDurationS=route.duration||0;
   buildNavigationSteps(route);
   resetLiveEtaEngine();
@@ -13152,6 +13363,8 @@ function updateDrivingCamera(
 function recenterDrivingCamera(){
   repairLeafletPointerRouting?.();
 
+  resetDriveNavigationZoom();
+
   if(isDrive3DActive()){
     drive3DRecenterFromState();
     return;
@@ -14394,6 +14607,8 @@ function enterDrivingMode(){
   resetSafetyCoach();
   document.body.classList.add('driving-mode');
 
+  resetDriveNavigationZoom();
+
   // Start the perspective renderer immediately. Leaflet remains as
   // a fail-safe until MapLibre reports ready.
   activateDrive3DMap();
@@ -14441,6 +14656,7 @@ function enterDrivingMode(){
 }
 function exitDrivingMode(){
   stopAutomaticHeading({northUp:true});
+  resetDriveNavigationZoom();
   deactivateDrive3DMap();
 
   setDrivingRoutePresentation(false);
@@ -14992,6 +15208,388 @@ function speedGridCell(lat,lng){
   return`${Math.floor(Number(lat)/size)}:${Math.floor(Number(lng)/size)}`;
 }
 
+
+
+function sampleRouteForTraceAttributes(maxPoints=110){
+  if(!routeCoords?.length)return[];
+
+  const total=Math.max(
+    1,
+    Number(routeDistanceM||totalDistance(routeCoords)||1)
+  );
+
+  const count=Math.max(
+    3,
+    Math.min(
+      maxPoints,
+      Math.ceil(total/140)+1
+    )
+  );
+
+  const out=[];
+
+  for(let i=0;i<count;i++){
+    const d=
+      count===1
+        ?0
+        :total*i/(count-1);
+
+    const p=routePointAtDistanceM(d);
+
+    if(
+      Array.isArray(p) &&
+      p.length>=2 &&
+      p.every(Number.isFinite)
+    ){
+      out.push({
+        lat:Number(p[0]),
+        lon:Number(p[1]),
+        type:"via"
+      });
+    }
+  }
+
+  if(out.length){
+    out[0].type="break";
+    out[out.length-1].type="break";
+  }
+
+  return out;
+}
+
+function normalizeValhallaEdgeName(edge){
+  const names=edge?.names;
+
+  if(Array.isArray(names) && names.length){
+    const first=names[0];
+
+    if(typeof first==="string"){
+      return first;
+    }
+
+    if(first?.value){
+      return String(first.value);
+    }
+  }
+
+  return String(
+    edge?.name ||
+    edge?.ref ||
+    ""
+  ).trim();
+}
+
+function normalizeValhallaSpeedType(value){
+  if(value==null)return"unknown";
+
+  const raw=String(value).toLowerCase();
+
+  if(
+    raw.includes("tag") ||
+    raw.includes("limit")
+  ){
+    return"tagged";
+  }
+
+  if(
+    raw.includes("default") ||
+    raw.includes("classified") ||
+    raw.includes("urban")
+  ){
+    return"default";
+  }
+
+  return raw||"unknown";
+}
+
+function exactSpeedProfileAtProgress(progress){
+  const profile=mappedSpeedState.exactProfile;
+
+  if(
+    profile.status!=="ready" ||
+    !profile.edges?.length
+  ){
+    return null;
+  }
+
+  const currentM=
+    routeDistanceM*
+    clamp(Number(progress||0),0,1);
+
+  let selected=null;
+
+  for(const edge of profile.edges){
+    if(
+      currentM>=Number(edge.startM||0)-8 &&
+      currentM<=Number(edge.endM||0)+8
+    ){
+      selected=edge;
+      break;
+    }
+  }
+
+  if(!selected){
+    let best=null;
+
+    for(const edge of profile.edges){
+      const mid=
+        (Number(edge.startM||0)+Number(edge.endM||0))/2;
+
+      const gap=Math.abs(mid-currentM);
+
+      if(!best || gap<best.gap){
+        best={edge,gap};
+      }
+    }
+
+    if(best?.gap<=90){
+      selected=best.edge;
+    }
+  }
+
+  if(!selected)return null;
+
+  const limit=Number(selected.speedLimit||0);
+
+  if(
+    !Number.isFinite(limit) ||
+    limit<10 ||
+    limit>160
+  ){
+    return null;
+  }
+
+  return{
+    limit,
+    confidence:
+      selected.speedType==="tagged"
+        ?97
+        :91,
+    road:selected.name||"Road Edge",
+    source:"Valhalla exact edge",
+    wayId:selected.osmId||null,
+    exactEdge:true,
+    scoreEligible:true,
+    speedType:selected.speedType,
+    edgeUse:selected.use||"",
+    edgeRamp:!!selected.ramp,
+    startM:selected.startM,
+    endM:selected.endM
+  };
+}
+
+async function fetchValhallaTraceAttributes(shape){
+  const request={
+    shape,
+    costing:currentVehicleProfile.costing,
+    costing_options:valhallaCostingOptions(
+      currentVehicleProfile
+    ),
+    shape_match:"map_snap",
+    units:"kilometers",
+    filters:{
+      action:"include",
+      attributes:[
+        "edge.speed_limit",
+        "edge.speed_type",
+        "edge.names",
+        "edge.length",
+        "edge.osm_id",
+        "edge.use",
+        "edge.ramp"
+      ]
+    }
+  };
+
+  const endpoints=[
+    "https://valhalla1.openstreetmap.de/trace_attributes",
+    "https://valhalla.openstreetmap.de/trace_attributes"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(
+        ()=>controller.abort(),
+        14000
+      );
+
+      const res=await fetch(
+        endpoint,
+        {
+          method:"POST",
+          signal:controller.signal,
+          headers:{
+            "Content-Type":"application/json",
+            "Accept":"application/json",
+            "X-Client-Id":"pol-navigation-prototype"
+          },
+          body:JSON.stringify(request)
+        }
+      );
+
+      clearTimeout(timer);
+
+      if(!res.ok){
+        throw new Error(
+          `Trace attributes ${res.status}`
+        );
+      }
+
+      const data=await res.json();
+
+      if(!Array.isArray(data?.edges)){
+        throw new Error(
+          "Trace attributes edges missing"
+        );
+      }
+
+      return{
+        endpoint,
+        data
+      };
+    }catch(e){
+      lastError=e;
+    }
+  }
+
+  throw lastError||
+    new Error("Exact route speed profile unavailable");
+}
+
+async function prefetchExactRouteSpeedProfile({
+  force=false
+}={}){
+  if(!routeCoords?.length)return false;
+
+  const profile=mappedSpeedState.exactProfile;
+
+  if(
+    !force &&
+    profile.status==="ready" &&
+    profile.routeRef===routeCoords
+  ){
+    return true;
+  }
+
+  const seq=++profile.requestSeq;
+
+  profile.status="loading";
+  profile.routeRef=routeCoords;
+  profile.edges=[];
+  profile.lastError="";
+  profile.source="";
+
+  const shape=
+    sampleRouteForTraceAttributes(110);
+
+  if(shape.length<3){
+    profile.status="error";
+    profile.lastError="Route shape insufficient";
+    return false;
+  }
+
+  try{
+    const result=
+      await fetchValhallaTraceAttributes(shape);
+
+    if(seq!==profile.requestSeq){
+      return false;
+    }
+
+    const rawEdges=result.data.edges||[];
+
+    const parsed=[];
+    let cumulative=0;
+
+    for(const edge of rawEdges){
+      const lengthKm=Number(
+        edge?.length||0
+      );
+
+      const lengthM=
+        Number.isFinite(lengthKm) &&
+        lengthKm>0
+          ?lengthKm*1000
+          :0;
+
+      if(lengthM<=0)continue;
+
+      const speedLimit=Number(
+        edge?.speed_limit||0
+      );
+
+      const item={
+        startM:cumulative,
+        endM:cumulative+lengthM,
+        lengthM,
+        speedLimit:
+          Number.isFinite(speedLimit)
+            ?speedLimit
+            :0,
+        speedType:normalizeValhallaSpeedType(
+          edge?.speed_type
+        ),
+        name:normalizeValhallaEdgeName(edge),
+        osmId:
+          edge?.osm_id ??
+          edge?.way_id ??
+          null,
+        use:String(edge?.use||""),
+        ramp:edge?.ramp===true
+      };
+
+      parsed.push(item);
+      cumulative+=lengthM;
+    }
+
+    if(!parsed.length){
+      throw new Error(
+        "Exact profile contained no usable edges"
+      );
+    }
+
+    // Align provider cumulative edge length to the exact selected route.
+    const providerTotal=Math.max(1,cumulative);
+    const selectedTotal=Math.max(
+      1,
+      Number(routeDistanceM||providerTotal)
+    );
+
+    const scale=selectedTotal/providerTotal;
+
+    parsed.forEach(edge=>{
+      edge.startM*=scale;
+      edge.endM*=scale;
+      edge.lengthM*=scale;
+    });
+
+    profile.status="ready";
+    profile.edges=parsed;
+    profile.source="Valhalla trace_attributes";
+    profile.lastError="";
+
+    renderMappedSpeedDiagnostics();
+
+    return true;
+  }catch(e){
+    if(seq!==profile.requestSeq){
+      return false;
+    }
+
+    profile.status="error";
+    profile.edges=[];
+    profile.lastError=String(
+      e?.message||e
+    );
+
+    renderMappedSpeedDiagnostics();
+
+    return false;
+  }
+}
 
 function vehicleMaxspeedKeys(vehicleId){
   if(vehicleId==="truck"){
@@ -15600,6 +16198,20 @@ function matchMappedSpeedLimit(
   temporalConfidence=0,
   routeProgress=null
 ){
+  // Primary:
+  // exact edge sequence from the selected route's Valhalla trace attributes.
+  if(Number.isFinite(Number(routeProgress))){
+    const exact=
+      exactSpeedProfileAtProgress(routeProgress);
+
+    if(exact){
+      return exact;
+    }
+  }
+
+  // Fallback:
+  // strict Overpass geometry match. This may be displayed, but scoring
+  // requires substantially stronger evidence than the previous version.
   if(
     mappedSpeedState.status!=="ready" ||
     !mappedSpeedState.segments.length
@@ -15718,6 +16330,13 @@ function matchMappedSpeedLimit(
     96
   );
 
+  const fallbackScoreEligible=
+    confidence>=91 &&
+    best.distance<=14 &&
+    best.headingPenalty<=8 &&
+    best.progressPenalty<=7 &&
+    !best.ambiguous;
+
   return{
     limit:best.limit,
     confidence,
@@ -15735,7 +16354,9 @@ function matchMappedSpeedLimit(
     raw:best.raw,
     vehicleSpecific:!!best.vehicleSpecific,
     vehicleId:currentVehicleProfile.id,
-    routeProgressPenalty:best.progressPenalty
+    routeProgressPenalty:best.progressPenalty,
+    exactEdge:false,
+    scoreEligible:fallbackScoreEligible
   };
 }
 
@@ -15804,6 +16425,10 @@ async function fetchOverpassSpeedWays(bbox){
 
 async function prefetchMappedSpeedLimits({force=false}={}){
   if(!routeCoords?.length)return false;
+
+  // Exact edge profile is independent from Overpass and should be attempted
+  // for every selected route, even if the bbox is too large for Overpass.
+  prefetchExactRouteSpeedProfile({force});
 
   const bbox=routeSpeedBBox();
   if(!bbox)return false;
@@ -15930,7 +16555,8 @@ function updateMappedSpeedPreview({
   }
 
   const reliable=
-    match.confidence>=72 &&
+    match.scoreEligible===true &&
+    match.confidence>=90 &&
     Number(accuracy)<=38 &&
     Number(temporalConfidence)>=58;
 
@@ -15997,7 +16623,9 @@ function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
     'mapped-limit',
     'mapped-limit-low'
   );
-  badge.classList.remove('good','warn');
+  badge.classList.remove(
+    'good','warn','exact','fallback','blocked'
+  );
 
   if(!match||match.confidence<58){
     sign.textContent="--";
@@ -16015,14 +16643,18 @@ function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
     Number(match.limit).toLocaleString('fa-IR');
   sign.classList.add('mapped-limit');
 
-  if(match.confidence>=78){
+  if(match.exactEdge){
     badge.textContent=
-      `${match.road} • OSM`;
+      `${match.road} • Edge دقیق`;
+    badge.classList.add('exact');
+  }else if(match.scoreEligible){
+    badge.textContent=
+      `${match.road} • Match تأییدشده`;
     badge.classList.add('good');
   }else{
     badge.textContent=
-      `${match.road} • کم‌اطمینان`;
-    badge.classList.add('warn');
+      `${match.road} • فقط نمایش`;
+    badge.classList.add('fallback');
     sign.classList.add('mapped-limit-low');
   }
 
@@ -16079,7 +16711,7 @@ function renderMappedSpeedDiagnostics(){
 
   if($('mappedSpeedConfidence')){
     $('mappedSpeedConfidence').textContent=current
-      ?`${Math.round(current.confidence).toLocaleString('fa-IR')}٪`
+      ?`${Math.round(current.confidence).toLocaleString('fa-IR')}٪${current.scoreEligible?" • Score":" • Display"}`
       :"--";
   }
 
@@ -19029,6 +19661,11 @@ function syncNavigationAfterReroute(){
   drive3DRouteRef=null;
   syncDrive3DFullRoute({force:true});
 
+  mappedSpeedState.exactProfile.status="idle";
+  mappedSpeedState.exactProfile.routeRef=null;
+  mappedSpeedState.exactProfile.edges=[];
+  prefetchExactRouteSpeedProfile({force:true});
+
   clearDriveRouteCorridor();
   setDrivingRoutePresentation(
     document.body.classList.contains('driving-mode')
@@ -20740,6 +21377,14 @@ $('voiceToggle').onclick=toggleVoiceGuidance;
 $('voiceTestBtn').onclick=testVoice;
 $('driveRecenterBtn').onclick=recenterDrivingCamera;
 
+$('driveZoomInBtn').onclick=()=>{
+  adjustDriveNavigationZoom(.55);
+};
+
+$('driveZoomOutBtn').onclick=()=>{
+  adjustDriveNavigationZoom(-.55);
+};
+
 $('driveOverviewBtn').onclick=()=>{
   if(!document.body.classList.contains('driving-mode'))return;
 
@@ -20879,47 +21524,6 @@ const shouldIgnoreManualEvent=(target)=>{
     'button,.turn-card,.nav-bottom-strip,.drive-control-cluster,.drive-report-btn,.drive-circle-btn,.leaflet-control-container'
   );
 };
-
-mapContainerEl.addEventListener('pointerdown',(e)=>{
-  if(!document.body.classList.contains('driving-mode'))return;
-  if(shouldIgnoreManualEvent(e.target))return;
-  pauseFollowForManualExplore("pointerdown");
-},{passive:true});
-
-mapContainerEl.addEventListener('mousedown',(e)=>{
-  if(!document.body.classList.contains('driving-mode'))return;
-  if(shouldIgnoreManualEvent(e.target))return;
-  pauseFollowForManualExplore("mousedown");
-},{passive:true});
-
-mapContainerEl.addEventListener('touchstart',(e)=>{
-  if(!document.body.classList.contains('driving-mode'))return;
-  if(shouldIgnoreManualEvent(e.target))return;
-  pauseFollowForManualExplore("touchstart");
-},{passive:true});
-
-mapContainerEl.addEventListener('wheel',()=>{
-  pauseFollowForManualExplore("wheel");
-},{passive:true});
-
-mapContainerEl.addEventListener('dblclick',()=>{
-  pauseFollowForManualExplore("dblclick");
-},{passive:true});
-
-// Pause follow when using Leaflet +/- controls as well.
-setTimeout(()=>{
-  const zoomIn=mapContainerEl.querySelector('.leaflet-control-zoom-in');
-  const zoomOut=mapContainerEl.querySelector('.leaflet-control-zoom-out');
-
-  [zoomIn,zoomOut].forEach(btn=>{
-    btn?.addEventListener('click',()=>{
-      pauseFollowForManualExplore("zoom-control");
-    });
-    btn?.addEventListener('touchstart',()=>{
-      pauseFollowForManualExplore("zoom-control-touch");
-    },{passive:true});
-  });
-},0);
 
 $('navigationMode').onchange=()=>{
   const real=isRealGpsMode();
@@ -21834,6 +22438,8 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
   }
   function recenterDrivingCamera(){
     repairLeafletPointerRouting();
+
+    resetDriveNavigationZoom();
 
     if(isDrive3DActive()){
       drive3DRecenterFromState();
