@@ -2,8 +2,8 @@
 <html lang="fa-IR" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۷.۱.۱ Speed Compliance & Autocomplete Fix</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>POL | نسخه ۷.۱.۲ Mobile UI Lockdown</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8252,6 +8252,7 @@ body.pol-consumer-mode .nav-live-search-status{
 }
 </style>
 
+\n<style id="pol-v7-1-2-mobile-ui-lockdown">\n/* ============================================================\n   v7.1.2 — MOBILE UI LOCKDOWN\n   Goal: zero horizontal overflow, fixed mobile sheets, minimal UI.\n   ============================================================ */\n\n@media(max-width:700px){\n  html,body{\n    width:100%!important;\n    min-width:0!important;\n    max-width:100%!important;\n    overflow-x:hidden!important;\n    overscroll-behavior-x:none!important;\n  }\n\n  body.pol-consumer-mode,\n  body.pol-consumer-mode .app-shell,\n  body.pol-consumer-mode .app-screen,\n  body.pol-consumer-mode #screen-trip,\n  body.pol-consumer-mode .map-first-stage,\n  body.pol-consumer-mode #map,\n  body.pol-consumer-mode #drive3dMap{\n    width:100%!important;\n    min-width:0!important;\n    max-width:100%!important;\n    overflow-x:hidden!important;\n  }\n\n  body.pol-consumer-mode *,\n  body.pol-consumer-mode *::before,\n  body.pol-consumer-mode *::after{\n    box-sizing:border-box!important;\n  }\n\n  body.pol-consumer-mode button,\n  body.pol-consumer-mode input,\n  body.pol-consumer-mode div,\n  body.pol-consumer-mode span{\n    min-width:0;\n  }\n\n  /* ---------------- HOME ---------------- */\n  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher{\n    left:12px!important;\n    right:12px!important;\n    bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;\n    width:auto!important;\n    max-width:none!important;\n  }\n\n  body.pol-consumer-mode #navLauncherButton{\n    min-height:58px!important;\n    width:100%!important;\n    max-width:100%!important;\n    padding:6px 10px!important;\n    grid-template-columns:42px minmax(0,1fr)!important;\n    gap:8px!important;\n    border-radius:18px!important;\n  }\n\n  body.pol-consumer-mode #navLauncherButton .nav-launcher-icon{\n    width:40px!important;\n    height:40px!important;\n    font-size:19px!important;\n  }\n\n  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy b{\n    font-size:14px!important;\n    line-height:1.2!important;\n  }\n\n  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy small{\n    margin-top:2px!important;\n    font-size:8px!important;\n    white-space:nowrap!important;\n    overflow:hidden!important;\n    text-overflow:ellipsis!important;\n  }\n\n  /* ---------------- SEARCH SHEET ---------------- */\n  body.pol-consumer-mode #navSearchSheet{\n    position:fixed!important;\n    left:0!important;\n    right:auto!important;\n    top:var(--pol-vv-top,0px)!important;\n    bottom:auto!important;\n    width:100%!important;\n    max-width:100%!important;\n    height:var(--pol-vvh,100dvh)!important;\n    max-height:var(--pol-vvh,100dvh)!important;\n    padding:0!important;\n    margin:0!important;\n    overflow:hidden!important;\n    align-items:flex-end!important;\n    justify-content:stretch!important;\n    background:rgba(3,8,14,.28)!important;\n    backdrop-filter:blur(5px)!important;\n  }\n\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{\n    position:relative!important;\n    width:100%!important;\n    min-width:0!important;\n    max-width:100%!important;\n    height:min(560px,calc(var(--pol-vvh,100dvh) - 4px))!important;\n    max-height:calc(var(--pol-vvh,100dvh) - 4px)!important;\n    margin:0!important;\n    padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px))!important;\n    border-radius:22px 22px 0 0!important;\n    overflow:hidden!important;\n    display:flex!important;\n    flex-direction:column!important;\n    direction:rtl!important;\n    background:#f8fafc!important;\n    box-shadow:0 -14px 40px rgba(15,23,42,.16)!important;\n  }\n\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-handle{\n    flex:0 0 auto!important;\n    width:42px!important;\n    height:4px!important;\n    margin:0 auto 8px!important;\n  }\n\n  /* Exactly two visible controls: back + search field. Live suggestions remove\n     the need for a third search icon, which was the source of the overflow. */\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row{\n    flex:0 0 auto!important;\n    width:100%!important;\n    max-width:100%!important;\n    display:grid!important;\n    grid-template-columns:42px minmax(0,1fr)!important;\n    gap:7px!important;\n    align-items:center!important;\n    direction:rtl!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode #navSearchBackBtn{\n    grid-column:1!important;\n    width:42px!important;\n    height:46px!important;\n    min-width:42px!important;\n    min-height:46px!important;\n    margin:0!important;\n    padding:0!important;\n    border-radius:14px!important;\n    font-size:20px!important;\n  }\n\n  body.pol-consumer-mode #navSheetSearchInput{\n    grid-column:2!important;\n    width:100%!important;\n    min-width:0!important;\n    max-width:100%!important;\n    height:50px!important;\n    min-height:50px!important;\n    margin:0!important;\n    padding:0 12px!important;\n    border-radius:14px!important;\n    font-size:16px!important;\n    line-height:1!important;\n    text-align:right!important;\n    direction:rtl!important;\n    box-shadow:none!important;\n  }\n\n  body.pol-consumer-mode #navSheetSearchBtn{\n    display:none!important;\n  }\n\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-current{\n    flex:0 0 auto!important;\n    width:100%!important;\n    max-width:100%!important;\n    margin:6px 0 0!important;\n    padding:4px 3px!important;\n    gap:7px!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-current small{\n    font-size:6.5px!important;\n  }\n\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-current b{\n    display:block!important;\n    max-width:calc(100vw - 55px)!important;\n    font-size:8px!important;\n    white-space:nowrap!important;\n    overflow:hidden!important;\n    text-overflow:ellipsis!important;\n  }\n\n  /* One minimal secondary action. Recent destinations already have their own list. */\n  body.pol-consumer-mode #navSearchSheet .nav-quick-actions{\n    flex:0 0 auto!important;\n    width:100%!important;\n    display:block!important;\n    margin:4px 0 0!important;\n  }\n\n  body.pol-consumer-mode #navRecentAction{\n    display:none!important;\n  }\n\n  body.pol-consumer-mode #navPickOnMapAction{\n    width:100%!important;\n    min-height:42px!important;\n    display:grid!important;\n    grid-template-columns:32px minmax(0,1fr)!important;\n    gap:7px!important;\n    padding:5px 8px!important;\n    border-radius:12px!important;\n  }\n\n  body.pol-consumer-mode #navPickOnMapAction>span{\n    width:30px!important;\n    height:30px!important;\n  }\n\n  body.pol-consumer-mode #navPickOnMapAction b{\n    font-size:8px!important;\n  }\n\n  body.pol-consumer-mode #navPickOnMapAction small{\n    display:none!important;\n  }\n\n  body.pol-consumer-mode #navSheetResults{\n    flex:1 1 auto!important;\n    width:100%!important;\n    max-width:100%!important;\n    min-height:0!important;\n    max-height:none!important;\n    overflow-x:hidden!important;\n    overflow-y:auto!important;\n    overscroll-behavior:contain!important;\n    -webkit-overflow-scrolling:touch!important;\n    margin:5px 0 0!important;\n    padding:0 0 6px!important;\n    gap:2px!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-result,\n  body.pol-consumer-mode .nav-sheet-result.area-result{\n    width:100%!important;\n    max-width:100%!important;\n    min-height:54px!important;\n    display:grid!important;\n    grid-template-columns:34px minmax(0,1fr)!important;\n    gap:8px!important;\n    margin:0!important;\n    padding:6px 4px!important;\n    border-radius:0!important;\n    border:0!important;\n    border-bottom:1px solid rgba(15,23,42,.07)!important;\n    background:transparent!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-result-icon{\n    width:32px!important;\n    height:32px!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-result>div:not(.nav-sheet-result-icon){\n    min-width:0!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-result b,\n  body.pol-consumer-mode .nav-sheet-result span{\n    display:block!important;\n    max-width:100%!important;\n    white-space:nowrap!important;\n    overflow:hidden!important;\n    text-overflow:ellipsis!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-result b{font-size:9px!important}\n  body.pol-consumer-mode .nav-sheet-result span{font-size:7px!important;margin-top:2px!important}\n  body.pol-consumer-mode .nav-sheet-result-meta{display:none!important}\n\n  body.pol-consumer-mode #navSheetRecentSection{\n    flex:1 1 auto!important;\n    width:100%!important;\n    max-width:100%!important;\n    min-height:0!important;\n    margin:8px 0 0!important;\n    overflow-x:hidden!important;\n    overflow-y:auto!important;\n    overscroll-behavior:contain!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-section-title{\n    padding:4px 2px 6px!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-section-title b{font-size:9px!important}\n  body.pol-consumer-mode .nav-sheet-section-title button{font-size:7px!important}\n\n  body.pol-consumer-mode .nav-sheet-recent-list{\n    width:100%!important;\n    max-width:100%!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-recent-item{\n    width:100%!important;\n    max-width:100%!important;\n    min-height:52px!important;\n    grid-template-columns:32px minmax(0,1fr)!important;\n    gap:8px!important;\n    padding:6px 4px!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-recent-item>div{\n    min-width:0!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode .nav-sheet-recent-item b,\n  body.pol-consumer-mode .nav-sheet-recent-item span{\n    display:block!important;\n    max-width:100%!important;\n    white-space:nowrap!important;\n    overflow:hidden!important;\n    text-overflow:ellipsis!important;\n  }\n\n  body.search-sheet-open .floating-map-controls,\n  body.search-sheet-open #navLauncher{\n    display:none!important;\n  }\n\n  /* ---------------- ROUTE SELECTION ---------------- */\n  body.pol-consumer-mode #mapRouteSheet{\n    left:8px!important;\n    right:8px!important;\n    width:auto!important;\n    max-width:none!important;\n    transform:translateY(16px)!important;\n    border-radius:22px!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode #mapRouteSheet.show{\n    transform:translateY(0)!important;\n  }\n\n  body.pol-consumer-mode #mapRouteSheet .map-route-sheet-inner,\n  body.pol-consumer-mode #mapRouteSheet>*{\n    min-width:0!important;\n    max-width:100%!important;\n  }\n\n  body.pol-consumer-mode #mapRouteDestination{\n    max-width:calc(100vw - 90px)!important;\n    font-size:14px!important;\n  }\n\n  body.pol-consumer-mode #mapRouteReason,\n  body.pol-consumer-mode .route-confidence-row,\n  body.pol-consumer-mode #mapSpeedTruthBtn{\n    display:none!important;\n  }\n\n  body.pol-consumer-mode .map-route-primary{\n    margin-top:5px!important;\n  }\n\n  body.pol-consumer-mode #mapRouteEta{font-size:28px!important}\n  body.pol-consumer-mode #mapRouteDistance{font-size:13px!important}\n\n  body.pol-consumer-mode .map-route-vehicle-btn{\n    width:100%!important;\n    min-height:40px!important;\n    margin-top:6px!important;\n    float:none!important;\n  }\n\n  body.pol-consumer-mode .map-route-actions{\n    position:sticky!important;\n    bottom:0!important;\n    z-index:2!important;\n    width:100%!important;\n    display:grid!important;\n    grid-template-columns:1fr 1fr!important;\n    gap:6px!important;\n    margin-top:7px!important;\n    padding-top:7px!important;\n    background:linear-gradient(180deg,rgba(9,17,29,0),rgba(9,17,29,.98) 24%)!important;\n  }\n\n  body.pol-consumer-mode #mapStartBtn{\n    grid-column:1/-1!important;\n    grid-row:1!important;\n    min-height:52px!important;\n    font-size:10px!important;\n  }\n\n  body.pol-consumer-mode #mapRouteCompareBtn,\n  body.pol-consumer-mode #mapRoutePreviewBtn{\n    grid-row:2!important;\n    min-height:40px!important;\n    font-size:7px!important;\n  }\n\n  body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip{\n    left:8px!important;\n    right:8px!important;\n    width:auto!important;\n    max-width:none!important;\n    overflow-x:auto!important;\n    overflow-y:hidden!important;\n  }\n\n  /* ---------------- PRETRIP ---------------- */\n  body.pol-consumer-mode #preTripMissionSheet,\n  body.pol-consumer-mode #tripSummarySheet,\n  body.pol-consumer-mode #vehicleSheet,\n  body.pol-consumer-mode #speedTruthQuickSheet{\n    width:100%!important;\n    max-width:100%!important;\n    overflow-x:hidden!important;\n  }\n\n  body.pol-consumer-mode .pretrip-mission-card,\n  body.pol-consumer-mode #tripSummarySheet .summary-card,\n  body.pol-consumer-mode .vehicle-sheet-card,\n  body.pol-consumer-mode .speed-truth-quick-card{\n    width:100%!important;\n    min-width:0!important;\n    max-width:100%!important;\n    overflow-x:hidden!important;\n  }\n\n  body.pol-consumer-mode .pretrip-mission-grid{\n    grid-template-columns:1fr 1fr!important;\n  }\n\n  body.pol-consumer-mode .pretrip-metric{\n    min-width:0!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode .pretrip-metric>b,\n  body.pol-consumer-mode .pretrip-metric>small{\n    overflow:hidden!important;\n    text-overflow:ellipsis!important;\n  }\n\n  /* ---------------- DRIVING ---------------- */\n  body.pol-consumer-mode.driving-mode #turnCard{\n    left:8px!important;\n    right:8px!important;\n    width:auto!important;\n    max-width:none!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode.driving-mode .nav-bottom-strip{\n    left:74px!important;\n    right:74px!important;\n    width:auto!important;\n    max-width:none!important;\n    overflow:hidden!important;\n  }\n\n  body.pol-consumer-mode.driving-mode #driveCurrentRoadBar{\n    max-width:60vw!important;\n    overflow:hidden!important;\n  }\n}\n\n@media(max-width:360px){\n  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{\n    padding-left:8px!important;\n    padding-right:8px!important;\n    border-radius:18px 18px 0 0!important;\n  }\n  body.pol-consumer-mode #navSheetSearchInput{font-size:16px!important}\n  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy small{display:none!important}\n  body.pol-consumer-mode .pretrip-mission-grid{grid-template-columns:1fr 1fr!important}\n}\n</style>\n
 </head>
 
 <body>
@@ -8878,7 +8879,7 @@ body.pol-consumer-mode .nav-live-search-status{
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v7.1.1</span>
+              <span class="lab-version-chip">v7.1.2</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -31852,6 +31853,62 @@ window.POL_SEARCH_DEBUG=()=>{
       "Photon live autocomplete + explicit Nominatim fallback"
   };
 };
+</script>
+
+
+<script id="pol-v7-1-2-mobile-lock-runtime">
+(function(){
+  const root=document.documentElement;
+
+  function lockMobileWidth(){
+    if(window.innerWidth>700)return;
+
+    const vv=window.visualViewport;
+    const vw=Math.max(280,Math.round(vv?.width||window.innerWidth));
+    root.style.setProperty('--pol-vvw',vw+'px');
+
+    document.documentElement.style.maxWidth='100%';
+    document.body.style.maxWidth='100%';
+    document.documentElement.style.overflowX='hidden';
+    document.body.style.overflowX='hidden';
+  }
+
+  window.POL_MOBILE_WIDTH_AUDIT=function(){
+    const vv=window.visualViewport;
+    const offenders=[];
+    const viewportWidth=vv?.width||window.innerWidth;
+
+    document.querySelectorAll('body *').forEach(el=>{
+      const style=getComputedStyle(el);
+      if(style.display==='none'||style.visibility==='hidden')return;
+      const r=el.getBoundingClientRect();
+      if(r.width<1||r.height<1)return;
+      if(r.left<-1||r.right>viewportWidth+1){
+        offenders.push({
+          id:el.id||'',
+          cls:String(el.className||'').slice(0,90),
+          left:Math.round(r.left),
+          right:Math.round(r.right),
+          width:Math.round(r.width)
+        });
+      }
+    });
+
+    return{
+      ok:offenders.length===0,
+      viewportWidth:Math.round(viewportWidth),
+      scrollWidth:document.documentElement.scrollWidth,
+      bodyScrollWidth:document.body.scrollWidth,
+      offenders:offenders.slice(0,30)
+    };
+  };
+
+  lockMobileWidth();
+  window.addEventListener('resize',lockMobileWidth,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(lockMobileWidth,80),{passive:true});
+  window.addEventListener('pageshow',()=>setTimeout(lockMobileWidth,40),{passive:true});
+  window.visualViewport?.addEventListener('resize',lockMobileWidth,{passive:true});
+})();
 </script>
 
 </body>
