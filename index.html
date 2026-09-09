@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۱.۴ Mobile Home Spacing Controls</title>
+<title>POL | نسخه ۷.۱.۵ Smooth Navigation & Instant Search</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -9230,6 +9230,23 @@ body.pol-consumer-mode .nav-live-search-status{
 }
 </style>
 
+
+<style id="pol-v7-1-5-smooth-search-polish">
+body.pol-consumer-mode #navSheetSearchBtn{
+  display:none!important;
+}
+
+body.pol-consumer-mode #navSheetResults{
+  scroll-behavior:smooth;
+}
+
+.pol-3d-car-marker{
+  will-change:transform;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+</style>
+
 </head>
 
 <body>
@@ -9856,7 +9873,7 @@ body.pol-consumer-mode .nav-live-search-status{
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v7.1.4</span>
+              <span class="lab-version-chip">v7.1.5</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -11039,6 +11056,16 @@ let drive3DRouteRef=null;
 let drive3DLastCameraAt=0;
 let drive3DLastBearing=0;
 
+/* v7.1.5 — continuous visual renderer.
+   Telemetry can remain 10Hz; camera/car render on requestAnimationFrame. */
+let drive3DSmoothTarget=null;
+let drive3DSmoothVisual=null;
+let drive3DSmoothFrameId=0;
+let drive3DSmoothLastFrameAt=0;
+let drive3DSmoothLastTargetAt=0;
+let drive3DSmoothLastTargetProgress=null;
+let drive3DSmoothProgressRate=0;
+
 const DRIVE_3D_SOURCE_FULL='pol-drive-full-route';
 const DRIVE_3D_SOURCE_ACTIVE='pol-drive-active-route';
 
@@ -11650,6 +11677,452 @@ function enforceDrive3DCameraPose({
   }catch(e){}
 }
 
+
+function drive3DSmoothingAlpha(dtMs,tauMs){
+  const dt=clamp(Number(dtMs||16),1,60);
+  const tau=Math.max(1,Number(tauMs||100));
+  return 1-Math.exp(-dt/tau);
+}
+
+function drive3DLerpNumber(a,b,alpha){
+  const from=Number(a);
+  const to=Number(b);
+
+  if(!Number.isFinite(from))return to;
+  if(!Number.isFinite(to))return from;
+
+  return from+(to-from)*alpha;
+}
+
+function drive3DLerpBearing(a,b,alpha){
+  if(!Number.isFinite(Number(b))){
+    return Number(a||0);
+  }
+
+  if(!Number.isFinite(Number(a))){
+    return normalizedBearingDegrees(b);
+  }
+
+  return normalizedBearingDegrees(
+    Number(a)+
+    shortestAngleDelta(a,b)*alpha
+  );
+}
+
+function stopDrive3DSmoothLoop(){
+  if(drive3DSmoothFrameId){
+    cancelAnimationFrame(
+      drive3DSmoothFrameId
+    );
+  }
+
+  drive3DSmoothFrameId=0;
+  drive3DSmoothLastFrameAt=0;
+}
+
+function ensureDrive3DSmoothLoop(){
+  if(drive3DSmoothFrameId)return;
+
+  drive3DSmoothFrameId=
+    requestAnimationFrame(
+      renderDrive3DSmoothFrame
+    );
+}
+
+function setDrive3DSmoothTarget({
+  progress,
+  point,
+  speedKmh,
+  zoom,
+  pitch,
+  bearing,
+  offsetY,
+  force=false
+}={}){
+  const now=performance.now();
+
+  const safeProgress=
+    clamp(
+      Number(progress||0),
+      0,
+      1
+    );
+
+  const safePoint=
+    Array.isArray(point) &&
+    point.length>=2
+      ?[
+        Number(point[0]),
+        Number(point[1])
+      ]
+      :routePointAtDistanceM(
+        routeDistanceM*safeProgress
+      );
+
+  if(
+    !Array.isArray(safePoint) ||
+    safePoint.length<2 ||
+    !safePoint.every(Number.isFinite)
+  ){
+    return;
+  }
+
+  if(
+    drive3DSmoothLastTargetProgress!=null &&
+    drive3DSmoothLastTargetAt>0
+  ){
+    const dt=
+      Math.max(
+        30,
+        now-drive3DSmoothLastTargetAt
+      );
+
+    const rawRate=
+      (
+        safeProgress-
+        Number(
+          drive3DSmoothLastTargetProgress
+        )
+      )/dt;
+
+    if(
+      Number.isFinite(rawRate) &&
+      rawRate>=-0.00005 &&
+      rawRate<=0.0015
+    ){
+      drive3DSmoothProgressRate=
+        drive3DSmoothProgressRate===0
+          ?rawRate
+          :drive3DLerpNumber(
+            drive3DSmoothProgressRate,
+            rawRate,
+            .42
+          );
+    }
+  }
+
+  drive3DSmoothLastTargetProgress=
+    safeProgress;
+
+  drive3DSmoothLastTargetAt=now;
+
+  drive3DSmoothTarget={
+    progress:safeProgress,
+    point:safePoint,
+    speedKmh:Number(speedKmh||0),
+    zoom:Number(zoom),
+    pitch:Number(pitch),
+    bearing:Number(bearing||0),
+    offsetY:Number(offsetY||0),
+    setAt:now
+  };
+
+  if(
+    force ||
+    !drive3DSmoothVisual
+  ){
+    drive3DSmoothVisual={
+      progress:safeProgress,
+      lat:Number(safePoint[0]),
+      lng:Number(safePoint[1]),
+      zoom:Number(zoom),
+      pitch:Number(pitch),
+      bearing:Number(bearing||0),
+      offsetY:Number(offsetY||0)
+    };
+
+    try{
+      drive3DMap?.stop?.();
+
+      drive3DMap?.jumpTo?.({
+        center:[
+          drive3DSmoothVisual.lng,
+          drive3DSmoothVisual.lat
+        ],
+        zoom:drive3DSmoothVisual.zoom,
+        bearing:drive3DSmoothVisual.bearing,
+        pitch:drive3DSmoothVisual.pitch
+      });
+
+      drive3DMap?.panBy?.(
+        [0,drive3DSmoothVisual.offsetY],
+        {
+          animate:false,
+          essential:true
+        }
+      );
+    }catch(e){}
+
+    updateDrive3DCar(
+      safePoint,
+      safeProgress,
+      Number(speedKmh||0)
+    );
+  }
+
+  ensureDrive3DSmoothLoop();
+}
+
+function predictedDrive3DRenderState(ts){
+  const target=drive3DSmoothTarget;
+
+  if(!target)return null;
+
+  let progress=
+    Number(target.progress||0);
+
+  /* Simulation is accelerated. Predict between the 100ms telemetry
+     samples so the map never pauses while waiting for the next tick. */
+  if(
+    !isRealGpsMode() &&
+    !manualExploreLock &&
+    !userManuallyMovedDrivingMap
+  ){
+    const age=
+      clamp(
+        ts-Number(target.setAt||ts),
+        0,
+        180
+      );
+
+    progress=
+      clamp(
+        progress+
+        drive3DSmoothProgressRate*age,
+        0,
+        1
+      );
+  }
+
+  let point=target.point;
+
+  if(
+    !isRealGpsMode() &&
+    routeCoords.length>=2
+  ){
+    const projected=
+      routePointAtDistanceM(
+        routeDistanceM*progress
+      );
+
+    if(
+      Array.isArray(projected) &&
+      projected.length>=2
+    ){
+      point=projected;
+    }
+  }
+
+  let bearing=target.bearing;
+
+  if(
+    headingUpEnabled &&
+    !isRealGpsMode()
+  ){
+    const projectedBearing=
+      drive3DRouteBearing(
+        progress,
+        point,
+        target.speedKmh
+      );
+
+    if(
+      Number.isFinite(
+        Number(projectedBearing)
+      )
+    ){
+      bearing=
+        Number(projectedBearing);
+    }
+  }
+
+  return{
+    progress,
+    point,
+    speedKmh:target.speedKmh,
+    zoom:target.zoom,
+    pitch:target.pitch,
+    bearing,
+    offsetY:target.offsetY
+  };
+}
+
+function renderDrive3DSmoothFrame(ts){
+  drive3DSmoothFrameId=0;
+
+  if(
+    !isDrive3DActive() ||
+    !drive3DSmoothTarget
+  ){
+    return;
+  }
+
+  ensureDrive3DSmoothLoop();
+
+  if(
+    manualExploreLock ||
+    userManuallyMovedDrivingMap ||
+    drive3DUserZooming
+  ){
+    drive3DSmoothLastFrameAt=ts;
+    return;
+  }
+
+  const desired=
+    predictedDrive3DRenderState(ts);
+
+  if(!desired)return;
+
+  const dt=
+    drive3DSmoothLastFrameAt
+      ?Math.min(
+        50,
+        Math.max(
+          8,
+          ts-drive3DSmoothLastFrameAt
+        )
+      )
+      :16;
+
+  drive3DSmoothLastFrameAt=ts;
+
+  const pointAlpha=
+    drive3DSmoothingAlpha(
+      dt,
+      isRealGpsMode()
+        ?170
+        :58
+    );
+
+  const bearingAlpha=
+    drive3DSmoothingAlpha(
+      dt,
+      105
+    );
+
+  const zoomAlpha=
+    drive3DSmoothingAlpha(
+      dt,
+      170
+    );
+
+  const pitchAlpha=
+    drive3DSmoothingAlpha(
+      dt,
+      160
+    );
+
+  const offsetAlpha=
+    drive3DSmoothingAlpha(
+      dt,
+      130
+    );
+
+  if(!drive3DSmoothVisual){
+    drive3DSmoothVisual={
+      progress:desired.progress,
+      lat:Number(desired.point[0]),
+      lng:Number(desired.point[1]),
+      zoom:desired.zoom,
+      pitch:desired.pitch,
+      bearing:desired.bearing,
+      offsetY:desired.offsetY
+    };
+  }
+
+  drive3DSmoothVisual.progress=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.progress,
+      desired.progress,
+      pointAlpha
+    );
+
+  drive3DSmoothVisual.lat=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.lat,
+      Number(desired.point[0]),
+      pointAlpha
+    );
+
+  drive3DSmoothVisual.lng=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.lng,
+      Number(desired.point[1]),
+      pointAlpha
+    );
+
+  drive3DSmoothVisual.bearing=
+    drive3DLerpBearing(
+      drive3DSmoothVisual.bearing,
+      desired.bearing,
+      bearingAlpha
+    );
+
+  drive3DSmoothVisual.zoom=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.zoom,
+      desired.zoom,
+      zoomAlpha
+    );
+
+  drive3DSmoothVisual.pitch=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.pitch,
+      desired.pitch,
+      pitchAlpha
+    );
+
+  drive3DSmoothVisual.offsetY=
+    drive3DLerpNumber(
+      drive3DSmoothVisual.offsetY,
+      desired.offsetY,
+      offsetAlpha
+    );
+
+  drive3DLastBearing=
+    drive3DSmoothVisual.bearing;
+
+  drive3DProgrammaticCameraUntil=
+    performance.now()+80;
+
+  try{
+    /* No overlapping easeTo animations.
+       One deterministic camera pose per animation frame. */
+    drive3DMap.jumpTo({
+      center:[
+        drive3DSmoothVisual.lng,
+        drive3DSmoothVisual.lat
+      ],
+      zoom:drive3DSmoothVisual.zoom,
+      bearing:
+        headingUpEnabled
+          ?drive3DSmoothVisual.bearing
+          :0,
+      pitch:drive3DSmoothVisual.pitch
+    });
+
+    drive3DMap.panBy(
+      [
+        0,
+        drive3DSmoothVisual.offsetY
+      ],
+      {
+        animate:false,
+        essential:true
+      }
+    );
+  }catch(e){}
+
+  updateDrive3DCar(
+    [
+      drive3DSmoothVisual.lat,
+      drive3DSmoothVisual.lng
+    ],
+    drive3DSmoothVisual.progress,
+    desired.speedKmh
+  );
+}
+
 function updateDrive3DCamera(
   progress,
   currentPoint,
@@ -11658,120 +12131,88 @@ function updateDrive3DCamera(
 ){
   if(!isDrive3DActive())return;
 
-  syncDrive3DActiveCorridor(progress,speedKmh);
-  updateDrive3DCar(currentPoint,progress,speedKmh);
+  syncDrive3DActiveCorridor(
+    progress,
+    speedKmh
+  );
 
   if(
-    (manualExploreLock || userManuallyMovedDrivingMap) &&
+    (
+      manualExploreLock ||
+      userManuallyMovedDrivingMap
+    ) &&
     !force
   ){
     return;
   }
 
-  // User zoom is allowed while Follow remains active.
-  // During the gesture, don't fight the zoom animation.
-  if(drive3DUserZooming && !force){
+  if(
+    drive3DUserZooming &&
+    !force
+  ){
     return;
   }
 
-  const now=performance.now();
+  const safeProgress=
+    clamp(
+      Number(progress||0),
+      0,
+      1
+    );
 
-  if(!force && now-drive3DLastCameraAt<145){
-    return;
-  }
+  const zoom=
+    drive3DZoomForState(
+      safeProgress,
+      speedKmh
+    );
 
-  drive3DLastCameraAt=now;
+  const pitch=
+    drive3DPitchForState(
+      safeProgress,
+      speedKmh
+    );
 
-  const zoom=drive3DZoomForState(progress,speedKmh);
-  const pitch=drive3DPitchForState(progress,speedKmh);
-
-  const rawBearing=drive3DRouteBearing(
-    progress,
-    currentPoint,
-    speedKmh
-  );
+  const rawBearing=
+    drive3DRouteBearing(
+      safeProgress,
+      currentPoint,
+      speedKmh
+    );
 
   const bearing=
     headingUpEnabled &&
-    Number.isFinite(Number(rawBearing))
-      ?smoothBearingToward(
-        drive3DLastBearing,
-        rawBearing,
-        force?1:.48
-      )
+    Number.isFinite(
+      Number(rawBearing)
+    )
+      ?Number(rawBearing)
       :0;
-
-  drive3DLastBearing=bearing;
-
-  const carOffsetY=drive3DVehicleOffsetPx();
 
   const fallbackPoint=
     routePointAtDistanceM(
-      routeDistanceM*clamp(Number(progress||0),0,1)
+      routeDistanceM*
+      safeProgress
     );
 
   const trackedPoint=
     Array.isArray(currentPoint) &&
     currentPoint.length>=2
-      ?currentPoint
+      ?[
+        Number(currentPoint[0]),
+        Number(currentPoint[1])
+      ]
       :fallbackPoint;
 
-  const center=[
-    Number(trackedPoint[1]),
-    Number(trackedPoint[0])
-  ];
-
-  try{
-    drive3DProgrammaticCameraUntil=
-      performance.now()+(force?500:300);
-
-    drive3DMap.easeTo({
-      center,
-      offset:[0,carOffsetY],
-      zoom,
-      bearing,
-      pitch,
-      padding:{
-        top:0,
-        right:0,
-        bottom:0,
-        left:0
-      },
-      duration:force?380:210,
-      easing:t=>1-Math.pow(1-t,3),
-      essential:true,
-      noMoveStart:true
-    });
-  }catch(e){
-    try{
-      drive3DMap.jumpTo({
-        center,
-        zoom,
-        bearing,
-        pitch
-      });
-
-      drive3DMap.panBy(
-        [0,carOffsetY],
-        {
-          animate:false,
-          essential:true
-        }
-      );
-    }catch(_e){}
-  }
-
-  // Hard route-up / pitch verification.
-  setTimeout(()=>{
-    enforceDrive3DCameraPose({
-      bearing,
-      pitch,
-      zoom,
-      allowCenterCorrection:true,
-      center,
-      offsetY:carOffsetY
-    });
-  },90);
+  setDrive3DSmoothTarget({
+    progress:safeProgress,
+    point:trackedPoint,
+    speedKmh,
+    zoom,
+    pitch,
+    bearing,
+    offsetY:
+      drive3DVehicleOffsetPx(),
+    force
+  });
 }
 
 function drive3DFitRoute(){
@@ -11840,6 +12281,9 @@ function drive3DRecenterFromState(){
   if(!isDrive3DActive())return false;
 
   try{drive3DMap.stop()}catch(e){}
+
+  drive3DSmoothVisual=null;
+  drive3DSmoothLastFrameAt=0;
 
   resetDriveNavigationZoom();
   resumeFollowAfterManualExplore();
@@ -12227,6 +12671,13 @@ async function activateDrive3DMap(){
 
 function deactivateDrive3DMap(){
   document.body.classList.remove('drive-3d-active');
+
+  stopDrive3DSmoothLoop();
+  drive3DSmoothTarget=null;
+  drive3DSmoothVisual=null;
+  drive3DSmoothLastTargetAt=0;
+  drive3DSmoothLastTargetProgress=null;
+  drive3DSmoothProgressRate=0;
 
   if(drive3DCarMarker){
     try{drive3DCarMarker.remove()}catch(e){}
@@ -18991,7 +19442,10 @@ function buildLiveSearchQueries(raw){
 const liveSearchCache=
   new Map();
 
-const LIVE_SEARCH_CACHE_MAX=40;
+const liveSearchInFlight=
+  new Map();
+
+const LIVE_SEARCH_CACHE_MAX=60;
 
 function photonFeatureToSearchItem(feature){
   const p=feature?.properties||{};
@@ -19129,73 +19583,139 @@ async function fetchPhotonSuggestions(
   const normalized=
     normalizeFaSearch(q);
 
-  const cacheKey=
-    normalized.toLowerCase();
+  const bias=
+    liveSearchBiasPoint();
+
+  const cacheKey=[
+    normalized.toLowerCase(),
+    Number(bias.lat).toFixed(2),
+    Number(bias.lon).toFixed(2)
+  ].join("|");
 
   if(liveSearchCache.has(cacheKey)){
     return liveSearchCache.get(cacheKey);
   }
 
-  const bias=
-    liveSearchBiasPoint();
-
-  const params=
-    new URLSearchParams({
-      q:normalized,
-      limit:"12",
-      lang:"fa",
-      countrycode:"IR",
-      lat:String(bias.lat),
-      lon:String(bias.lon),
-      zoom:"12",
-      location_bias_scale:"0.22"
-    });
-
-  const res=
-    await fetch(
-      `https://photon.komoot.io/api/?${params.toString()}`,
-      {
-        signal,
-        headers:{
-          Accept:"application/json"
-        }
-      }
-    );
-
-  if(!res.ok){
-    throw new Error(
-      `Photon ${res.status}`
-    );
+  if(liveSearchInFlight.has(cacheKey)){
+    return liveSearchInFlight.get(cacheKey);
   }
 
-  const data=
-    await res.json();
+  const request=(async()=>{
+    const params=
+      new URLSearchParams({
+        q:normalized,
+        limit:"14",
+        lang:"fa",
+        lat:String(bias.lat),
+        lon:String(bias.lon),
+        zoom:"13",
+        location_bias_scale:"0.18"
+      });
 
-  const items=
-    (data?.features||[])
-      .map(
-        photonFeatureToSearchItem
-      )
-      .filter(Boolean);
+    const res=
+      await fetch(
+        `https://photon.komoot.io/api/?${params.toString()}`,
+        {
+          signal,
+          headers:{
+            Accept:"application/json"
+          }
+        }
+      );
 
-  liveSearchCache.set(
+    if(!res.ok){
+      throw new Error(
+        `Photon ${res.status}`
+      );
+    }
+
+    const data=
+      await res.json();
+
+    const items=
+      (data?.features||[])
+        .map(
+          photonFeatureToSearchItem
+        )
+        .filter(Boolean);
+
+    liveSearchCache.set(
+      cacheKey,
+      items
+    );
+
+    while(
+      liveSearchCache.size>
+      LIVE_SEARCH_CACHE_MAX
+    ){
+      const firstKey=
+        liveSearchCache.keys()
+          .next().value;
+
+      liveSearchCache.delete(
+        firstKey
+      );
+    }
+
+    return items;
+  })();
+
+  liveSearchInFlight.set(
     cacheKey,
-    items
+    request
   );
 
-  while(
-    liveSearchCache.size>
-    LIVE_SEARCH_CACHE_MAX
-  ){
-    const firstKey=
-      liveSearchCache.keys().next().value;
-
-    liveSearchCache.delete(
-      firstKey
+  try{
+    return await request;
+  }finally{
+    liveSearchInFlight.delete(
+      cacheKey
     );
   }
+}
 
-  return items;
+function instantRecentSuggestions(q){
+  const query=
+    normalizeFaSearch(q)
+      .toLowerCase();
+
+  if(!query)return[];
+
+  return loadRecentDestinations()
+    .filter(d=>{
+      const hay=
+        normalizeFaSearch(
+          `${d.label||""} ${d.address||""}`
+        ).toLowerCase();
+
+      return hay.includes(query);
+    })
+    .slice(0,6)
+    .map(d=>({
+      lat:String(d.lat),
+      lon:String(d.lng),
+      display_name:
+        d.address||
+        d.label||
+        "مقصد اخیر",
+      name:
+        d.label||
+        "مقصد اخیر",
+      type:"recent",
+      category:"recent",
+      address:{
+        city:"",
+        state:"",
+        country:"ایران",
+        country_code:"ir"
+      },
+      namedetails:{
+        name:
+          d.label||
+          "مقصد اخیر"
+      },
+      _provider:"Recent"
+    }));
 }
 
 async function runExplicitNominatimSearch(
@@ -19333,27 +19853,52 @@ async function runLiveDestinationSearch(
     }catch(e){}
   }
 
-  if(q.length<2){
+  if(!q){
     box.innerHTML="";
     $('navSheetRecentSection').style.display=
       "block";
     return;
   }
 
+  /* First character: instant local recent-match preview.
+     Second character onward: live remote autocomplete. */
+  const local=
+    instantRecentSuggestions(q);
+
+  if(local.length){
+    $('navSheetRecentSection').style.display=
+      "none";
+
+    renderLiveSearchResults(
+      local,
+      q
+    );
+  }
+
+  if(q.length<2){
+    if(!local.length){
+      $('navSheetRecentSection').style.display=
+        "block";
+    }
+    return;
+  }
+
   $('navSheetRecentSection').style.display=
     "none";
 
-  box.innerHTML=
-    '<div class="nav-live-search-status">'+
-      '<span class="nav-live-search-spinner"></span>'+
-      '<span>در حال پیشنهاد مقصدهای نزدیک...</span>'+
-    '</div>';
+  if(!local.length){
+    box.innerHTML=
+      '<div class="nav-live-search-status">'+
+        '<span class="nav-live-search-spinner"></span>'+
+        '<span>در حال پیدا کردن پیشنهادهای نزدیک...</span>'+
+      '</div>';
+  }
 
   liveSearchAbort=
     new AbortController();
 
   try{
-    const items=
+    let items=
       await fetchPhotonSuggestions(
         q,
         liveSearchAbort.signal
@@ -19363,9 +19908,31 @@ async function runLiveDestinationSearch(
       return;
     }
 
+    if(items.length<4){
+      try{
+        const extra=
+          await fetchPhotonSuggestions(
+            `${q} ایران`,
+            liveSearchAbort.signal
+          );
+
+        items=[
+          ...items,
+          ...extra
+        ];
+      }catch(e){}
+    }
+
+    if(mySeq!==liveSearchSeq){
+      return;
+    }
+
     const results=
       dedupeLiveSearchResults(
-        items
+        [
+          ...local,
+          ...items
+        ]
       )
         .map(x=>({
           item:x,
@@ -19373,6 +19940,11 @@ async function runLiveDestinationSearch(
             searchResultPriority(
               x,
               q
+            )+
+            (
+              x?._provider==="Recent"
+                ?16
+                :0
             )
         }))
         .sort(
@@ -19391,15 +19963,17 @@ async function runLiveDestinationSearch(
     }
 
     console.warn(
-      "Photon autocomplete failed",
+      "Live autocomplete failed",
       e
     );
 
-    box.innerHTML=
-      '<div class="nav-search-fallback-note">'+
-        '<b>پیشنهاد زنده فعلاً در دسترس نیست</b>'+
-        '<span>نام مقصد را کامل‌تر بنویس و دکمه جست‌وجو را بزن.</span>'+
-      '</div>';
+    if(!local.length){
+      box.innerHTML=
+        '<div class="nav-search-fallback-note">'+
+          '<b>پیشنهاد آنلاین لحظه‌ای در دسترس نیست</b>'+
+          '<span>به تایپ ادامه بده؛ سیستم خودکار دوباره تلاش می‌کند.</span>'+
+        '</div>';
+    }
   }
 }
 
@@ -19802,7 +20376,7 @@ function updateDrivingCamera(
 
   const now=performance.now();
 
-  if(!force && now-coreDrivingCameraLastAt<170){
+  if(!force && now-coreDrivingCameraLastAt<75){
     return;
   }
 
@@ -19846,7 +20420,7 @@ function updateDrivingCamera(
           target,
           {
             animate:true,
-            duration:.20,
+            duration:.11,
             noMoveStart:true
           }
         );
@@ -30799,37 +31373,94 @@ $('navLauncherButton').onclick=()=>openNavSearchSheet({showRecent:true});
 $('navSearchBackBtn').onclick=closeNavSearchSheet;
 $('navSearchSheet').onclick=e=>{if(e.target===$('navSearchSheet'))closeNavSearchSheet()};
 $('navSheetSearchBtn').onclick=searchDestinationV3;
-$('navSheetSearchInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){e.preventDefault();searchDestinationV3()}
-});
-$('navSheetSearchInput').addEventListener('input',()=>{
-  const value=$('navSheetSearchInput').value;
+function scheduleInstantDestinationSuggestions({
+  immediate=false
+}={}){
+  const value=
+    $('navSheetSearchInput')?.value||
+    "";
 
-  clearTimeout(liveSearchTimer);
+  clearTimeout(
+    liveSearchTimer
+  );
 
   if(!value.trim()){
     liveSearchSeq++;
+
     if(liveSearchAbort){
-      try{liveSearchAbort.abort()}catch(e){}
+      try{
+        liveSearchAbort.abort();
+      }catch(e){}
     }
+
     $('navSheetResults').innerHTML="";
-    $('navSheetRecentSection').style.display="block";
+    $('navSheetRecentSection').style.display=
+      "block";
     return;
   }
 
-  if(normalizeFaSearch(value).length<2){
-    $('navSheetResults').innerHTML=
-      '<div style="padding:10px 3px;color:#94a3b8;font-size:8px">حداقل دو حرف بنویس...</div>';
-    $('navSheetRecentSection').style.display="none";
-    return;
-  }
-
-  $('navSheetRecentSection').style.display="none";
-
-  liveSearchTimer=setTimeout(()=>{
+  if(
+    normalizeFaSearch(value).length===1
+  ){
     runLiveDestinationSearch(value);
-  },220);
-});
+    return;
+  }
+
+  liveSearchTimer=
+    setTimeout(
+      ()=>{
+        runLiveDestinationSearch(
+          value
+        );
+      },
+      immediate
+        ?0
+        :120
+    );
+}
+
+$('navSheetSearchInput').addEventListener(
+  'keydown',
+  e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+
+      /* Enter is optional. Suggestions are already live.
+         It only triggers the broader explicit fallback search. */
+      searchDestinationV3();
+    }
+  }
+);
+
+$('navSheetSearchInput').addEventListener(
+  'input',
+  ()=>{
+    scheduleInstantDestinationSuggestions();
+  }
+);
+
+$('navSheetSearchInput').addEventListener(
+  'compositionend',
+  ()=>{
+    scheduleInstantDestinationSuggestions({
+      immediate:true
+    });
+  }
+);
+
+$('navSheetSearchInput').addEventListener(
+  'paste',
+  ()=>{
+    setTimeout(
+      ()=>{
+        scheduleInstantDestinationSuggestions({
+          immediate:true
+        });
+      },
+      0
+    );
+  }
+);
 $('navPickOnMapAction').onclick=()=>{
   closeNavSearchSheet();
   beginDestinationPick();
@@ -33187,6 +33818,55 @@ window.POL_SEARCH_DEBUG=()=>{
   updateViewportVars();
   lockDocumentScroll();
 })();
+</script>
+
+
+<script id="pol-v7-1-5-debug">
+window.POL_SMOOTH_NAV_DEBUG=()=>{
+  return{
+    active:
+      typeof isDrive3DActive==="function"
+        ?isDrive3DActive()
+        :false,
+    target:
+      typeof drive3DSmoothTarget!=="undefined"
+        ?drive3DSmoothTarget
+        :null,
+    visual:
+      typeof drive3DSmoothVisual!=="undefined"
+        ?drive3DSmoothVisual
+        :null,
+    progressRate:
+      typeof drive3DSmoothProgressRate!=="undefined"
+        ?drive3DSmoothProgressRate
+        :null,
+    raf:
+      typeof drive3DSmoothFrameId!=="undefined"
+        ?drive3DSmoothFrameId
+        :null
+  };
+};
+
+window.POL_AUTOCOMPLETE_DEBUG=()=>{
+  return{
+    query:
+      document.getElementById(
+        'navSheetSearchInput'
+      )?.value||"",
+    cache:
+      typeof liveSearchCache!=="undefined"
+        ?liveSearchCache.size
+        :0,
+    inFlight:
+      typeof liveSearchInFlight!=="undefined"
+        ?liveSearchInFlight.size
+        :0,
+    seq:
+      typeof liveSearchSeq!=="undefined"
+        ?liveSearchSeq
+        :0
+  };
+};
 </script>
 
 </body>
