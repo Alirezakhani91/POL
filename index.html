@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۶ Speed Status Separation Fix</title>
+<title>POL | نسخه ۶.۲.۷ Speed Score, Camera & Clean Start</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6040,6 +6040,29 @@ body.driving-mode .traffic-camera-pill{
   }
 }
 
+
+/* ============================================================
+   v6.2.7 SPEED SCORE / CAMERA / CLEAN START
+   ============================================================ */
+
+.mission-speed-trust.good{
+  background:#12351d!important;
+  border-color:#28543c!important;
+}
+
+body.map-first-mode:not(.driving-mode) #preTripMissionSheet,
+body.map-first-mode:not(.driving-mode) #vehicleSheet,
+body.map-first-mode:not(.driving-mode) #speedTruthQuickSheet,
+body.map-first-mode:not(.driving-mode) #tripSummarySheet{
+  /* These sheets only become visible through an explicit user action. */
+}
+
+.speed-limit-source-badge.good{
+  background:#12351d!important;
+  border-color:#28543c!important;
+  color:#86efac!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6844,7 +6867,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.6</span>
+              <span class="lab-version-chip">v6.2.7</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -10527,17 +10550,23 @@ function renderSpeedTruthQuickSummary(){
   const truthCoverage=
     Number(speedTruthState.coverage||0);
 
+  const pilot=
+    routeDataPilotSpeedStats();
+
   const scoreReady=
-    speedTruthState.status==="ready";
+    speedTruthState.status==="ready" ||
+    pilot.ready;
 
   if(navReady){
     btn?.classList.add('ready');
 
     if(summary){
       summary.textContent=
-        scoreReady
-          ?`Navigation آماده • Score Speed آماده`
-          :`Navigation آماده • Score Speed هنوز قفل`;
+        speedTruthState.status==="ready"
+          ?`Navigation آماده • Speed Score Verified`
+          :pilot.ready
+            ?`Navigation آماده • Speed Score Pilot فعال`
+            :`Navigation آماده • Speed Score هنوز قفل`;
     }
   }else if(navLoading){
     btn?.classList.add('partial');
@@ -10649,17 +10678,32 @@ function renderSpeedTruthQuickSheet(){
     'ready','checking','locked','error'
   );
 
+  const pilot=
+    routeDataPilotSpeedStats();
+
   if(speedTruthState.status==="ready"){
     scoreCard?.classList.add('ready');
 
     if($('quickTruthScoreState')){
       $('quickTruthScoreState').textContent=
-        "READY";
+        "VERIFIED";
     }
 
     if($('quickTruthReason')){
       $('quickTruthReason').textContent=
-        `Verified Coverage ${verifiedCoverage.toFixed(1)}٪ است؛ Speed می‌تواند وارد Score شود.`;
+        `Verified Coverage ${verifiedCoverage.toFixed(1)}٪ است؛ Speed وارد Score می‌شود.`;
+    }
+  }else if(pilot.ready){
+    scoreCard?.classList.add('ready');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "PILOT ACTIVE";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        `Route Data Coverage ${Math.round(pilot.coverage).toLocaleString('fa-IR')}٪ است؛ Speed Score در حالت Pilot فعال است.`;
     }
   }else{
     scoreCard?.classList.add('locked');
@@ -10671,7 +10715,7 @@ function renderSpeedTruthQuickSheet(){
 
     if($('quickTruthReason')){
       $('quickTruthReason').textContent=
-        "Navigation Speed Data آماده است، اما تا اتصال منبع رسمی Speed وارد امتیاز نمی‌شود.";
+        "Speed Profile برای Score هنوز پوشش کافی ندارد.";
     }
   }
 
@@ -11383,6 +11427,7 @@ let mappedSpeedState={
   cameraCacheKey:"",
   cameraLastError:"",
   cameraUpdatedAt:0,
+  cameraSourceSummary:"",
   lastCameraAlertId:null,
   lastCameraVoiceStage:{},
 
@@ -11407,6 +11452,7 @@ let mappedSpeedState={
 
 let leafletTrafficCameraMarkers=[];
 let drive3DTrafficCameraMarkers=[];
+let trafficCameraRawElements=new Map();
 
 
 let confidenceSafetyScoreState={
@@ -14929,6 +14975,7 @@ function selectRouteAlternative(index){
   mappedSpeedState.cameraCacheKey="";
   mappedSpeedState.cameraLastError="";
   mappedSpeedState.cameras=[];
+  clearTrafficCameraRawElements();
   clearTrafficCameraMarkers();
 
   speedTruthState.status="idle";
@@ -16581,6 +16628,85 @@ function exactOpenDataSpeedStats(){
   };
 }
 
+
+function routeDataPilotSpeedStats(){
+  const stats=
+    exactOpenDataSpeedStats();
+
+  const edges=
+    mappedSpeedState.exactProfile?.edges||[];
+
+  const validEdges=
+    edges.filter(edge=>{
+      const limit=Number(edge?.speedLimit||0);
+      const length=Number(edge?.lengthM||0);
+
+      return(
+        Number.isFinite(limit) &&
+        limit>=10 &&
+        limit<=160 &&
+        Number.isFinite(length) &&
+        length>0
+      );
+    });
+
+  const suspiciousEdges=
+    validEdges.filter(edge=>{
+      const limit=Number(edge.speedLimit||0);
+
+      return(
+        limit<20 ||
+        limit>130
+      );
+    });
+
+  const ready=
+    mappedSpeedState.exactProfile.status==="ready" &&
+    Number(stats.coverage||0)>=95 &&
+    validEdges.length>0 &&
+    suspiciousEdges.length===0;
+
+  return{
+    ...stats,
+    ready,
+    mode:
+      ready
+        ?"ROUTE_DATA_PILOT"
+        :"LOCKED",
+    edgeCount:validEdges.length,
+    suspiciousEdges:suspiciousEdges.length
+  };
+}
+
+function pilotSpeedAtProgress(progress){
+  const pilot=
+    routeDataPilotSpeedStats();
+
+  if(!pilot.ready)return null;
+
+  const exact=
+    exactSpeedProfileAtProgress(
+      progress
+    );
+
+  if(
+    !exact ||
+    !Number.isFinite(Number(exact.limit))
+  ){
+    return null;
+  }
+
+  return{
+    ...exact,
+    confidence:96,
+    scoreEligible:true,
+    authorityVerified:false,
+    pilotScoring:true,
+    scoreAuthority:"ROUTE_DATA_PILOT",
+    runtimeSource:"exact-route-pilot"
+  };
+}
+
 function verifiedRouteSpeedStats(){
   return verifiedRouteSpeedStatsFromTruth();
 }
@@ -16645,7 +16771,7 @@ function renderPreTripMission(){
         ?(
           cameraCount>0
             ?`${cameraCount.toLocaleString('fa-IR')} دوربین ثبت‌شده روی Route پیدا شد`
-            :"منبع دوربین با موفقیت بررسی شد؛ دوربین ثبت‌شده‌ای روی Route پیدا نشد"
+            :"منابع دوربین بررسی شدند؛ دوربین ثبت‌شده‌ای روی این Route پیدا نشد"
         )
         :status==="loading"
           ?"در حال بررسی مستقل دوربین‌ها"
@@ -16698,10 +16824,15 @@ function renderPreTripMission(){
   }
 
   if($('missionScoreCoverage')){
+    const pilot=
+      routeDataPilotSpeedStats();
+
     $('missionScoreCoverage').textContent=
       verified.scoreReady
-        ?"۴۰ امتیاز سرعت آماده ارزیابی"
-        :"۴۰ امتیاز سرعت تا منبع معتبر قفل";
+        ?"۴۰ امتیاز سرعت • Verified"
+        :pilot.ready
+          ?"۴۰ امتیاز سرعت • Route Data Pilot فعال"
+          :"بخش سرعت فعلاً خارج از Score";
   }
 
   const trust=$('missionSpeedTrustCard');
@@ -16711,24 +16842,36 @@ function renderPreTripMission(){
       'good','review','blocked'
     );
 
+    const pilot=
+      routeDataPilotSpeedStats();
+
     if(verified.scoreReady){
       trust.classList.add('good');
 
       $('missionSpeedTrustTitle').textContent=
-        "حد سرعت مسیر برای Score آماده است";
+        "امتیاز سرعت فعال است";
 
       $('missionSpeedTrustText').textContent=
-        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است.`;
-    }else{
-      trust.classList.add('blocked');
+        `Speed Truth تأییدشده با پوشش ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ وارد Score می‌شود.`;
+    }else if(pilot.ready){
+      trust.classList.add('good');
 
       $('missionSpeedTrustTitle').textContent=
-        "بخش سرعت فعلاً خارج از امتیاز است";
+        "امتیاز سرعت فعال است • Pilot";
 
       $('missionSpeedTrustText').textContent=
-        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Speed فعلاً وارد Score نمی‌شود؛ امتیاز سفر از ترمز، شتاب و پیچ محاسبه خواهد شد.`;
+        `Exact Route Speed Profile با پوشش ${Math.round(pilot.coverage).toLocaleString('fa-IR')}٪ وارد Score می‌شود. این حالت Pilot است و منبع رسمی قانونی محسوب نمی‌شود.`;
+    }else{
+      trust.classList.add('review');
+
+      $('missionSpeedTrustTitle').textContent=
+        "Speed Profile هنوز برای Score کافی نیست";
+
+      $('missionSpeedTrustText').textContent=
+        `Route Data Coverage فعلی ${Math.round(pilot.coverage||0).toLocaleString('fa-IR')}٪ است؛ حداقل ۹۵٪ لازم است.`;
     }
   }
+
 }
 
 async function refreshPreTripMissionIntel(){
@@ -17003,8 +17146,13 @@ function renderMapRouteSheet(){
       Number(openData.coverage||0)>=90;
 
     if(navSpeedReady){
+      const pilot=
+        routeDataPilotSpeedStats();
+
       $('mapRouteReason').textContent=
-        `مسیر پیشنهادی آماده است • Speed Data مسیر ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪ پوشش دارد`;
+        pilot.ready
+          ?`مسیر پیشنهادی آماده است • Speed Score Pilot فعال • پوشش ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪`
+          :`مسیر پیشنهادی آماده است • Speed Data مسیر ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪ پوشش دارد`;
     }
   }
 
@@ -17082,6 +17230,101 @@ function openMapFirstOriginPicker(){
   hideMapSearchPanels();
   showMapStatus("روی نقشه محل شروع را انتخاب کن.");
 }
+
+function forceCleanMapStartup(){
+  // Page refresh must always return to the clean Map-First state.
+  const body=document.body;
+
+  body.classList.remove(
+    'driving-mode',
+    'drive-3d-active',
+    'setup-open',
+    'route-selection-mode',
+    'trip-replay-mode',
+    'map-manual-explore',
+    'zoom-follow-active'
+  );
+
+  body.classList.add(
+    'map-first-mode'
+  );
+
+  document.querySelectorAll(
+    '.app-screen'
+  ).forEach(screen=>{
+    screen.classList.remove('active');
+  });
+
+  document.getElementById(
+    'screen-trip'
+  )?.classList.add('active');
+
+  const overlays=[
+    'mapRouteSheet',
+    'preTripMissionSheet',
+    'vehicleSheet',
+    'speedTruthQuickSheet',
+    'tripSummarySheet',
+    'tripReplaySheet',
+    'navSearchSheet',
+    'routePreviewSheet',
+    'routeCompareSheet',
+    'tripReadySheet'
+  ];
+
+  overlays.forEach(id=>{
+    const el=document.getElementById(id);
+
+    if(!el)return;
+
+    el.classList.remove(
+      'open',
+      'show',
+      'active'
+    );
+  });
+
+  document.querySelectorAll(
+    '.search-results.open,'+
+    '.map-search-results.open,'+
+    '.map-recent-wrap.open'
+  ).forEach(el=>{
+    el.classList.remove('open');
+  });
+
+  if(
+    document.getElementById(
+      'mapStatusToast'
+    )
+  ){
+    document.getElementById(
+      'mapStatusToast'
+    ).classList.remove(
+      'show',
+      'bad'
+    );
+  }
+
+  // Do not restore a previous driving/route selection UI after reload.
+  try{
+    setRouteSelectionMode(false);
+  }catch(e){}
+
+  try{
+    resetDriveNavigationZoom();
+  }catch(e){}
+
+  try{
+    clearTrafficCameraMarkers();
+  }catch(e){}
+
+  setTimeout(()=>{
+    try{
+      fixMapSize(true);
+    }catch(e){}
+  },80);
+}
+
 async function bootstrapMapFirstExperience(){
   document.body.classList.add('map-first-mode');
   setRouteSelectionMode(false);
@@ -20130,57 +20373,75 @@ async function fetchTrafficCameraBatch(points){
 
 
 async function fetchRouteTrafficCameraNodes(){
-  const points=
-    sampledRouteForCameraQuery();
+  const bbox=
+    routeSpeedBBox();
 
-  if(!points.length)return[];
+  if(!bbox)return[];
 
-  // Split the continuous corridor into manageable Overpass requests.
-  // This is more reliable than one huge query and still has no coverage gaps.
-  const BATCH_SIZE=22;
-  const dedupe=new Map();
+  const box=
+    `(${bbox.south.toFixed(6)},${bbox.west.toFixed(6)},${bbox.north.toFixed(6)},${bbox.east.toFixed(6)})`;
 
-  for(
-    let i=0;
-    i<points.length;
-    i+=BATCH_SIZE
-  ){
-    const batch=
-      points.slice(
-        i,
-        i+BATCH_SIZE
+  const query=
+    `[out:json][timeout:25];(`+
+      `node["highway"="speed_camera"]${box};`+
+      `node["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
+      `relation["type"="enforcement"]["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
+      `relation["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
+    `);out center tags;`;
+
+  const endpoints=[
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const controller=
+        new AbortController();
+
+      const timeout=setTimeout(
+        ()=>controller.abort(),
+        26000
       );
 
-    const elements=
-      await fetchTrafficCameraBatch(
-        batch
+      const res=await fetch(
+        `${endpoint}?data=${encodeURIComponent(query)}`,
+        {
+          signal:controller.signal,
+          headers:{
+            Accept:"application/json"
+          }
+        }
       );
 
-    for(const el of elements||[]){
-      if(
-        el?.type==="node" &&
-        el?.id!=null
-      ){
-        dedupe.set(
-          String(el.id),
-          el
+      clearTimeout(timeout);
+
+      if(!res.ok){
+        throw new Error(
+          `Camera Overpass ${res.status}`
         );
       }
-    }
 
-    // Small spacing between public Overpass requests.
-    if(
-      i+BATCH_SIZE<points.length
-    ){
-      await new Promise(
-        r=>setTimeout(r,180)
-      );
+      const data=await res.json();
+
+      if(!Array.isArray(data?.elements)){
+        throw new Error(
+          "Camera response invalid"
+        );
+      }
+
+      return data.elements;
+    }catch(e){
+      lastError=e;
     }
   }
 
-  return[
-    ...dedupe.values()
-  ];
+  throw lastError||
+    new Error(
+      "Traffic camera source unavailable"
+    );
 }
 
 async function prefetchRouteTrafficCameras({
@@ -20207,7 +20468,13 @@ async function prefetchRouteTrafficCameras({
       :null;
 
   if(cached){
-    buildMappedTrafficCameras(cached);
+    buildMappedTrafficCameras(
+      cached,
+      {
+        source:"dedicated-cache",
+        merge:true
+      }
+    );
 
     mappedSpeedState.cameraStatus="ready";
     mappedSpeedState.cameraUpdatedAt=
@@ -20245,7 +20512,34 @@ async function prefetchRouteTrafficCameras({
       elements
     );
 
-    buildMappedTrafficCameras(elements);
+    const beforeCount=
+      Number(
+        mappedSpeedState.cameras?.length||0
+      );
+
+    buildMappedTrafficCameras(
+      elements,
+      {
+        source:"dedicated-camera-bbox",
+        merge:true
+      }
+    );
+
+    const afterCount=
+      Number(
+        mappedSpeedState.cameras?.length||0
+      );
+
+    // An empty dedicated response must never erase cameras already found
+    // by the road-rules bbox source.
+    if(
+      !elements.length &&
+      beforeCount>0 &&
+      afterCount===0
+    ){
+      mappedSpeedState.cameras=
+        mappedSpeedState.cameras||[];
+    }
 
     mappedSpeedState.cameraStatus="ready";
     mappedSpeedState.cameraLastError="";
@@ -20265,12 +20559,18 @@ async function prefetchRouteTrafficCameras({
       return false;
     }
 
-    mappedSpeedState.cameraStatus="error";
     mappedSpeedState.cameraLastError=
       String(e?.message||e);
 
-    mappedSpeedState.cameras=[];
-    clearTrafficCameraMarkers();
+    if(
+      mappedSpeedState.cameras?.length
+    ){
+      mappedSpeedState.cameraStatus=
+        "ready";
+    }else{
+      mappedSpeedState.cameraStatus=
+        "error";
+    }
 
     if(typeof renderPreTripMission==="function"){
       renderPreTripMission();
@@ -20280,71 +20580,241 @@ async function prefetchRouteTrafficCameras({
   }
 }
 
-function buildMappedTrafficCameras(elements){
-  const routeSamples=sampledCurrentRouteMeta(150);
-  const cameras=[];
 
+function clearTrafficCameraRawElements(){
+  trafficCameraRawElements=
+    new Map();
+}
+
+function ingestTrafficCameraElements(
+  elements,
+  source="unknown"
+){
   for(const el of elements||[]){
-    if(el?.type!=="node")continue;
+    if(
+      !el ||
+      !["node","relation","way"].includes(el.type)
+    ){
+      continue;
+    }
 
-    const tags=el?.tags||{};
+    const tags=el.tags||{};
 
-    const isSpeedCamera=
+    const looksLikeCamera=
       tags.highway==="speed_camera" ||
       String(tags.enforcement||"").includes("maxspeed") ||
       String(tags.enforcement||"").includes("traffic_signals") ||
-      String(tags.enforcement||"").includes("average_speed");
+      String(tags.enforcement||"").includes("average_speed") ||
+      (
+        tags.type==="enforcement" &&
+        String(tags.enforcement||"").length>0
+      );
 
-    if(!isSpeedCamera)continue;
+    if(!looksLikeCamera)continue;
 
-    const point=[
+    const key=
+      `${el.type}:${el.id}`;
+
+    trafficCameraRawElements.set(
+      key,
+      {
+        ...el,
+        __cameraSource:source
+      }
+    );
+  }
+
+  return[
+    ...trafficCameraRawElements.values()
+  ];
+}
+
+function cameraElementPoint(el){
+  if(!el)return null;
+
+  if(
+    Number.isFinite(Number(el.lat)) &&
+    Number.isFinite(Number(el.lon))
+  ){
+    return[
       Number(el.lat),
       Number(el.lon)
     ];
+  }
 
-    if(!point.every(Number.isFinite))continue;
+  if(
+    Number.isFinite(Number(el.center?.lat)) &&
+    Number.isFinite(Number(el.center?.lon))
+  ){
+    return[
+      Number(el.center.lat),
+      Number(el.center.lon)
+    ];
+  }
+
+  return null;
+}
+
+function nearestRouteGeometryMeta(point){
+  if(
+    !Array.isArray(point) ||
+    point.length<2 ||
+    !routeCoords?.length
+  ){
+    return null;
+  }
+
+  const cache=
+    ensureDriveRouteGeometryCache();
+
+  let best=null;
+
+  for(let i=0;i<routeCoords.length-1;i++){
+    const a=routeCoords[i];
+    const b=routeCoords[i+1];
+
+    const hit=
+      pointToSegmentMeters(
+        point,
+        a,
+        b
+      );
+
+    if(
+      !best ||
+      hit.distance<best.distance
+    ){
+      const segmentLength=
+        Number(
+          cache.segmentDistances?.[i] ??
+          hav(a,b)
+        );
+
+      const ratio=
+        segmentLength>0
+          ?clamp(
+            hav(a,hit.point)/
+            segmentLength,
+            0,
+            1
+          )
+          :0;
+
+      best={
+        distance:hit.distance,
+        point:hit.point,
+        routeM:
+          Number(
+            cache.cumulative?.[i]||0
+          )+
+          segmentLength*ratio,
+        segmentIndex:i
+      };
+    }
+  }
+
+  return best;
+}
+
+function buildMappedTrafficCameras(
+  elements,
+  {
+    source="unknown",
+    merge=true
+  }={}
+){
+  const all=
+    merge
+      ?ingestTrafficCameraElements(
+        elements,
+        source
+      )
+      :elements||[];
+
+  const cameras=[];
+  const seen=new Set();
+
+  for(const el of all){
+    const tags=el?.tags||{};
+
+    const point=
+      cameraElementPoint(el);
+
+    if(!point)continue;
 
     const nearest=
-      nearestRouteSampleMeta(
-        point,
-        routeSamples
+      nearestRouteGeometryMeta(
+        point
       );
 
     if(!nearest)continue;
 
-    const direction=parseCameraDirection(
-      tags.direction
-    );
+    const direction=
+      parseCameraDirection(
+        tags.direction
+      );
 
-    // Exact-node mode:
-    // cameras without direction must be very close to the selected route.
+    // Relations often have a center that is less exact than a camera node.
+    const isRelation=
+      el.type==="relation";
+
     const allowedDistance=
-      Number.isFinite(Number(direction))
-        ?55
-        :28;
+      isRelation
+        ?95
+        :Number.isFinite(Number(direction))
+          ?70
+          :55;
 
-    if(nearest.distance>allowedDistance)continue;
+    if(
+      nearest.distance>
+      allowedDistance
+    ){
+      continue;
+    }
 
     let type="speed";
 
-    if(String(tags.enforcement||"").includes("traffic_signals")){
+    if(
+      String(tags.enforcement||"")
+        .includes("traffic_signals")
+    ){
       type="red_light";
-    }else if(String(tags.enforcement||"").includes("average_speed")){
+    }else if(
+      String(tags.enforcement||"")
+        .includes("average_speed")
+    ){
       type="average_speed";
     }
 
+    const id=
+      `${el.type}_${el.id}`;
+
+    if(seen.has(id))continue;
+    seen.add(id);
+
     cameras.push({
-      id:`osm_camera_${el.id}`,
+      id:`osm_camera_${id}`,
       osmId:el.id,
+      osmType:el.type,
       point,
       routeM:Number(nearest.routeM||0),
       routeDistanceM:Number(nearest.distance||0),
       direction,
       type,
-      maxspeed:parseOsmMaxspeed(tags.maxspeed)?.kmh||null,
-      operator:String(tags.operator||""),
+      maxspeed:
+        parseOsmMaxspeed(
+          tags.maxspeed
+        )?.kmh||null,
+      operator:String(
+        tags.operator||""
+      ),
       ref:String(tags.ref||""),
-      source:"OpenStreetMap"
+      source:
+        String(
+          el.__cameraSource||
+          source||
+          "OpenStreetMap"
+        )
     });
   }
 
@@ -20352,7 +20822,15 @@ function buildMappedTrafficCameras(elements){
     (a,b)=>a.routeM-b.routeM
   );
 
-  mappedSpeedState.cameras=cameras;
+  mappedSpeedState.cameras=
+    cameras;
+
+  mappedSpeedState.cameraSourceSummary=
+    [
+      ...new Set(
+        cameras.map(c=>c.source)
+      )
+    ].join(" + ");
 
   syncTrafficCameraMarkers();
 
@@ -20812,7 +21290,13 @@ function buildMappedSpeedSegments(elements){
   mappedSpeedState.segments=segments;
   mappedSpeedState.grid=grid;
 
-  buildMappedTrafficCameras(elements);
+  buildMappedTrafficCameras(
+    elements,
+    {
+      source:"road-rules-bbox",
+      merge:true
+    }
+  );
 
   return segments;
 }
@@ -21044,6 +21528,24 @@ function matchMappedSpeedLimit(
         ...truth,
         exactEdge:true,
         openDataLimit:null
+      };
+    }
+  }
+
+  // Pilot scoring:
+  // exact selected-route speed profile may enter score when route coverage
+  // is high enough. This remains explicitly non-official.
+  if(Number.isFinite(Number(routeProgress))){
+    const pilot=
+      pilotSpeedAtProgress(
+        routeProgress
+      );
+
+    if(pilot){
+      return{
+        ...pilot,
+        exactEdge:true,
+        openDataLimit:Number(pilot.limit)
       };
     }
   }
@@ -21352,6 +21854,16 @@ function runtimeRouteSpeedAtProgress(
   }
 
   if(allowOpenDataDisplay){
+    const pilot=
+      pilotSpeedAtProgress(p);
+
+    if(pilot){
+      return{
+        ...pilot,
+        displayEligible:true
+      };
+    }
+
     const exact=
       exactSpeedProfileAtProgress(p);
 
@@ -21438,9 +21950,16 @@ function renderRuntimeNavigationSpeedLimit(
     badge.classList.add(
       'truth-verified'
     );
+  }else if(match.pilotScoring){
+    badge.textContent=
+      `${match.road||"Route"} • Route Data • Score فعال`;
+
+    badge.classList.add(
+      'good'
+    );
   }else{
     badge.textContent=
-      `${match.road||"Route"} • Route Data • بدون امتیاز`;
+      `${match.road||"Route"} • Route Data • فقط نمایش`;
 
     badge.classList.add(
       'fallback'
@@ -21531,11 +22050,14 @@ function renderMappedSpeedLimit(
     return;
   }
 
-  if(!match.authorityVerified){
+  if(
+    !match.authorityVerified &&
+    !match.pilotScoring
+  ){
     sign.textContent="--";
 
     badge.textContent=
-      "Speed Limit تأیید نشده";
+      "Speed Limit فقط برای نمایش موجود است";
 
     badge.classList.add(
       'truth-missing'
@@ -21557,9 +22079,15 @@ function renderMappedSpeedLimit(
   sign.classList.add('mapped-limit');
 
   badge.textContent=
-    `${match.road} • منبع تأییدشده`;
+    match.authorityVerified
+      ?`${match.road} • منبع تأییدشده`
+      :`${match.road} • Route Data Pilot • Score فعال`;
 
-  badge.classList.add('truth-verified');
+  badge.classList.add(
+    match.authorityVerified
+      ?'truth-verified'
+      :'good'
+  );
 
   if($('limit')){
     $('limit').textContent=
@@ -27082,6 +27610,13 @@ window.addEventListener('resize',()=>{
     renderTrustedRealTrips();
   }
 });
+window.addEventListener(
+  'pageshow',
+  ()=>{
+    forceCleanMapStartup();
+  }
+);
+
 window.addEventListener('load',()=>fixMapSize(false));
 setTimeout(()=>fixMapSize(false),150);
 renderProfile();
@@ -27090,8 +27625,11 @@ setTimeout(()=>fixMapSize(false),900);
 if($('originLabel'))$('originLabel').textContent="هنوز مبدأیی تأیید نشده";
 if($('originSub'))$('originSub').textContent="موقعیت فعلی، جست‌وجو یا انتخاب روی نقشه";
 if($('destinationSearch'))$('destinationSearch').value='';
-document.body.classList.add('map-first-mode');
-setTimeout(()=>bootstrapMapFirstExperience(),650);
+forceCleanMapStartup();
+setTimeout(
+  ()=>bootstrapMapFirstExperience(),
+  300
+);
 </script>
 
 <script>
