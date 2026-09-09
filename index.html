@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۸ Route-Up Waze Camera</title>
+<title>POL | نسخه ۵.۹ Vehicle-Aware Routing & Road Rules</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5022,6 +5022,294 @@ body.driving-mode.drive-3d-active #drive3dMap{
   }
 }
 
+
+/* ============================================================
+   v5.9 VEHICLE-AWARE ROUTING & STREET RULES
+   ============================================================ */
+
+.map-route-vehicle-btn{
+  width:100%!important;
+  min-height:48px!important;
+  margin-top:8px!important;
+  padding:7px 9px!important;
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+  text-align:right!important;
+  border-radius:12px!important;
+  background:#101c29!important;
+  color:#e8eef5!important;
+  border:1px solid rgba(148,163,184,.10)!important;
+}
+.map-route-vehicle-btn>span{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#17283c;
+  font-size:18px;
+}
+.map-route-vehicle-btn small{
+  display:block;
+  color:#7890a8;
+  font-size:6.5px;
+}
+.map-route-vehicle-btn b{
+  display:block;
+  margin-top:2px;
+  font-size:9px;
+}
+.map-route-vehicle-btn em{
+  font-style:normal;
+  color:#78b7f6;
+  font-size:7px;
+}
+
+/* Vehicle selector */
+.vehicle-sheet{
+  position:fixed;
+  inset:0;
+  z-index:5200;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:12px;
+  background:rgba(2,8,23,.52);
+  backdrop-filter:blur(6px);
+}
+.vehicle-sheet.open{
+  display:flex;
+}
+.vehicle-sheet-card{
+  width:min(680px,100%);
+  max-height:min(88dvh,760px);
+  overflow:auto;
+  padding:12px;
+  border-radius:24px;
+  background:#0b141f;
+  color:#eef4fb;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 24px 60px rgba(2,8,23,.45);
+}
+.vehicle-sheet-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.vehicle-sheet-head small{
+  color:#78b7f6;
+  font-size:7px;
+}
+.vehicle-sheet-head h3{
+  margin:3px 0 0;
+  font-size:17px;
+}
+.vehicle-sheet-head p{
+  margin:4px 0 0;
+  color:#8fa2b6;
+  font-size:8px;
+  line-height:1.6;
+}
+.vehicle-sheet-head button{
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  background:#172334!important;
+  color:#cbd5e1!important;
+  border:1px solid rgba(148,163,184,.12)!important;
+}
+
+.vehicle-choice-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin-top:13px;
+}
+.vehicle-choice-grid button{
+  min-height:105px!important;
+  padding:10px 8px!important;
+  border-radius:15px!important;
+  background:#101923!important;
+  color:#e8eef5!important;
+  border:2px solid #293b50!important;
+  text-align:center!important;
+}
+.vehicle-choice-grid button.selected{
+  background:#102944!important;
+  border-color:#4594e7!important;
+  box-shadow:0 0 0 2px rgba(69,148,231,.10)!important;
+}
+.vehicle-choice-grid button>span{
+  display:block;
+  font-size:26px;
+}
+.vehicle-choice-grid button>b{
+  display:block;
+  margin-top:6px;
+  font-size:9px;
+}
+.vehicle-choice-grid button>small{
+  display:block;
+  margin-top:3px;
+  color:#8295aa;
+  font-size:6.5px;
+  line-height:1.45;
+}
+
+.truck-vehicle-options{
+  display:none;
+  margin-top:11px;
+  padding:10px;
+  border-radius:13px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.truck-vehicle-options.show{
+  display:block;
+}
+.truck-options-title{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:center;
+}
+.truck-options-title b{font-size:9px}
+.truck-options-title span{font-size:7px;color:#8497aa}
+.truck-options-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:8px;
+}
+.truck-options-grid label span{
+  display:block;
+  margin-bottom:4px;
+  color:#8fa2b6;
+  font-size:6.5px;
+}
+.truck-options-grid input{
+  width:100%;
+  min-height:36px;
+  padding:6px 8px;
+  border-radius:9px;
+  background:#172334;
+  color:#fff;
+  border:1px solid #304760;
+}
+
+.vehicle-routing-note{
+  margin-top:10px;
+  padding:9px 10px;
+  border-radius:11px;
+  background:#3b2d0d;
+  border:1px solid #6d551d;
+}
+.vehicle-routing-note b{
+  display:block;
+  color:#fde68a;
+  font-size:8px;
+}
+.vehicle-routing-note span{
+  display:block;
+  margin-top:3px;
+  color:#d9c995;
+  font-size:7px;
+  line-height:1.6;
+}
+
+.vehicle-sheet-actions{
+  display:grid;
+  grid-template-columns:1fr 1.6fr;
+  gap:7px;
+  margin-top:11px;
+}
+.vehicle-sheet-actions button{
+  min-height:45px!important;
+  border-radius:12px!important;
+}
+
+/* Traffic camera warning */
+.traffic-camera-pill{
+  display:none;
+}
+body.driving-mode .traffic-camera-pill.show{
+  position:absolute;
+  z-index:1245;
+  left:50%;
+  bottom:128px;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:130px;
+  max-width:260px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(58,29,8,.94);
+  border:1px solid rgba(245,158,11,.30);
+  color:#fde68a;
+  box-shadow:0 9px 25px rgba(2,8,23,.22);
+  backdrop-filter:blur(12px);
+  pointer-events:none;
+}
+.traffic-camera-pill>span{
+  font-size:18px;
+}
+.traffic-camera-pill small{
+  display:block;
+  color:#d8b75f;
+  font-size:6.5px;
+}
+.traffic-camera-pill b{
+  display:block;
+  margin-top:1px;
+  font-size:9px;
+}
+
+/* Exact OSM-tagged camera markers */
+.pol-camera-marker{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#f59e0b;
+  color:#111827;
+  border:3px solid #fff;
+  box-shadow:0 5px 13px rgba(15,23,42,.28);
+  font-size:14px;
+  pointer-events:none;
+}
+.leaflet-camera-marker{
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#f59e0b;
+  border:3px solid #fff;
+  box-shadow:0 5px 13px rgba(15,23,42,.24);
+  font-size:13px;
+}
+
+@media(max-width:700px){
+  .vehicle-choice-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+  .vehicle-choice-grid button:last-child{
+    grid-column:1/-1;
+  }
+  .truck-options-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5599,6 +5887,15 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
                 <div id="mapRouteReason" class="map-route-reason">در حال بررسی مسیر...</div>
 
+                <button id="mapRouteVehicleBtn" class="map-route-vehicle-btn">
+                  <span id="mapRouteVehicleIcon">🚗</span>
+                  <div>
+                    <small>وسیله نقلیه</small>
+                    <b id="mapRouteVehicleLabel">خودرو سواری</b>
+                  </div>
+                  <em>تغییر</em>
+                </button>
+
                 <div class="map-route-actions">
                   <button id="mapRouteCompareBtn">مقایسه</button>
                   <button id="mapRoutePreviewBtn">جزئیات مسیر</button>
@@ -5656,6 +5953,14 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <div class="speed-limit-stack">
                   <div class="speedSign" id="speedSign">--</div>
                   <div id="speedLimitSourceBadge" class="speed-limit-source-badge">بدون داده</div>
+                </div>
+              </div>
+
+              <div id="trafficCameraPill" class="traffic-camera-pill">
+                <span>📷</span>
+                <div>
+                  <small id="trafficCameraType">دوربین ثبت‌شده</small>
+                  <b id="trafficCameraDistance">--</b>
                 </div>
               </div>
 
@@ -5797,9 +6102,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.8</span>
+              <span class="lab-version-chip">v5.9</span>
               <div>
-                <b>Route-Up Waze Camera</b>
+                <b>Vehicle-Aware Routing & Road Rules</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6459,6 +6764,93 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     </div>
     <div class="drive-report-note">
       در نسخه آزمایشی، گزارش روی همین دستگاه ثبت می‌شود و هنوز به شبکه عمومی ارسال نمی‌شود.
+    </div>
+  </div>
+</div>
+
+
+<div id="vehicleSheet" class="vehicle-sheet">
+  <div class="vehicle-sheet-card">
+    <div class="ready-handle"></div>
+
+    <div class="vehicle-sheet-head">
+      <div>
+        <small>قبل از شروع مسیر</small>
+        <h3>با چه وسیله‌ای حرکت می‌کنی؟</h3>
+        <p>Route و محدودیت‌های قابل استفاده بر اساس نوع وسیله دوباره محاسبه می‌شوند.</p>
+      </div>
+      <button id="closeVehicleSheetBtn">×</button>
+    </div>
+
+    <div id="vehicleChoiceGrid" class="vehicle-choice-grid">
+      <button data-vehicle="car">
+        <span>🚗</span>
+        <b>خودرو سواری</b>
+        <small>مسیر استاندارد خودرو</small>
+      </button>
+
+      <button data-vehicle="motorcycle">
+        <span>🏍️</span>
+        <b>موتورسیکلت</b>
+        <small>پروفایل مخصوص موتور</small>
+      </button>
+
+      <button data-vehicle="scooter">
+        <span>🛵</span>
+        <b>اسکوتر / موتور سبک</b>
+        <small>سرعت و راه‌های مناسب‌تر</small>
+      </button>
+
+      <button data-vehicle="van">
+        <span>🚐</span>
+        <b>وانت / ون سبک</b>
+        <small>مسیر خودرویی محافظه‌کارانه</small>
+      </button>
+
+      <button data-vehicle="truck">
+        <span>🚚</span>
+        <b>کامیون</b>
+        <small>محدودیت ابعاد و وزن</small>
+      </button>
+    </div>
+
+    <div id="truckVehicleOptions" class="truck-vehicle-options">
+      <div class="truck-options-title">
+        <b>مشخصات تقریبی کامیون</b>
+        <span>برای Route محدودیت‌دار مهم است</span>
+      </div>
+
+      <div class="truck-options-grid">
+        <label>
+          <span>ارتفاع (m)</span>
+          <input id="truckHeight" type="number" min="2" max="5" step=".1" value="4">
+        </label>
+        <label>
+          <span>عرض (m)</span>
+          <input id="truckWidth" type="number" min="1.5" max="3.5" step=".1" value="2.5">
+        </label>
+        <label>
+          <span>طول (m)</span>
+          <input id="truckLength" type="number" min="4" max="25" step=".5" value="12">
+        </label>
+        <label>
+          <span>وزن (ton)</span>
+          <input id="truckWeight" type="number" min="2" max="60" step=".5" value="18">
+        </label>
+      </div>
+    </div>
+
+    <div class="vehicle-routing-note">
+      <b>Prototype Routing</b>
+      <span>
+        خودرو، موتور و کامیون با Costing متفاوت Route می‌گیرند.
+        برای وسیله غیرخودرو اگر Provider مخصوص آن در دسترس نباشد، Route خودروی سواری جایگزین نمی‌کنیم.
+      </span>
+    </div>
+
+    <div class="vehicle-sheet-actions">
+      <button id="vehicleSheetCancelBtn">بازگشت</button>
+      <button id="vehicleSheetConfirmBtn" class="primary">اعمال و محاسبه مسیر</button>
     </div>
   </div>
 </div>
@@ -7589,6 +7981,7 @@ async function activateDrive3DMap(){
 
     installDrive3DRouteLayers();
     syncDrive3DFullRoute({force:true});
+    syncTrafficCameraMarkers();
 
     setTimeout(()=>{
       try{
@@ -7781,6 +8174,9 @@ let mappedSpeedState={
   segments:[],
   grid:new Map(),
   current:null,
+  cameras:[],
+  lastCameraAlertId:null,
+  lastCameraVoiceStage:{},
   lastError:"",
   gpsSamples:0,
   validLimitSamples:0,
@@ -7790,6 +8186,9 @@ let mappedSpeedState={
   activeOverspeedSince:null,
   lastOverspeedAlertAt:0
 };
+
+let leafletTrafficCameraMarkers=[];
+let drive3DTrafficCameraMarkers=[];
 
 
 let confidenceSafetyScoreState={
@@ -8122,10 +8521,163 @@ let realGpsState={
 let pendingRealGpsFix=null;
 const ROUTING_ENGINE={
   id:"osrm-demo",
-  label:"موتور آزمایشی",
+  label:"OSRM Map Matching",
   liveTraffic:false,
   productionReady:false
 };
+
+const VEHICLE_PREF_KEY="pol_vehicle_profile_v1";
+
+const VEHICLE_PROFILES={
+  car:{
+    id:"car",
+    label:"خودرو سواری",
+    icon:"🚗",
+    costing:"auto",
+    provider:"valhalla-public"
+  },
+  motorcycle:{
+    id:"motorcycle",
+    label:"موتورسیکلت",
+    icon:"🏍️",
+    costing:"motorcycle",
+    provider:"valhalla-public"
+  },
+  scooter:{
+    id:"scooter",
+    label:"اسکوتر / موتور سبک",
+    icon:"🛵",
+    costing:"motor_scooter",
+    provider:"valhalla-public"
+  },
+  van:{
+    id:"van",
+    label:"وانت / ون سبک",
+    icon:"🚐",
+    costing:"auto",
+    provider:"valhalla-public"
+  },
+  truck:{
+    id:"truck",
+    label:"کامیون",
+    icon:"🚚",
+    costing:"truck",
+    provider:"valhalla-public"
+  }
+};
+
+function loadVehiclePreference(){
+  try{
+    const saved=JSON.parse(
+      localStorage.getItem(VEHICLE_PREF_KEY)||"null"
+    );
+
+    const base=
+      VEHICLE_PROFILES[saved?.id] ||
+      VEHICLE_PROFILES.car;
+
+    return{
+      ...base,
+      truck:{
+        height:Number(saved?.truck?.height||4),
+        width:Number(saved?.truck?.width||2.5),
+        length:Number(saved?.truck?.length||12),
+        weight:Number(saved?.truck?.weight||18)
+      }
+    };
+  }catch(e){
+    return{
+      ...VEHICLE_PROFILES.car,
+      truck:{height:4,width:2.5,length:12,weight:18}
+    };
+  }
+}
+
+let currentVehicleProfile=loadVehiclePreference();
+let pendingVehicleId=currentVehicleProfile.id;
+let vehicleConfirmedForRoute=false;
+
+function saveVehiclePreference(){
+  try{
+    localStorage.setItem(
+      VEHICLE_PREF_KEY,
+      JSON.stringify({
+        id:currentVehicleProfile.id,
+        truck:currentVehicleProfile.truck
+      })
+    );
+  }catch(e){}
+}
+
+function vehicleProfileLabel(){
+  return currentVehicleProfile?.label||"خودرو سواری";
+}
+
+function vehicleProfileIcon(){
+  return currentVehicleProfile?.icon||"🚗";
+}
+
+function syncVehicleUi(){
+  if($('mapRouteVehicleLabel')){
+    $('mapRouteVehicleLabel').textContent=vehicleProfileLabel();
+  }
+
+  if($('mapRouteVehicleIcon')){
+    $('mapRouteVehicleIcon').textContent=vehicleProfileIcon();
+  }
+
+  document.querySelectorAll('[data-vehicle]').forEach(btn=>{
+    btn.classList.toggle(
+      'selected',
+      btn.dataset.vehicle===pendingVehicleId
+    );
+  });
+
+  $('truckVehicleOptions')?.classList.toggle(
+    'show',
+    pendingVehicleId==="truck"
+  );
+}
+
+function openVehicleSheet(){
+  pendingVehicleId=currentVehicleProfile.id;
+
+  if($('truckHeight'))$('truckHeight').value=
+    Number(currentVehicleProfile.truck?.height||4);
+
+  if($('truckWidth'))$('truckWidth').value=
+    Number(currentVehicleProfile.truck?.width||2.5);
+
+  if($('truckLength'))$('truckLength').value=
+    Number(currentVehicleProfile.truck?.length||12);
+
+  if($('truckWeight'))$('truckWeight').value=
+    Number(currentVehicleProfile.truck?.weight||18);
+
+  syncVehicleUi();
+  $('vehicleSheet')?.classList.add('open');
+}
+
+function closeVehicleSheet(){
+  $('vehicleSheet')?.classList.remove('open');
+}
+
+function selectedVehicleFromSheet(){
+  const base=
+    VEHICLE_PROFILES[pendingVehicleId] ||
+    VEHICLE_PROFILES.car;
+
+  return{
+    ...base,
+    truck:{
+      height:clamp(Number($('truckHeight')?.value||4),2,5),
+      width:clamp(Number($('truckWidth')?.value||2.5),1.5,3.5),
+      length:clamp(Number($('truckLength')?.value||12),4,25),
+      weight:clamp(Number($('truckWeight')?.value||18),2,60)
+    }
+  };
+}
+
 let routingEndpointState={
   originSnap:null,
   destinationSnap:null,
@@ -8498,8 +9050,10 @@ function classifyRouteOption(route,index){
   if(index===0){
     return{
       title:"مسیر پیشنهادی",
-      badge:isFast?"زمان کمتر در داده فعلی":"گزینه متعادل",
-      detail:isFast?"کمترین ETA بین مسیرهای معتبر":"انتخاب اول موتور مسیر"
+      badge:`${vehicleProfileIcon()} ${vehicleProfileLabel()}`,
+      detail:isFast
+        ?"کمترین ETA بین مسیرهای معتبر همین پروفایل وسیله"
+        :"انتخاب اول موتور مسیر برای وسیله انتخاب‌شده"
     };
   }
   if(isShort){
@@ -8633,11 +9187,391 @@ function resetNetworkMapMatch(){
   };
 }
 
+
+function decodeValhallaPolyline6(encoded){
+  const coordinates=[];
+  let index=0;
+  let lat=0;
+  let lon=0;
+
+  while(index<encoded.length){
+    let shift=0,result=0,b;
+
+    do{
+      b=encoded.charCodeAt(index++)-63;
+      result|=(b&0x1f)<<shift;
+      shift+=5;
+    }while(b>=0x20 && index<=encoded.length);
+
+    const dlat=(result&1)?~(result>>1):(result>>1);
+    lat+=dlat;
+
+    shift=0;
+    result=0;
+
+    do{
+      b=encoded.charCodeAt(index++)-63;
+      result|=(b&0x1f)<<shift;
+      shift+=5;
+    }while(b>=0x20 && index<=encoded.length);
+
+    const dlon=(result&1)?~(result>>1):(result>>1);
+    lon+=dlon;
+
+    coordinates.push([
+      lon/1e6,
+      lat/1e6
+    ]);
+  }
+
+  return coordinates;
+}
+
+function valhallaManeuverShape(type){
+  const n=Number(type||0);
+
+  const map={
+    1:["depart","straight"],
+    2:["depart","right"],
+    3:["depart","left"],
+    4:["arrive","straight"],
+    5:["arrive","right"],
+    6:["arrive","left"],
+    7:["new name","straight"],
+    8:["continue","straight"],
+    9:["turn","slight right"],
+    10:["turn","right"],
+    11:["turn","sharp right"],
+    12:["turn","uturn"],
+    13:["turn","uturn"],
+    14:["turn","sharp left"],
+    15:["turn","left"],
+    16:["turn","slight left"],
+    17:["on ramp","straight"],
+    18:["on ramp","right"],
+    19:["on ramp","left"],
+    20:["off ramp","right"],
+    21:["off ramp","left"],
+    22:["fork","straight"],
+    23:["fork","right"],
+    24:["fork","left"],
+    25:["merge","straight"],
+    26:["roundabout","straight"],
+    27:["continue","straight"]
+  };
+
+  return map[n]||["continue","straight"];
+}
+
+function valhallaStreetName(m){
+  const names=[
+    ...(Array.isArray(m?.street_names)?m.street_names:[]),
+    ...(Array.isArray(m?.begin_street_names)?m.begin_street_names:[])
+  ].filter(Boolean);
+
+  return String(names[0]||"").trim();
+}
+
+function valhallaSignText(m){
+  const sign=m?.sign;
+  if(!sign||typeof sign!=="object")return"";
+
+  const arrays=[
+    sign.exit_toward_elements,
+    sign.exit_branch_elements,
+    sign.exit_name_elements,
+    sign.exit_number_elements
+  ];
+
+  for(const arr of arrays){
+    if(Array.isArray(arr)&&arr.length){
+      const first=arr[0];
+      const text=
+        typeof first==="string"
+          ?first
+          :first?.text;
+
+      if(text)return String(text);
+    }
+  }
+
+  return"";
+}
+
+function valhallaTripToOsrmRoute(trip,vehicleId){
+  if(!trip?.legs?.length)return null;
+
+  const routeCoordsLngLat=[];
+  const legs=[];
+
+  for(const leg of trip.legs){
+    const coords=decodeValhallaPolyline6(
+      String(leg?.shape||"")
+    );
+
+    if(!coords.length)continue;
+
+    const baseIndex=routeCoordsLngLat.length;
+
+    coords.forEach((c,i)=>{
+      if(
+        i===0 &&
+        routeCoordsLngLat.length &&
+        routeCoordsLngLat.at(-1)[0]===c[0] &&
+        routeCoordsLngLat.at(-1)[1]===c[1]
+      ){
+        return;
+      }
+
+      routeCoordsLngLat.push(c);
+    });
+
+    const steps=(leg?.maneuvers||[]).map((m,i)=>{
+      const [type,modifier]=valhallaManeuverShape(m?.type);
+
+      const shapeIndex=clamp(
+        Number(m?.begin_shape_index||0),
+        0,
+        Math.max(0,coords.length-1)
+      );
+
+      const loc=coords[shapeIndex]||coords[0];
+
+      return{
+        distance:Number(m?.length||0)*1000,
+        duration:Number(m?.time||0),
+        mode:"driving",
+        name:valhallaStreetName(m),
+        ref:String(m?.road_ref||""),
+        destinations:valhallaSignText(m),
+        maneuver:{
+          type,
+          modifier,
+          location:[
+            Number(loc?.[0]),
+            Number(loc?.[1])
+          ],
+          exit:Number(m?.roundabout_exit_count||0)||undefined
+        },
+        intersections:[]
+      };
+    });
+
+    legs.push({
+      steps,
+      distance:Number(leg?.summary?.length||0)*1000,
+      duration:Number(leg?.summary?.time||0)
+    });
+  }
+
+  if(routeCoordsLngLat.length<2)return null;
+
+  return{
+    geometry:{
+      type:"LineString",
+      coordinates:routeCoordsLngLat
+    },
+    distance:Number(trip?.summary?.length||0)*1000,
+    duration:Number(trip?.summary?.time||0),
+    legs,
+    __provider:"valhalla-public",
+    __vehicleId:vehicleId
+  };
+}
+
+function valhallaCostingOptions(profile){
+  if(profile.id==="motorcycle"){
+    return{
+      motorcycle:{
+        use_highways:.75,
+        use_tolls:.5,
+        use_trails:0,
+        top_speed:140
+      }
+    };
+  }
+
+  if(profile.id==="scooter"){
+    return{
+      motor_scooter:{
+        use_hills:.5,
+        use_primary:.72,
+        top_speed:85
+      }
+    };
+  }
+
+  if(profile.id==="truck"){
+    const t=profile.truck||{};
+
+    return{
+      truck:{
+        height:Number(t.height||4),
+        width:Number(t.width||2.5),
+        length:Number(t.length||12),
+        weight:Number(t.weight||18),
+        axle_load:10,
+        hazmat:false,
+        use_highways:1,
+        use_tolls:.6,
+        use_tracks:0,
+        exclude_unpaved:true
+      }
+    };
+  }
+
+  if(profile.id==="van"){
+    return{
+      auto:{
+        use_highways:.78,
+        use_tolls:.5,
+        use_ferry:.2,
+        use_tracks:0,
+        exclude_unpaved:true
+      }
+    };
+  }
+
+  return{
+    auto:{
+      use_highways:.85,
+      use_tolls:.5,
+      use_ferry:.25,
+      use_tracks:0
+    }
+  };
+}
+
+async function valhallaVehicleRouteRequest(
+  originPoint,
+  destinationPoint,
+  {alternatives=true,maxAlternatives=3}={}
+){
+  const profile=currentVehicleProfile;
+
+  const request={
+    locations:[
+      {
+        lat:Number(originPoint[0]),
+        lon:Number(originPoint[1]),
+        type:"break"
+      },
+      {
+        lat:Number(destinationPoint[0]),
+        lon:Number(destinationPoint[1]),
+        type:"break"
+      }
+    ],
+    costing:profile.costing,
+    costing_options:valhallaCostingOptions(profile),
+    units:"kilometers",
+    language:"en-US",
+    alternates:alternatives
+      ?Math.max(0,Math.min(2,Number(maxAlternatives||3)-1))
+      :0,
+    id:`pol_${profile.id}_${Date.now()}`
+  };
+
+  const endpoints=[
+    "https://valhalla1.openstreetmap.de/route",
+    "https://valhalla.openstreetmap.de/route"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(
+        ()=>controller.abort(),
+        12000
+      );
+
+      const res=await fetch(
+        endpoint,
+        {
+          method:"POST",
+          signal:controller.signal,
+          headers:{
+            "Content-Type":"application/json",
+            "Accept":"application/json",
+            "X-Client-Id":"pol-navigation-prototype"
+          },
+          body:JSON.stringify(request)
+        }
+      );
+
+      clearTimeout(timer);
+
+      if(!res.ok){
+        throw new Error(`Valhalla ${res.status}`);
+      }
+
+      const data=await res.json();
+
+      if(!data?.trip){
+        throw new Error("Vehicle route response invalid");
+      }
+
+      const trips=[
+        data.trip,
+        ...(Array.isArray(data.alternates)
+          ?data.alternates.map(x=>x?.trip).filter(Boolean)
+          :[])
+      ];
+
+      const routes=trips
+        .map(trip=>valhallaTripToOsrmRoute(trip,profile.id))
+        .filter(Boolean);
+
+      if(!routes.length){
+        throw new Error("Vehicle route geometry unavailable");
+      }
+
+      return{
+        provider:"valhalla-public",
+        liveTraffic:false,
+        requestedAlternatives:maxAlternatives,
+        vehicleId:profile.id,
+        routes
+      };
+    }catch(e){
+      lastError=e;
+    }
+  }
+
+  throw lastError||new Error("Vehicle routing unavailable");
+}
+
 async function routingProviderRequest(
   originPoint,
   destinationPoint,
   {alternatives=true,bearing=null,maxAlternatives=3,continueStraight=null}={}
 ){
+  // Vehicle-aware routing uses Valhalla because the public OSRM demo
+  // exposes only the driving profile used by this prototype.
+  try{
+    return await valhallaVehicleRouteRequest(
+      originPoint,
+      destinationPoint,
+      {alternatives,maxAlternatives}
+    );
+  }catch(vehicleError){
+    console.warn(
+      "Vehicle-aware provider failed:",
+      vehicleError
+    );
+
+    // Safety rule:
+    // Only normal passenger-car routing may fall back to OSRM car.
+    // Motorcycle/truck/scooter must NOT silently receive a car route.
+    if(currentVehicleProfile.id!=="car"){
+      throw new Error(
+        `مسیریاب مخصوص ${vehicleProfileLabel()} در دسترس نیست؛ Route خودروی سواری جایگزین نشد`
+      );
+    }
+  }
+
   if(ROUTING_ENGINE.id==="osrm-demo"){
     const coords=
       `${originPoint[1]},${originPoint[0]};${destinationPoint[1]},${destinationPoint[0]}`;
@@ -8652,7 +9586,6 @@ async function routingProviderRequest(
       `?alternatives=${altParam}`+
       `&overview=full&geometries=geojson&steps=true`;
 
-    // Normal planning should not be over-constrained.
     if(continueStraight===true){
       url+=`&continue_straight=true`;
     }else if(continueStraight===false){
@@ -8673,11 +9606,20 @@ async function routingProviderRequest(
       provider:ROUTING_ENGINE.id,
       liveTraffic:false,
       requestedAlternatives:alternatives?Number(maxAlternatives||3):1,
-      routes:Array.isArray(data?.routes)?data.routes:[]
+      vehicleId:"car",
+      routes:Array.isArray(data?.routes)
+        ?data.routes.map(r=>({
+          ...r,
+          __provider:"osrm-demo",
+          __vehicleId:"car"
+        }))
+        :[]
     };
   }
+
   throw new Error("Routing provider is not configured");
 }
+
 function showRouteFailure(message){
   routeAlternatives=[];
   routeCoords=[];
@@ -11091,6 +12033,7 @@ resetMappedSpeedTripStats();
 renderShadowRewardLedger();
 renderShadowMarketplace();
 renderTrustedRealTrips();
+syncVehicleUi();
 renderRecentDestinations();
 }
 function renderRecentDestinations(){
@@ -11313,6 +12256,7 @@ async function stageDestination(dest,{source="search",autoRoute=false}={}){
   }
 }
 function clearExistingRouteForDestinationChange(){
+  vehicleConfirmedForRoute=false;
   routeAlternatives=[];
   routeCoords=[];
   routeDistanceM=0;
@@ -12264,8 +13208,14 @@ async function smartStartTrip(){
   }
 
   const integrity=analyzeSelectedRoute();
+
   if(integrity.critical){
     openRoutePreview();
+    return;
+  }
+
+  if(!vehicleConfirmedForRoute){
+    openVehicleSheet();
     return;
   }
 
@@ -12276,6 +13226,7 @@ async function smartStartTrip(){
 
   await startDrivingConfirmed();
 }
+
 function openDriveReport(){$('driveReportSheet')?.classList.add('open')}
 function closeDriveReport(){$('driveReportSheet')?.classList.remove('open')}
 function registerLocalDriveReport(type){
@@ -12461,6 +13412,8 @@ function renderCompactRouteChoices(){
 function renderMapRouteSheet(){
   const sheet=$('mapRouteSheet');
   if(!sheet)return;
+
+  syncVehicleUi();
 
   if(!routeAlternatives.length || !routeCoords.length){
     sheet.classList.remove('show');
@@ -12744,7 +13697,8 @@ async function loadRoute(){
       renderPendingDestination();
     }
 
-    $('status').textContent="در حال محاسبه و اعتبارسنجی مسیرهای پیشنهادی...";
+    $('status').textContent=
+      `در حال محاسبه مسیر مخصوص ${vehicleProfileLabel()}...`;
 
     const response=await routingProviderRequest(
       originSnap.point,
@@ -12787,8 +13741,8 @@ async function loadRoute(){
     $('status').textContent=
       (
         routeAlternatives.length>1
-          ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر برای انتخاب آماده است`
-          :"فقط یک مسیر معتبر از Provider دریافت شد"
+          ?`${routeAlternatives.length.toLocaleString('fa-IR')} مسیر معتبر مخصوص ${vehicleProfileLabel()} آماده است`
+          :`فقط یک مسیر معتبر مخصوص ${vehicleProfileLabel()} دریافت شد`
       )+
       (accessWarnings.length?` • ${accessWarnings.join(" • ")}`:".");
 
@@ -13867,6 +14821,8 @@ async function getRealGpsFix(){
 
 function resetMappedSpeedTripStats(){
   mappedSpeedState.current=null;
+  mappedSpeedState.lastCameraAlertId=null;
+  mappedSpeedState.lastCameraVoiceStage={};
   mappedSpeedState.gpsSamples=0;
   mappedSpeedState.validLimitSamples=0;
   mappedSpeedState.complianceSamples=0;
@@ -14036,63 +14992,567 @@ function speedGridCell(lat,lng){
   return`${Math.floor(Number(lat)/size)}:${Math.floor(Number(lng)/size)}`;
 }
 
+
+function vehicleMaxspeedKeys(vehicleId){
+  if(vehicleId==="truck"){
+    return[
+      "maxspeed:hgv",
+      "maxspeed:goods",
+      "maxspeed"
+    ];
+  }
+
+  if(vehicleId==="motorcycle" || vehicleId==="scooter"){
+    return[
+      "maxspeed:motorcycle",
+      "maxspeed"
+    ];
+  }
+
+  if(vehicleId==="van"){
+    return[
+      "maxspeed:goods",
+      "maxspeed"
+    ];
+  }
+
+  return[
+    "maxspeed:motorcar",
+    "maxspeed"
+  ];
+}
+
+function vehicleDirectionalSpeedValue(tags,baseKey,direction){
+  const suffix=
+    direction==="forward"
+      ?"forward"
+      :"backward";
+
+  const variants=[
+    `${baseKey}:${suffix}`,
+    baseKey==="maxspeed"
+      ?`maxspeed:${suffix}`
+      :baseKey.replace(
+        "maxspeed:",
+        `maxspeed:${suffix}:`
+      )
+  ];
+
+  for(const key of variants){
+    const parsed=parseOsmMaxspeed(tags?.[key]);
+    if(parsed){
+      return{
+        parsed,
+        key
+      };
+    }
+  }
+
+  return null;
+}
+
+function vehicleSpeedForSegment(tags,segment,heading){
+  const keys=vehicleMaxspeedKeys(
+    currentVehicleProfile.id
+  );
+
+  const wayHeading=bearingDeg(
+    segment.a,
+    segment.b
+  );
+
+  let direction="forward";
+
+  if(Number.isFinite(Number(heading)) && Number.isFinite(Number(wayHeading))){
+    const delta=Math.abs(
+      shortestAngleDelta(
+        wayHeading,
+        heading
+      )
+    );
+
+    direction=delta<=90
+      ?"forward"
+      :"backward";
+  }
+
+  for(const baseKey of keys){
+    const directional=
+      vehicleDirectionalSpeedValue(
+        tags,
+        baseKey,
+        direction
+      );
+
+    if(directional){
+      return{
+        ...directional.parsed,
+        tagKey:directional.key,
+        vehicleSpecific:baseKey!=="maxspeed"
+      };
+    }
+
+    const parsed=parseOsmMaxspeed(
+      tags?.[baseKey]
+    );
+
+    if(parsed){
+      return{
+        ...parsed,
+        tagKey:baseKey,
+        vehicleSpecific:baseKey!=="maxspeed"
+      };
+    }
+  }
+
+  return null;
+}
+
+function sampledCurrentRouteMeta(maxPoints=120){
+  if(!routeCoords?.length)return[];
+
+  const cache=ensureDriveRouteGeometryCache();
+
+  const count=Math.min(
+    maxPoints,
+    routeCoords.length
+  );
+
+  const out=[];
+
+  for(let i=0;i<count;i++){
+    const idx=
+      count===1
+        ?0
+        :Math.round(
+          i*(routeCoords.length-1)/(count-1)
+        );
+
+    out.push({
+      point:routeCoords[idx],
+      routeM:Number(
+        cache.cumulative[idx]||0
+      )
+    });
+  }
+
+  return out;
+}
+
+function nearestRouteSampleMeta(point,samples){
+  let best=null;
+
+  for(const item of samples||[]){
+    const d=hav(point,item.point);
+
+    if(!best || d<best.distance){
+      best={
+        distance:d,
+        routeM:item.routeM,
+        point:item.point
+      };
+    }
+  }
+
+  return best;
+}
+
+function parseCameraDirection(value){
+  if(value==null)return null;
+
+  const raw=String(value).trim().toLowerCase();
+  const numeric=Number(raw);
+
+  if(Number.isFinite(numeric)){
+    return normalizedBearingDegrees(numeric);
+  }
+
+  const map={
+    n:0,north:0,
+    ne:45,northeast:45,
+    e:90,east:90,
+    se:135,southeast:135,
+    s:180,south:180,
+    sw:225,southwest:225,
+    w:270,west:270,
+    nw:315,northwest:315
+  };
+
+  return map[raw]??null;
+}
+
+function buildMappedTrafficCameras(elements){
+  const routeSamples=sampledCurrentRouteMeta(150);
+  const cameras=[];
+
+  for(const el of elements||[]){
+    if(el?.type!=="node")continue;
+
+    const tags=el?.tags||{};
+
+    const isSpeedCamera=
+      tags.highway==="speed_camera" ||
+      String(tags.enforcement||"").includes("maxspeed") ||
+      String(tags.enforcement||"").includes("traffic_signals") ||
+      String(tags.enforcement||"").includes("average_speed");
+
+    if(!isSpeedCamera)continue;
+
+    const point=[
+      Number(el.lat),
+      Number(el.lon)
+    ];
+
+    if(!point.every(Number.isFinite))continue;
+
+    const nearest=
+      nearestRouteSampleMeta(
+        point,
+        routeSamples
+      );
+
+    if(!nearest)continue;
+
+    const direction=parseCameraDirection(
+      tags.direction
+    );
+
+    // Exact-node mode:
+    // cameras without direction must be very close to the selected route.
+    const allowedDistance=
+      Number.isFinite(Number(direction))
+        ?55
+        :28;
+
+    if(nearest.distance>allowedDistance)continue;
+
+    let type="speed";
+
+    if(String(tags.enforcement||"").includes("traffic_signals")){
+      type="red_light";
+    }else if(String(tags.enforcement||"").includes("average_speed")){
+      type="average_speed";
+    }
+
+    cameras.push({
+      id:`osm_camera_${el.id}`,
+      osmId:el.id,
+      point,
+      routeM:Number(nearest.routeM||0),
+      routeDistanceM:Number(nearest.distance||0),
+      direction,
+      type,
+      maxspeed:parseOsmMaxspeed(tags.maxspeed)?.kmh||null,
+      operator:String(tags.operator||""),
+      ref:String(tags.ref||""),
+      source:"OpenStreetMap"
+    });
+  }
+
+  cameras.sort(
+    (a,b)=>a.routeM-b.routeM
+  );
+
+  mappedSpeedState.cameras=cameras;
+
+  syncTrafficCameraMarkers();
+
+  return cameras;
+}
+
+function clearTrafficCameraMarkers(){
+  leafletTrafficCameraMarkers.forEach(m=>{
+    try{map.removeLayer(m)}catch(e){}
+  });
+
+  leafletTrafficCameraMarkers=[];
+
+  drive3DTrafficCameraMarkers.forEach(m=>{
+    try{m.remove()}catch(e){}
+  });
+
+  drive3DTrafficCameraMarkers=[];
+}
+
+function cameraMarkerLabel(camera){
+  if(camera.type==="red_light"){
+    return"دوربین چراغ قرمز";
+  }
+
+  if(camera.type==="average_speed"){
+    return"کنترل میانگین سرعت";
+  }
+
+  return"دوربین سرعت";
+}
+
+function syncTrafficCameraMarkers(){
+  clearTrafficCameraMarkers();
+
+  if(!mappedSpeedState.cameras?.length)return;
+
+  mappedSpeedState.cameras.forEach(camera=>{
+    try{
+      const icon=L.divIcon({
+        className:"",
+        html:'<div class="leaflet-camera-marker">📷</div>',
+        iconSize:[28,28],
+        iconAnchor:[14,14]
+      });
+
+      const marker=L.marker(
+        camera.point,
+        {
+          icon,
+          interactive:false,
+          zIndexOffset:900
+        }
+      ).addTo(map);
+
+      leafletTrafficCameraMarkers.push(marker);
+    }catch(e){}
+
+    if(isDrive3DActive() && drive3DMap){
+      try{
+        const el=document.createElement('div');
+        el.className='pol-camera-marker';
+        el.textContent='📷';
+
+        const marker=new maplibregl.Marker({
+          element:el,
+          anchor:'center'
+        })
+          .setLngLat([
+            camera.point[1],
+            camera.point[0]
+          ])
+          .addTo(drive3DMap);
+
+        drive3DTrafficCameraMarkers.push(marker);
+      }catch(e){}
+    }
+  });
+}
+
+function cameraDirectionMatches(camera,routeBearing){
+  if(!Number.isFinite(Number(camera?.direction))){
+    return true;
+  }
+
+  if(!Number.isFinite(Number(routeBearing))){
+    return false;
+  }
+
+  return Math.abs(
+    shortestAngleDelta(
+      camera.direction,
+      routeBearing
+    )
+  )<=55;
+}
+
+function nextTrafficCamera(progress,speedKmh=0){
+  if(!mappedSpeedState.cameras?.length)return null;
+
+  const currentM=
+    routeDistanceM*
+    clamp(Number(progress||0),0,1);
+
+  const routeBearing=
+    drive3DRouteTangentBearing(
+      progress,
+      speedKmh
+    );
+
+  for(const camera of mappedSpeedState.cameras){
+    const ahead=
+      Number(camera.routeM)-currentM;
+
+    if(ahead<-40)continue;
+    if(ahead>1500)break;
+
+    if(
+      !cameraDirectionMatches(
+        camera,
+        routeBearing
+      )
+    ){
+      continue;
+    }
+
+    return{
+      ...camera,
+      aheadM:Math.max(0,ahead)
+    };
+  }
+
+  return null;
+}
+
+function updateTrafficCameraApproach(
+  progress,
+  speedKmh=0
+){
+  const camera=nextTrafficCamera(
+    progress,
+    speedKmh
+  );
+
+  const pill=$('trafficCameraPill');
+
+  if(!pill)return;
+
+  if(!camera || camera.aheadM>900){
+    pill.classList.remove('show');
+    return;
+  }
+
+  pill.classList.add('show');
+
+  if($('trafficCameraType')){
+    $('trafficCameraType').textContent=
+      cameraMarkerLabel(camera);
+  }
+
+  if($('trafficCameraDistance')){
+    $('trafficCameraDistance').textContent=
+      camera.aheadM<=25
+        ?"اکنون"
+        :distanceTextFa(camera.aheadM);
+  }
+
+  const stages=
+    mappedSpeedState.lastCameraVoiceStage;
+
+  if(
+    voiceGuidanceEnabled &&
+    camera.aheadM<=500 &&
+    camera.aheadM>160 &&
+    stages[camera.id]!=="500" &&
+    stages[camera.id]!=="150"
+  ){
+    stages[camera.id]="500";
+
+    coachVoice(
+      `${cameraMarkerLabel(camera)} ثبت‌شده در ${distanceTextFa(camera.aheadM)}`
+    );
+  }
+
+  if(
+    voiceGuidanceEnabled &&
+    camera.aheadM<=160 &&
+    stages[camera.id]!=="150"
+  ){
+    stages[camera.id]="150";
+
+    coachVoice(
+      `${cameraMarkerLabel(camera)} ثبت‌شده نزدیک است`
+    );
+  }
+}
+
 function buildMappedSpeedSegments(elements){
-  const routeSamples=sampledCurrentRoute();
+  const routeSamples=sampledCurrentRouteMeta();
   const segments=[];
+  const seenWays=new Set();
 
   for(const way of elements||[]){
-    const tags=way?.tags||{};
-    const parsed=parseOsmMaxspeed(tags.maxspeed);
-    if(!parsed)continue;
+    if(way?.type!=="way")continue;
+    if(seenWays.has(way.id))continue;
+    seenWays.add(way.id);
 
-    const geometry=Array.isArray(way.geometry)?way.geometry:[];
+    const tags=way?.tags||{};
+
+    const hasAnySpeedTag=
+      Object.keys(tags).some(
+        k=>k.startsWith("maxspeed")
+      );
+
+    if(!hasAnySpeedTag)continue;
+
+    const geometry=
+      Array.isArray(way.geometry)
+        ?way.geometry
+        :[];
+
     if(geometry.length<2)continue;
 
-    const sourceConfidence=mappedSpeedSourceConfidence(tags,parsed);
-
     for(let i=0;i<geometry.length-1;i++){
-      const a=[Number(geometry[i].lat),Number(geometry[i].lon)];
-      const b=[Number(geometry[i+1].lat),Number(geometry[i+1].lon)];
+      const a=[
+        Number(geometry[i].lat),
+        Number(geometry[i].lon)
+      ];
 
-      if(!a.every(Number.isFinite)||!b.every(Number.isFinite))continue;
+      const b=[
+        Number(geometry[i+1].lat),
+        Number(geometry[i+1].lon)
+      ];
 
-      const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+      if(
+        !a.every(Number.isFinite) ||
+        !b.every(Number.isFinite)
+      ){
+        continue;
+      }
 
-      // Keep only speed-tagged road pieces genuinely near this selected route.
-      if(distanceToRouteSamples(mid,routeSamples)>210)continue;
+      const mid=[
+        (a[0]+b[0])/2,
+        (a[1]+b[1])/2
+      ];
+
+      const nearest=
+        nearestRouteSampleMeta(
+          mid,
+          routeSamples
+        );
+
+      if(!nearest || nearest.distance>190){
+        continue;
+      }
 
       segments.push({
         a,
         b,
         mid,
-        limit:parsed.kmh,
-        raw:parsed.raw,
-        sourceConfidence,
+        tags,
+        routeM:Number(nearest.routeM||0),
+        routeDistanceM:Number(nearest.distance||0),
         wayId:way.id,
-        name:tags.name||tags["name:fa"]||tags.ref||"",
+        name:
+          tags["name:fa"]||
+          tags.name||
+          tags.ref||
+          "",
         highway:tags.highway||"",
-        oneway:String(tags.oneway||"").toLowerCase(),
-        source:tags["source:maxspeed"]||tags["maxspeed:type"]||"explicit maxspeed",
-        conditional:!!tags["maxspeed:conditional"]
+        oneway:String(tags.oneway||"").toLowerCase()
       });
 
-      if(segments.length>=3500)break;
+      if(segments.length>=4200)break;
     }
 
-    if(segments.length>=3500)break;
+    if(segments.length>=4200)break;
   }
 
   const grid=new Map();
 
   for(const segment of segments){
-    const key=speedGridCell(segment.mid[0],segment.mid[1]);
+    const key=speedGridCell(
+      segment.mid[0],
+      segment.mid[1]
+    );
 
-    if(!grid.has(key))grid.set(key,[]);
+    if(!grid.has(key)){
+      grid.set(key,[]);
+    }
+
     grid.get(key).push(segment);
   }
 
   mappedSpeedState.segments=segments;
   mappedSpeedState.grid=grid;
+
+  buildMappedTrafficCameras(elements);
+
   return segments;
 }
 
@@ -14134,68 +15594,166 @@ function mappedSpeedHeadingPenalty(segment,heading){
   return 22;
 }
 
-function matchMappedSpeedLimit(point,heading,temporalConfidence=0){
-  if(mappedSpeedState.status!=="ready" || !mappedSpeedState.segments.length){
+function matchMappedSpeedLimit(
+  point,
+  heading,
+  temporalConfidence=0,
+  routeProgress=null
+){
+  if(
+    mappedSpeedState.status!=="ready" ||
+    !mappedSpeedState.segments.length
+  ){
     return null;
   }
 
-  const candidates=nearbyMappedSpeedSegments(point);
+  const candidates=
+    nearbyMappedSpeedSegments(point);
+
+  const currentRouteM=
+    Number.isFinite(Number(routeProgress))
+      ?routeDistanceM*clamp(Number(routeProgress),0,1)
+      :null;
+
   let best=null;
 
   for(const segment of candidates){
-    const hit=pointToSegmentMeters(point,segment.a,segment.b);
-    if(!Number.isFinite(hit.distance)||hit.distance>75)continue;
+    const hit=pointToSegmentMeters(
+      point,
+      segment.a,
+      segment.b
+    );
 
-    const headingPenalty=mappedSpeedHeadingPenalty(segment,heading);
-    const score=hit.distance+headingPenalty;
+    if(
+      !Number.isFinite(hit.distance) ||
+      hit.distance>70
+    ){
+      continue;
+    }
 
-    if(!best||score<best.score){
+    const speedInfo=
+      vehicleSpeedForSegment(
+        segment.tags,
+        segment,
+        heading
+      );
+
+    if(!speedInfo)continue;
+
+    const headingPenalty=
+      mappedSpeedHeadingPenalty(
+        segment,
+        heading
+      );
+
+    const progressPenalty=
+      Number.isFinite(currentRouteM)
+        ?Math.min(
+          32,
+          Math.abs(
+            Number(segment.routeM||0)-currentRouteM
+          )/28
+        )
+        :0;
+
+    const score=
+      hit.distance+
+      headingPenalty+
+      progressPenalty;
+
+    if(!best || score<best.score){
       best={
         ...segment,
+        ...speedInfo,
+        limit:speedInfo.kmh,
         distance:hit.distance,
         point:hit.point,
         score,
-        headingPenalty
+        headingPenalty,
+        progressPenalty
       };
     }
   }
 
   if(!best)return null;
 
-  let confidence=Number(best.sourceConfidence||0);
+  const parsed={
+    kmh:best.limit,
+    ambiguous:!!best.ambiguous,
+    raw:best.raw
+  };
 
-  if(best.distance<=10)confidence+=5;
-  else if(best.distance<=25)confidence+=1;
-  else if(best.distance<=45)confidence-=7;
-  else confidence-=18;
+  let confidence=
+    mappedSpeedSourceConfidence(
+      best.tags,
+      parsed
+    );
+
+  if(best.vehicleSpecific){
+    confidence+=2;
+  }
+
+  if(best.distance<=8)confidence+=5;
+  else if(best.distance<=20)confidence+=2;
+  else if(best.distance<=40)confidence-=6;
+  else confidence-=17;
 
   if(best.headingPenalty>=20)confidence-=12;
   else if(best.headingPenalty>=10)confidence-=6;
 
+  if(best.progressPenalty>=20)confidence-=10;
+  else if(best.progressPenalty>=10)confidence-=4;
+
   confidence=Math.min(
     confidence,
-    Math.max(45,Number(temporalConfidence||0)+12)
+    Math.max(
+      45,
+      Number(temporalConfidence||0)+12
+    )
   );
 
-  confidence=clamp(Math.round(confidence),0,96);
+  confidence=clamp(
+    Math.round(confidence),
+    0,
+    96
+  );
 
   return{
     limit:best.limit,
     confidence,
     distance:best.distance,
-    road:best.name||best.highway||"Road Segment",
-    source:best.source,
+    road:
+      best.name||
+      best.highway||
+      "Road Segment",
+    source:
+      best.tagKey||
+      "maxspeed",
     wayId:best.wayId,
-    conditional:best.conditional,
-    raw:best.raw
+    conditional:
+      !!best.tags?.["maxspeed:conditional"],
+    raw:best.raw,
+    vehicleSpecific:!!best.vehicleSpecific,
+    vehicleId:currentVehicleProfile.id,
+    routeProgressPenalty:best.progressPenalty
   };
 }
 
 async function fetchOverpassSpeedWays(bbox){
+  const box=
+    `(${bbox.south.toFixed(6)},${bbox.west.toFixed(6)},${bbox.north.toFixed(6)},${bbox.east.toFixed(6)})`;
+
   const query=
-    `[out:json][timeout:12];`+
-    `way["highway"]["maxspeed"](${bbox.south.toFixed(6)},${bbox.west.toFixed(6)},${bbox.north.toFixed(6)},${bbox.east.toFixed(6)});`+
-    `out tags geom;`;
+    `[out:json][timeout:14];(`+
+      `way["highway"]["maxspeed"]${box};`+
+      `way["highway"]["maxspeed:forward"]${box};`+
+      `way["highway"]["maxspeed:backward"]${box};`+
+      `way["highway"]["maxspeed:hgv"]${box};`+
+      `way["highway"]["maxspeed:goods"]${box};`+
+      `way["highway"]["maxspeed:motorcycle"]${box};`+
+      `node["highway"="speed_camera"]${box};`+
+      `node["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
+    `);out tags geom;`;
 
   const endpoints=[
     "https://overpass-api.de/api/interpreter",
@@ -14207,7 +15765,10 @@ async function fetchOverpassSpeedWays(bbox){
   for(const endpoint of endpoints){
     try{
       const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),14000);
+      const timeout=setTimeout(
+        ()=>controller.abort(),
+        16000
+      );
 
       const res=await fetch(
         `${endpoint}?data=${encodeURIComponent(query)}`,
@@ -14226,17 +15787,19 @@ async function fetchOverpassSpeedWays(bbox){
       const data=await res.json();
 
       if(!Array.isArray(data?.elements)){
-        throw new Error("Speed data response invalid");
+        throw new Error(
+          "Road rules response invalid"
+        );
       }
 
       return data.elements;
     }catch(e){
       lastError=e;
-      // Never parallelize public Overpass fallback requests.
     }
   }
 
-  throw lastError||new Error("Speed data unavailable");
+  throw lastError||
+    new Error("Road rules unavailable");
 }
 
 async function prefetchMappedSpeedLimits({force=false}={}){
@@ -14345,6 +15908,7 @@ function updateMappedSpeedPreview({
   speedKmh,
   accuracy,
   temporalConfidence,
+  routeProgress,
   timestamp
 }={}){
   mappedSpeedState.gpsSamples+=1;
@@ -14352,7 +15916,8 @@ function updateMappedSpeedPreview({
   const match=matchMappedSpeedLimit(
     point,
     heading,
-    temporalConfidence
+    temporalConfidence,
+    routeProgress
   );
 
   mappedSpeedState.current=match;
@@ -14451,10 +16016,12 @@ function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
   sign.classList.add('mapped-limit');
 
   if(match.confidence>=78){
-    badge.textContent="OSM • mapped";
+    badge.textContent=
+      `${match.road} • OSM`;
     badge.classList.add('good');
   }else{
-    badge.textContent="OSM • کم‌اطمینان";
+    badge.textContent=
+      `${match.road} • کم‌اطمینان`;
     badge.classList.add('warn');
     sign.classList.add('mapped-limit-low');
   }
@@ -16745,8 +18312,14 @@ async function processRealGps(position){
     speedKmh:speed,
     accuracy,
     temporalConfidence:Number(temporal.confidence||0),
+    routeProgress:Number(realGpsState.routeProgress||0),
     timestamp:stamp
   });
+
+  updateTrafficCameraApproach(
+    Number(realGpsState.routeProgress||0),
+    speed
+  );
 
   $('speedAlertBanner')?.classList.remove('show');
 
@@ -17185,7 +18758,19 @@ function validateRouteCandidate(route,snappedStart,destination){
 
   const startGap=hav(coords[0],snappedStart);
   const endGap=hav(coords[coords.length-1],[destination.lat,destination.lng]);
-  if(startGap>45)return{ok:false,reason:"شروع مسیر با خیابان تثبیت‌شده همخوان نیست"};
+  const allowedStartGap=
+    currentVehicleProfile.id==="truck"
+      ?180
+      :currentVehicleProfile.id==="motorcycle" || currentVehicleProfile.id==="scooter"
+        ?110
+        :70;
+
+  if(startGap>allowedStartGap){
+    return{
+      ok:false,
+      reason:"شروع مسیر با شبکه مناسب وسیله نقلیه همخوان نیست"
+    };
+  }
   if(endGap>250)return{ok:false,reason:"مسیر به محدوده مقصد نمی‌رسد"};
 
   const straight=Math.max(50,hav(snappedStart,[destination.lat,destination.lng]));
@@ -17685,6 +19270,10 @@ function step(){
     ? `مسیر جدید فعال • ${Math.round(navProgress*100).toLocaleString('fa-IR')}٪ مسیر جدید`
     : `در حال مسیریابی • ${Math.round(s.p*100).toLocaleString('fa-IR')}٪ مسیر`;
   updateTurnByTurn(navProgress);
+  updateTrafficCameraApproach(
+    navProgress,
+    Number(s.speed||0)
+  );
   updateDrivingSpeedUI(s,det);
   updateSafetyCoach(s,det);
   handleOffRoute(s,pos);
@@ -17698,9 +19287,21 @@ function step(){
 }
 function start(){
   if(!routeCoords.length){
-    loadRoute().then(()=>openTripReadiness());
+    loadRoute().then(()=>{
+      if(!vehicleConfirmedForRoute){
+        openVehicleSheet();
+      }else{
+        openTripReadiness();
+      }
+    });
     return;
   }
+
+  if(!vehicleConfirmedForRoute){
+    openVehicleSheet();
+    return;
+  }
+
   openTripReadiness();
 }
 function startCoreDrive(){
@@ -19010,6 +20611,78 @@ $('mapRouteCompareBtn').onclick=()=>{
 $('mapRoutePreviewBtn').onclick=openRoutePreview;
 $('mapStartBtn').onclick=smartStartTrip;
 $('mapRouteCloseBtn').onclick=closeMapRouteSheet;
+
+$('mapRouteVehicleBtn').onclick=()=>{
+  openVehicleSheet();
+};
+
+$('closeVehicleSheetBtn').onclick=closeVehicleSheet;
+$('vehicleSheetCancelBtn').onclick=closeVehicleSheet;
+
+document.querySelectorAll('[data-vehicle]').forEach(btn=>{
+  btn.onclick=()=>{
+    pendingVehicleId=btn.dataset.vehicle;
+    syncVehicleUi();
+  };
+});
+
+$('vehicleSheetConfirmBtn').onclick=async()=>{
+  const next=selectedVehicleFromSheet();
+
+  const changed=
+    next.id!==currentVehicleProfile.id ||
+    (
+      next.id==="truck" &&
+      (
+        Math.abs(next.truck.height-currentVehicleProfile.truck.height)>.01 ||
+        Math.abs(next.truck.width-currentVehicleProfile.truck.width)>.01 ||
+        Math.abs(next.truck.length-currentVehicleProfile.truck.length)>.01 ||
+        Math.abs(next.truck.weight-currentVehicleProfile.truck.weight)>.01
+      )
+    );
+
+  currentVehicleProfile=next;
+  saveVehiclePreference();
+  vehicleConfirmedForRoute=true;
+  syncVehicleUi();
+  closeVehicleSheet();
+
+  // Road rules depend on vehicle-specific OSM tags.
+  mappedSpeedState.status="idle";
+  mappedSpeedState.cacheKey="";
+  mappedSpeedState.segments=[];
+  mappedSpeedState.grid=new Map();
+  mappedSpeedState.cameras=[];
+  clearTrafficCameraMarkers();
+
+  if(changed || !routeAlternatives.length){
+    showMapStatus(
+      `در حال محاسبه مسیر مخصوص ${vehicleProfileLabel()}...`
+    );
+
+    await loadRoute();
+
+    // loadRoute resets transient UI, but this vehicle is now confirmed.
+    vehicleConfirmedForRoute=true;
+    syncVehicleUi();
+    renderMapRouteSheet();
+
+    prefetchMappedSpeedLimits({force:false});
+
+    showMapStatus(
+      `مسیر ${vehicleProfileLabel()} آماده شد`
+    );
+
+    return;
+  }
+
+  prefetchMappedSpeedLimits({force:false});
+
+  showMapStatus(
+    `${vehicleProfileLabel()} برای این سفر تأیید شد`
+  );
+};
+
 
 $('mapDevBtn').onclick=()=>{
   document.body.classList.add('setup-open');
