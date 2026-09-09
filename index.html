@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۵ Trip Finish, RTL, Camera & Score Fix</title>
+<title>POL | نسخه ۶.۲.۶ Speed Status Separation Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5967,6 +5967,79 @@ body.driving-mode .traffic-camera-pill{
   line-height:1.7!important;
 }
 
+
+/* ============================================================
+   v6.2.6 SPEED STATUS SEPARATION
+   ============================================================ */
+
+.speed-status-split{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:11px;
+}
+.speed-status-card{
+  padding:10px;
+  border-radius:12px;
+  min-height:76px;
+}
+.speed-status-card.ready{
+  background:#12351d;
+  border:1px solid #28543c;
+}
+.speed-status-card.checking{
+  background:#102944;
+  border:1px solid #315b86;
+}
+.speed-status-card.locked{
+  background:#3b2d0d;
+  border:1px solid #6d551d;
+}
+.speed-status-card.error{
+  background:#441717;
+  border:1px solid #7d3030;
+}
+.speed-status-card small{
+  display:block;
+  color:#9bb0c3;
+  font-size:6px;
+}
+.speed-status-card b{
+  display:block;
+  margin-top:2px;
+  font-size:12px;
+}
+.speed-status-card span{
+  display:block;
+  margin-top:5px;
+  color:#c3d0dc;
+  font-size:6.5px;
+  line-height:1.55;
+}
+
+.map-speed-truth-btn.ready{
+  border-color:#28543c!important;
+  background:#10291b!important;
+}
+.map-speed-truth-btn.partial{
+  border-color:#6d551d!important;
+  background:#2f270f!important;
+}
+.map-speed-truth-btn.locked{
+  border-color:#315b86!important;
+  background:#102944!important;
+}
+.map-speed-truth-btn.error{
+  border-color:#7d3030!important;
+  background:#441717!important;
+}
+
+@media(max-width:600px){
+  .speed-status-split{
+    grid-template-columns:1fr;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6556,10 +6629,10 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                 <button id="mapSpeedTruthBtn" class="map-speed-truth-btn">
                   <span class="map-speed-truth-icon">⚑</span>
                   <div>
-                    <small>دقت حد سرعت مسیر</small>
-                    <b id="mapSpeedTruthSummary">در حال بررسی...</b>
+                    <small>وضعیت داده سرعت مسیر</small>
+                    <b id="mapSpeedTruthSummary">در حال بررسی Route Data...</b>
                   </div>
-                  <em>داده سرعت</em>
+                  <em>جزئیات</em>
                 </button>
 
                 <div class="map-route-actions">
@@ -6771,7 +6844,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.5</span>
+              <span class="lab-version-chip">v6.2.6</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -7552,45 +7625,60 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
     <div class="speed-truth-quick-head">
       <div>
-        <small>Speed Limit Truth Engine</small>
-        <h3>دقت حد سرعت همین مسیر</h3>
-        <p>این بخش مستقیماً از صفحه مسیر در دسترس است؛ نیازی به Lab نیست.</p>
+        <small>Speed Data Status</small>
+        <h3>وضعیت حد سرعت همین مسیر</h3>
+        <p>Navigation Data و Score Authority جداگانه بررسی می‌شوند.</p>
       </div>
       <button id="closeSpeedTruthQuickBtn" aria-label="بستن">×</button>
     </div>
 
+    <div class="speed-status-split">
+      <div id="quickNavSpeedCard" class="speed-status-card checking">
+        <div>
+          <small>Navigation Speed Data</small>
+          <b id="quickNavSpeedState">CHECKING</b>
+        </div>
+        <span id="quickNavSpeedReason">در حال بررسی Speed Profile مسیر...</span>
+      </div>
+
+      <div id="quickScoreSpeedCard" class="speed-status-card locked">
+        <div>
+          <small>Speed Score Authority</small>
+          <b id="quickTruthScoreState">LOCKED</b>
+        </div>
+        <span id="quickTruthReason">
+          تا اتصال منبع رسمی، Speed وارد امتیاز نمی‌شود.
+        </span>
+      </div>
+    </div>
+
     <div class="speed-truth-quick-grid">
       <div>
-        <span>پوشش تأییدشده</span>
+        <span>Route Data Coverage</span>
+        <b id="quickRouteDataCoverage">۰٪</b>
+      </div>
+      <div>
+        <span>میانگین Route Data</span>
+        <b id="quickRouteDataAverage">--</b>
+      </div>
+      <div>
+        <span>Verified Coverage</span>
         <b id="quickTruthCoverage">۰٪</b>
       </div>
       <div>
-        <span>Segment تأییدشده</span>
-        <b id="quickTruthResolved">۰</b>
-      </div>
-      <div>
-        <span>Gap بدون داده</span>
-        <b id="quickTruthGaps">۰</b>
-      </div>
-      <div>
-        <span>Conflict با Open Data</span>
+        <span>Conflict ثبت‌شده</span>
         <b id="quickTruthConflicts">۰</b>
       </div>
     </div>
 
-    <div id="quickTruthStateCard" class="quick-truth-state locked">
-      <div>
-        <small>Speed Score</small>
-        <b id="quickTruthScoreState">LOCKED</b>
-      </div>
-      <span id="quickTruthReason">
-        هنوز منبع تأییدشده برای این Route نداریم.
-      </span>
+    <div class="quick-truth-source-row">
+      <span>Navigation Source</span>
+      <b id="quickNavSpeedSource">Valhalla / OSM Route Edge</b>
     </div>
 
     <div class="quick-truth-source-row">
-      <span>منبع Authority</span>
-      <b id="quickTruthSource">--</b>
+      <span>Score Authority</span>
+      <b id="quickTruthSource">هنوز متصل نشده</b>
     </div>
 
     <div class="speed-truth-quick-actions">
@@ -10416,31 +10504,54 @@ function renderSpeedTruthQuickSummary(){
 
   if(btn){
     btn.classList.remove(
-      'ready','partial','locked'
+      'ready','partial','locked','error'
     );
   }
 
-  const coverage=
+  const openData=
+    exactOpenDataSpeedStats();
+
+  const routeCoverage=
+    Number(openData.coverage||0);
+
+  const navReady=
+    mappedSpeedState.exactProfile.status==="ready" &&
+    routeCoverage>=90;
+
+  const navLoading=
+    mappedSpeedState.exactProfile.status==="loading";
+
+  const navError=
+    mappedSpeedState.exactProfile.status==="error";
+
+  const truthCoverage=
     Number(speedTruthState.coverage||0);
 
-  if(speedTruthState.status==="ready"){
+  const scoreReady=
+    speedTruthState.status==="ready";
+
+  if(navReady){
     btn?.classList.add('ready');
 
     if(summary){
       summary.textContent=
-        `تأییدشده • ${coverage.toFixed(1)}٪ پوشش`;
+        scoreReady
+          ?`Navigation آماده • Score Speed آماده`
+          :`Navigation آماده • Score Speed هنوز قفل`;
     }
-  }else if(
-    speedTruthState.status==="partial" ||
-    speedTruthState.status==="loading"
-  ){
+  }else if(navLoading){
     btn?.classList.add('partial');
 
     if(summary){
       summary.textContent=
-        speedTruthState.status==="loading"
-          ?"در حال بررسی..."
-          :`ناقص • ${coverage.toFixed(1)}٪ پوشش`;
+        "در حال دریافت Speed Profile مسیر...";
+    }
+  }else if(navError){
+    btn?.classList.add('error');
+
+    if(summary){
+      summary.textContent=
+        "Speed Profile مسیر دریافت نشد";
     }
   }else{
     btn?.classList.add('locked');
@@ -10448,33 +10559,137 @@ function renderSpeedTruthQuickSummary(){
     if(summary){
       summary.textContent=
         routeCoords.length
-          ?"Speed Limit معتبر هنوز کامل نیست"
+          ?`Route Data ناقص • ${Math.round(routeCoverage).toLocaleString('fa-IR')}٪`
           :"بعد از ساخت مسیر قابل بررسی است";
     }
   }
 }
 
 function renderSpeedTruthQuickSheet(){
-  const coverage=
+  const openData=
+    exactOpenDataSpeedStats();
+
+  const routeCoverage=
+    Number(openData.coverage||0);
+
+  const routeAverage=
+    Number(openData.average);
+
+  const verifiedCoverage=
     Number(speedTruthState.coverage||0);
+
+  const navCard=$('quickNavSpeedCard');
+
+  navCard?.classList.remove(
+    'ready','checking','locked','error'
+  );
+
+  if(
+    mappedSpeedState.exactProfile.status==="ready" &&
+    routeCoverage>=90
+  ){
+    navCard?.classList.add('ready');
+
+    if($('quickNavSpeedState')){
+      $('quickNavSpeedState').textContent=
+        "READY";
+    }
+
+    if($('quickNavSpeedReason')){
+      $('quickNavSpeedReason').textContent=
+        `Speed Profile مسیر با پوشش ${Math.round(routeCoverage).toLocaleString('fa-IR')}٪ آماده Navigation است.`;
+    }
+  }else if(
+    mappedSpeedState.exactProfile.status==="loading"
+  ){
+    navCard?.classList.add('checking');
+
+    if($('quickNavSpeedState')){
+      $('quickNavSpeedState').textContent=
+        "CHECKING";
+    }
+
+    if($('quickNavSpeedReason')){
+      $('quickNavSpeedReason').textContent=
+        "در حال دریافت Exact Route Speed Profile...";
+    }
+  }else if(
+    mappedSpeedState.exactProfile.status==="error"
+  ){
+    navCard?.classList.add('error');
+
+    if($('quickNavSpeedState')){
+      $('quickNavSpeedState').textContent=
+        "ERROR";
+    }
+
+    if($('quickNavSpeedReason')){
+      $('quickNavSpeedReason').textContent=
+        mappedSpeedState.exactProfile.lastError||
+        "Speed Profile مسیر دریافت نشد.";
+    }
+  }else{
+    navCard?.classList.add('locked');
+
+    if($('quickNavSpeedState')){
+      $('quickNavSpeedState').textContent=
+        "INCOMPLETE";
+    }
+
+    if($('quickNavSpeedReason')){
+      $('quickNavSpeedReason').textContent=
+        `Route Data Coverage فقط ${Math.round(routeCoverage).toLocaleString('fa-IR')}٪ است.`;
+    }
+  }
+
+  const scoreCard=
+    $('quickScoreSpeedCard');
+
+  scoreCard?.classList.remove(
+    'ready','checking','locked','error'
+  );
+
+  if(speedTruthState.status==="ready"){
+    scoreCard?.classList.add('ready');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "READY";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        `Verified Coverage ${verifiedCoverage.toFixed(1)}٪ است؛ Speed می‌تواند وارد Score شود.`;
+    }
+  }else{
+    scoreCard?.classList.add('locked');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "LOCKED";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        "Navigation Speed Data آماده است، اما تا اتصال منبع رسمی Speed وارد امتیاز نمی‌شود.";
+    }
+  }
+
+  if($('quickRouteDataCoverage')){
+    $('quickRouteDataCoverage').textContent=
+      `${Math.round(routeCoverage).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('quickRouteDataAverage')){
+    $('quickRouteDataAverage').textContent=
+      Number.isFinite(routeAverage)
+        ?`${Math.round(routeAverage).toLocaleString('fa-IR')} km/h`
+        :"--";
+  }
 
   if($('quickTruthCoverage')){
     $('quickTruthCoverage').textContent=
-      `${coverage.toFixed(1)}٪`;
-  }
-
-  if($('quickTruthResolved')){
-    $('quickTruthResolved').textContent=
-      Number(
-        speedTruthState.resolvedSamples||0
-      ).toLocaleString('fa-IR');
-  }
-
-  if($('quickTruthGaps')){
-    $('quickTruthGaps').textContent=
-      Number(
-        speedTruthState.unresolved?.length||0
-      ).toLocaleString('fa-IR');
+      `${verifiedCoverage.toFixed(1)}٪`;
   }
 
   if($('quickTruthConflicts')){
@@ -10486,65 +10701,17 @@ function renderSpeedTruthQuickSheet(){
 
   if($('quickTruthSource')){
     $('quickTruthSource').textContent=
-      speedTruthState.source||"--";
+      speedTruthState.source &&
+      speedTruthState.source!=="Verified Way Registry"
+        ?speedTruthState.source
+        :"هنوز متصل نشده";
   }
 
-  const card=$('quickTruthStateCard');
-
-  card?.classList.remove(
-    'ready','partial','locked'
-  );
-
-  if(speedTruthState.status==="ready"){
-    card?.classList.add('ready');
-
-    if($('quickTruthScoreState')){
-      $('quickTruthScoreState').textContent=
-        "READY";
-    }
-
-    if($('quickTruthReason')){
-      $('quickTruthReason').textContent=
-        `پوشش تأییدشده ${coverage.toFixed(1)}٪ است؛ Speed Score می‌تواند فعال باشد.`;
-    }
-  }else if(speedTruthState.status==="partial"){
-    card?.classList.add('partial');
-
-    if($('quickTruthScoreState')){
-      $('quickTruthScoreState').textContent=
-        "LOCKED";
-    }
-
-    if($('quickTruthReason')){
-      $('quickTruthReason').textContent=
-        `پوشش فقط ${coverage.toFixed(1)}٪ است؛ Gapهای مسیر باید با منبع معتبر تکمیل شوند.`;
-    }
-  }else if(speedTruthState.status==="loading"){
-    card?.classList.add('partial');
-
-    if($('quickTruthScoreState')){
-      $('quickTruthScoreState').textContent=
-        "CHECKING";
-    }
-
-    if($('quickTruthReason')){
-      $('quickTruthReason').textContent=
-        "در حال بررسی Segmentهای مسیر...";
-    }
-  }else{
-    card?.classList.add('locked');
-
-    if($('quickTruthScoreState')){
-      $('quickTruthScoreState').textContent=
-        "LOCKED";
-    }
-
-    if($('quickTruthReason')){
-      $('quickTruthReason').textContent=
-        speedTruthState.lastError
-          ?`خطا: ${speedTruthState.lastError}`
-          :"هنوز دیتای Speed Limit تأییدشده برای این Route نداریم.";
-    }
+  if($('quickNavSpeedSource')){
+    $('quickNavSpeedSource').textContent=
+      mappedSpeedState.exactProfile.status==="ready"
+        ?"Valhalla Exact Route Edge + OSM"
+        :"--";
   }
 
   renderSpeedTruthQuickSummary();
@@ -16828,6 +16995,18 @@ function renderMapRouteSheet(){
 
   syncVehicleUi();
   renderSpeedTruthQuickSummary();
+
+  if($('mapRouteReason')){
+    const openData=exactOpenDataSpeedStats();
+    const navSpeedReady=
+      mappedSpeedState.exactProfile.status==="ready" &&
+      Number(openData.coverage||0)>=90;
+
+    if(navSpeedReady){
+      $('mapRouteReason').textContent=
+        `مسیر پیشنهادی آماده است • Speed Data مسیر ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪ پوشش دارد`;
+    }
+  }
 
   if(!routeAlternatives.length || !routeCoords.length){
     sheet.classList.remove('show');
