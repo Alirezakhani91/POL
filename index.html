@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۱ Speed Truth Direct Access</title>
+<title>POL | نسخه ۶.۲.۳ Road Context & Speed Boundary Audit</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6713,7 +6713,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.1</span>
+              <span class="lab-version-chip">v6.2.3</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -7536,13 +7536,13 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
 
     <div class="speed-truth-quick-actions">
       <button id="quickTruthRefreshBtn">بررسی دوباره مسیر</button>
-      <button id="quickTruthExportBtn" class="primary">دانلود CSV مسیر</button>
+      <button id="quickTruthExportBtn" class="primary">دانلود CSV عیب‌یابی سرعت</button>
     </div>
 
     <div class="quick-truth-help">
-      <b>CSV کجا می‌رود؟</b>
+      <b>CSV عیب‌یابی حالا مرز جاده و سرعت را هم تفکیک می‌کند</b>
       <span>
-        بعد از زدن «دانلود CSV مسیر»، فایل معمولاً داخل پوشه Downloads ویندوز ذخیره می‌شود.
+        Refهایی مثل 44 دیگر اسم خیابان محسوب نمی‌شوند. خروجی، نام خام، نام بازسازی‌شده Corridor و محل تغییر Speed را جدا ثبت می‌کند.
       </span>
     </div>
   </div>
@@ -10488,7 +10488,7 @@ async function exportCurrentRouteTruthGaps(){
   );
 
   showMapStatus(
-    "CSV مسیر دانلود شد؛ پوشه Downloads را بررسی کن."
+    "CSV عیب‌یابی سرعت دانلود شد؛ پوشه Downloads را بررسی کن."
   );
 }
 
@@ -10710,52 +10710,156 @@ async function importSpeedTruthDatasetFile(file){
   return true;
 }
 
+function csvSafe(value){
+  if(value==null)return"";
+
+  const s=String(value);
+
+  if(
+    s.includes(",") ||
+    s.includes('"') ||
+    s.includes("\n")
+  ){
+    return`"${s.replaceAll('"','""')}"`;
+  }
+
+  return s;
+}
+
 function speedTruthGapCsv(){
-  const lines=[
-    [
-      "route_m",
-      "lat",
-      "lng",
-      "heading",
-      "vehicle",
-      "open_data_limit",
-      "open_data_way_id",
-      "open_data_road"
-    ].join(",")
+  const headers=[
+    "route_m",
+    "lat",
+    "lng",
+    "heading",
+    "vehicle",
+    "source_kind",
+    "route_limit",
+    "road",
+    "road_raw",
+    "road_resolved",
+    "road_name_source",
+    "speed_boundary",
+    "speed_from",
+    "speed_to",
+    "valhalla_speed_limit",
+    "valhalla_speed_type",
+    "valhalla_speed_type_raw",
+    "valhalla_edge_id",
+    "valhalla_edge_use",
+    "valhalla_road_class",
+    "valhalla_ramp",
+    "valhalla_tunnel",
+    "valhalla_bridge",
+    "valhalla_surface",
+    "valhalla_truck_speed",
+    "osm_way_id",
+    "osm_highway",
+    "osm_name",
+    "osm_ref",
+    "osm_maxspeed",
+    "osm_maxspeed_forward",
+    "osm_maxspeed_backward",
+    "osm_maxspeed_hgv",
+    "osm_maxspeed_goods",
+    "osm_maxspeed_motorcycle",
+    "osm_maxspeed_conditional",
+    "osm_source_maxspeed",
+    "osm_oneway",
+    "truth_status"
   ];
 
-  for(const gap of speedTruthState.unresolved||[]){
+  const lines=[
+    headers.join(",")
+  ];
+
+  const samples=
+    speedTruthState.unresolved?.length
+      ?speedTruthState.unresolved
+      :sampleRouteForSpeedTruth().map(s=>({
+        routeM:s.routeM,
+        point:s.point,
+        heading:s.heading
+      }));
+
+  for(const sample of samples){
     const progress=
-      Number(gap.routeM)/
+      Number(sample.routeM)/
       Math.max(1,routeDistanceM);
 
-    const open=
-      exactSpeedProfileAtProgress(progress) ||
-      matchMappedSpeedLimitOpenDataOnly(
-        gap.point,
-        gap.heading,
-        100,
+    let provenance=
+      exactOpenDataProfileAtProgress(
         progress
       );
 
-    lines.push([
-      Math.round(Number(gap.routeM||0)),
-      Number(gap.point?.[0]||0).toFixed(6),
-      Number(gap.point?.[1]||0).toFixed(6),
-      Number.isFinite(Number(gap.heading))
-        ?Math.round(gap.heading)
-        :"",
-      currentVehicleProfile.id,
-      Number.isFinite(Number(open?.limit))
-        ?Math.round(open.limit)
-        :"",
-      open?.wayId||"",
-      `"${String(open?.road||"").replaceAll('"','""')}"`
-    ].join(","));
+    if(!provenance){
+      provenance=
+        fallbackOpenDataProfileAtPoint(
+          sample.point,
+          sample.heading,
+          progress
+        );
+    }
+
+    provenance=provenance||{
+      source_kind:"none",
+      route_limit:"",
+      road:"",
+      road_raw:"",
+      road_resolved:"",
+      road_name_source:"",
+      speed_boundary:"",
+      speed_from:"",
+      speed_to:"",
+      valhalla_speed_limit:"",
+      valhalla_speed_type:"",
+      valhalla_speed_type_raw:"",
+      valhalla_edge_id:"",
+      valhalla_edge_use:"",
+      valhalla_road_class:"",
+      valhalla_ramp:"",
+      valhalla_tunnel:"",
+      valhalla_bridge:"",
+      valhalla_surface:"",
+      valhalla_truck_speed:"",
+      osm_way_id:"",
+      osm_highway:"",
+      osm_name:"",
+      osm_ref:"",
+      osm_maxspeed:"",
+      osm_maxspeed_forward:"",
+      osm_maxspeed_backward:"",
+      osm_maxspeed_hgv:"",
+      osm_maxspeed_goods:"",
+      osm_maxspeed_motorcycle:"",
+      osm_maxspeed_conditional:"",
+      osm_source_maxspeed:"",
+      osm_oneway:""
+    };
+
+    const row={
+      route_m:Math.round(Number(sample.routeM||0)),
+      lat:Number(sample.point?.[0]||0).toFixed(6),
+      lng:Number(sample.point?.[1]||0).toFixed(6),
+      heading:
+        Number.isFinite(Number(sample.heading))
+          ?Math.round(sample.heading)
+          :"",
+      vehicle:currentVehicleProfile.id,
+      ...provenance,
+      truth_status:"UNVERIFIED"
+    };
+
+    lines.push(
+      headers
+        .map(h=>csvSafe(row[h]))
+        .join(",")
+    );
   }
 
   return lines.join("\n");
 }
+
 
 function downloadTextFile(
   filename,
@@ -13801,30 +13905,63 @@ function setDrivingRoutePresentation(active){
 }
 
 function currentNavigationRoad(travelled,nextIndex){
-  if(!navigationSteps.length)return"مسیر فعلی";
+  const progress=
+    routeDistanceM>0
+      ?clamp(
+        Number(travelled||0)/
+        routeDistanceM,
+        0,
+        1
+      )
+      :0;
 
-  // The next maneuver's road is usually the road being entered.
-  // For "current road", prefer the latest meaningful step already passed.
+  // v6.2.3:
+  // Route-edge corridor context has priority over maneuver road_ref.
+  // This prevents numeric refs such as "44" from appearing as a street name.
+  const exact=
+    resolvedExactRoadNameAtProgress(
+      progress
+    );
+
+  if(exact?.name){
+    return exact.name;
+  }
+
+  if(!navigationSteps.length){
+    return"مسیر فعلی";
+  }
+
   for(let i=Math.min(
     Math.max(0,Number(nextIndex||0)-1),
     navigationSteps.length-1
   );i>=0;i--){
-    const name=String(navigationSteps[i]?.street||"").trim();
-    const type=String(navigationSteps[i]?.type||"").toLowerCase();
+    const name=
+      normalizeRoadDisplayName(
+        navigationSteps[i]?.street||""
+      );
+
+    const type=
+      String(
+        navigationSteps[i]?.type||""
+      ).toLowerCase();
 
     if(
-      name &&
-      name!=="مسیر فعلی" &&
+      meaningfulRoadName(name) &&
       type!=="arrive"
     ){
       return name;
     }
   }
 
-  // At the very beginning, fall back to the first useful named road.
   for(const step of navigationSteps){
-    const name=String(step?.street||"").trim();
-    if(name && name!=="مسیر فعلی")return name;
+    const name=
+      normalizeRoadDisplayName(
+        step?.street||""
+      );
+
+    if(meaningfulRoadName(name)){
+      return name;
+    }
   }
 
   return"مسیر فعلی";
@@ -18093,6 +18230,488 @@ function normalizeValhallaEdgeName(edge){
   ).trim();
 }
 
+
+function normalizeRoadDisplayName(value){
+  return String(value||"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function latinizePersianDigits(value){
+  const map={
+    "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4",
+    "۵":"5","۶":"6","۷":"7","۸":"8","۹":"9",
+    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4",
+    "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"
+  };
+
+  return String(value||"")
+    .replace(/[۰-۹٠-٩]/g,ch=>map[ch]||ch);
+}
+
+function isRoadRefLikeLabel(value){
+  const raw=normalizeRoadDisplayName(value);
+
+  if(!raw)return true;
+
+  const ascii=
+    latinizePersianDigits(raw)
+      .toUpperCase();
+
+  // Pure route/reference labels: 44, A44, M2, E90, 44A, etc.
+  if(/^[A-Z]?\d+[A-Z]?$/.test(ascii)){
+    return true;
+  }
+
+  // Common ref separators still do not make a street name.
+  if(/^[A-Z0-9]+(?:[-/][A-Z0-9]+)+$/.test(ascii)){
+    return true;
+  }
+
+  const generic=[
+    "ROAD EDGE",
+    "ROAD SEGMENT",
+    "مسیر فعلی",
+    "خیابان مجاور قابل رانندگی"
+  ];
+
+  return generic.includes(raw.toUpperCase()) ||
+    generic.includes(raw);
+}
+
+function meaningfulRoadName(value){
+  const raw=normalizeRoadDisplayName(value);
+
+  return(
+    !!raw &&
+    !isRoadRefLikeLabel(raw)
+  );
+}
+
+function exactEdgeCompatibleForRoadName(a,b){
+  if(!a||!b)return false;
+
+  const aSpeed=Number(a.speedLimit||0);
+  const bSpeed=Number(b.speedLimit||0);
+
+  const speedCompatible=
+    !Number.isFinite(aSpeed) ||
+    !Number.isFinite(bSpeed) ||
+    aSpeed<=0 ||
+    bSpeed<=0 ||
+    Math.abs(aSpeed-bSpeed)<5;
+
+  if(!speedCompatible)return false;
+
+  if(
+    a.ramp!==b.ramp &&
+    (a.ramp || b.ramp)
+  ){
+    return false;
+  }
+
+  const useA=String(a.use||"");
+  const useB=String(b.use||"");
+
+  if(
+    useA &&
+    useB &&
+    useA!==useB
+  ){
+    const highwayUses=
+      new Set([
+        "road","ramp","turn_channel",
+        "motorway","trunk"
+      ]);
+
+    if(
+      !(
+        highwayUses.has(useA) &&
+        highwayUses.has(useB)
+      )
+    ){
+      return false;
+    }
+  }
+
+  const classA=String(a.roadClass||"");
+  const classB=String(b.roadClass||"");
+
+  if(
+    classA &&
+    classB &&
+    classA!==classB
+  ){
+    return false;
+  }
+
+  return true;
+}
+
+function roadNameCandidateScore(
+  target,
+  candidate,
+  distanceM
+){
+  if(!target||!candidate)return-Infinity;
+
+  if(!meaningfulRoadName(candidate.rawName)){
+    return-Infinity;
+  }
+
+  let score=100;
+
+  const targetSpeed=Number(target.speedLimit||0);
+  const candidateSpeed=Number(candidate.speedLimit||0);
+
+  if(
+    Number.isFinite(targetSpeed) &&
+    Number.isFinite(candidateSpeed) &&
+    targetSpeed>0 &&
+    candidateSpeed>0
+  ){
+    const diff=Math.abs(
+      targetSpeed-candidateSpeed
+    );
+
+    if(diff===0)score+=90;
+    else if(diff<5)score+=45;
+    else score-=140;
+  }
+
+  if(
+    String(target.use||"") &&
+    target.use===candidate.use
+  ){
+    score+=22;
+  }
+
+  if(
+    String(target.roadClass||"") &&
+    target.roadClass===candidate.roadClass
+  ){
+    score+=22;
+  }
+
+  if(target.ramp===candidate.ramp){
+    score+=14;
+  }else if(target.ramp||candidate.ramp){
+    score-=80;
+  }
+
+  score-=Math.min(
+    70,
+    Number(distanceM||0)/180
+  );
+
+  return score;
+}
+
+function resolveExactProfileRoadNames(edges){
+  if(!Array.isArray(edges)||!edges.length){
+    return edges||[];
+  }
+
+  edges.forEach(edge=>{
+    edge.rawName=
+      normalizeRoadDisplayName(edge.name);
+
+    edge.rawNameIsRef=
+      isRoadRefLikeLabel(edge.rawName);
+
+    edge.resolvedName=
+      meaningfulRoadName(edge.rawName)
+        ?edge.rawName
+        :"";
+
+    edge.resolvedNameSource=
+      meaningfulRoadName(edge.rawName)
+        ?"raw-name"
+        :"unresolved-ref";
+  });
+
+  for(let i=0;i<edges.length;i++){
+    const edge=edges[i];
+
+    if(meaningfulRoadName(edge.rawName)){
+      continue;
+    }
+
+    let left=null;
+    let right=null;
+    let leftDistance=0;
+    let rightDistance=0;
+
+    // Search backwards, but never cross an incompatible speed/context boundary.
+    for(let j=i-1;j>=0;j--){
+      const candidate=edges[j];
+
+      leftDistance+=Number(
+        candidate.lengthM||0
+      );
+
+      if(
+        !exactEdgeCompatibleForRoadName(
+          edge,
+          candidate
+        )
+      ){
+        break;
+      }
+
+      if(meaningfulRoadName(candidate.rawName)){
+        left={
+          edge:candidate,
+          index:j,
+          score:roadNameCandidateScore(
+            edge,
+            candidate,
+            leftDistance
+          ),
+          distance:leftDistance
+        };
+        break;
+      }
+    }
+
+    // Search forwards with the same boundary protection.
+    for(let j=i+1;j<edges.length;j++){
+      const candidate=edges[j];
+
+      rightDistance+=Number(
+        candidate.lengthM||0
+      );
+
+      if(
+        !exactEdgeCompatibleForRoadName(
+          edge,
+          candidate
+        )
+      ){
+        break;
+      }
+
+      if(meaningfulRoadName(candidate.rawName)){
+        right={
+          edge:candidate,
+          index:j,
+          score:roadNameCandidateScore(
+            edge,
+            candidate,
+            rightDistance
+          ),
+          distance:rightDistance
+        };
+        break;
+      }
+    }
+
+    let winner=null;
+    let source="unresolved-ref";
+
+    if(
+      left &&
+      right &&
+      normalizeRoadDisplayName(left.edge.rawName)===
+      normalizeRoadDisplayName(right.edge.rawName)
+    ){
+      winner=
+        left.score>=right.score
+          ?left
+          :right;
+
+      source="bracket-same-name";
+    }else if(left||right){
+      const candidates=[
+        left,
+        right
+      ].filter(Boolean)
+       .sort((a,b)=>b.score-a.score);
+
+      const best=candidates[0];
+      const second=candidates[1]||null;
+
+      // Require a strong candidate. If both different names are almost tied,
+      // keep the raw ref unresolved rather than inventing a street name.
+      if(
+        best.score>=105 &&
+        (
+          !second ||
+          best.score-second.score>=18
+        )
+      ){
+        winner=best;
+        source=
+          winner===left
+            ?"continuity-left"
+            :"continuity-right";
+      }
+    }
+
+    if(winner){
+      edge.resolvedName=
+        normalizeRoadDisplayName(
+          winner.edge.rawName
+        );
+
+      edge.resolvedNameSource=source;
+    }
+  }
+
+  // Second continuity pass:
+  // propagate an already-resolved name only inside an identical speed/context
+  // run. This handles long reference-only corridors such as Ref 44.
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<edges.length;i++){
+      const edge=edges[i];
+
+      if(
+        meaningfulRoadName(edge.resolvedName)
+      ){
+        continue;
+      }
+
+      const left=edges[i-1];
+      const right=edges[i+1];
+
+      const leftOk=
+        left &&
+        meaningfulRoadName(left.resolvedName) &&
+        exactEdgeCompatibleForRoadName(edge,left);
+
+      const rightOk=
+        right &&
+        meaningfulRoadName(right.resolvedName) &&
+        exactEdgeCompatibleForRoadName(edge,right);
+
+      if(
+        leftOk &&
+        rightOk &&
+        normalizeRoadDisplayName(left.resolvedName)===
+        normalizeRoadDisplayName(right.resolvedName)
+      ){
+        edge.resolvedName=
+          left.resolvedName;
+
+        edge.resolvedNameSource=
+          "propagated-bracket";
+      }else if(leftOk && !rightOk){
+        edge.resolvedName=
+          left.resolvedName;
+
+        edge.resolvedNameSource=
+          "propagated-left";
+      }else if(rightOk && !leftOk){
+        edge.resolvedName=
+          right.resolvedName;
+
+        edge.resolvedNameSource=
+          "propagated-right";
+      }
+    }
+  }
+
+  return edges;
+}
+
+function resolvedExactRoadNameAtProgress(progress){
+  const profile=
+    mappedSpeedState.exactProfile;
+
+  if(
+    profile.status!=="ready" ||
+    !profile.edges?.length
+  ){
+    return null;
+  }
+
+  const currentM=
+    routeDistanceM*
+    clamp(Number(progress||0),0,1);
+
+  let selected=null;
+
+  for(const edge of profile.edges){
+    if(
+      currentM>=Number(edge.startM||0)-15 &&
+      currentM<=Number(edge.endM||0)+15
+    ){
+      selected=edge;
+      break;
+    }
+  }
+
+  if(!selected)return null;
+
+  const resolved=
+    normalizeRoadDisplayName(
+      selected.resolvedName
+    );
+
+  if(meaningfulRoadName(resolved)){
+    return{
+      name:resolved,
+      rawName:
+        normalizeRoadDisplayName(
+          selected.rawName
+        ),
+      source:
+        selected.resolvedNameSource||
+        "exact-profile",
+      speedLimit:Number(
+        selected.speedLimit||0
+      ),
+      startM:Number(selected.startM||0),
+      endM:Number(selected.endM||0)
+    };
+  }
+
+  return null;
+}
+
+function speedBoundaryAtProgress(progress){
+  const edges=
+    mappedSpeedState.exactProfile?.edges||[];
+
+  if(!edges.length)return null;
+
+  const currentM=
+    routeDistanceM*
+    clamp(Number(progress||0),0,1);
+
+  for(let i=1;i<edges.length;i++){
+    const prev=edges[i-1];
+    const cur=edges[i];
+
+    const from=Number(prev.speedLimit||0);
+    const to=Number(cur.speedLimit||0);
+    const boundaryM=Number(cur.startM||0);
+
+    if(
+      from>0 &&
+      to>0 &&
+      from!==to &&
+      Math.abs(boundaryM-currentM)<=75
+    ){
+      return{
+        routeM:boundaryM,
+        from,
+        to,
+        fromRoad:
+          prev.resolvedName||
+          prev.rawName||
+          "",
+        toRoad:
+          cur.resolvedName||
+          cur.rawName||
+          ""
+      };
+    }
+  }
+
+  return null;
+}
+
 function normalizeValhallaSpeedType(value){
   if(value==null)return"unknown";
 
@@ -18179,7 +18798,21 @@ function exactSpeedProfileAtProgress(progress){
       selected.speedType==="tagged"
         ?97
         :86,
-    road:selected.name||"Road Edge",
+    road:
+      selected.resolvedName||
+      selected.rawName||
+      selected.name||
+      "Road Edge",
+    roadRaw:
+      selected.rawName||
+      selected.name||
+      "",
+    roadResolved:
+      selected.resolvedName||
+      "",
+    roadNameSource:
+      selected.resolvedNameSource||
+      "raw",
     source:"Valhalla exact edge • Open Data",
     wayId:selected.osmId||null,
     exactEdge:true,
@@ -18190,8 +18823,15 @@ function exactSpeedProfileAtProgress(progress){
     authorityVerified:false,
 
     speedType:selected.speedType,
+    speedTypeRaw:selected.speedTypeRaw,
     edgeUse:selected.use||"",
+    edgeRoadClass:selected.roadClass||"",
     edgeRamp:!!selected.ramp,
+    edgeTunnel:!!selected.tunnel,
+    edgeBridge:!!selected.bridge,
+    edgeSurface:selected.surface||"",
+    edgeId:selected.edgeId||null,
+    truckSpeed:selected.truckSpeed,
     startM:selected.startM,
     endM:selected.endM
   };
@@ -18214,8 +18854,14 @@ async function fetchValhallaTraceAttributes(shape){
         "edge.names",
         "edge.length",
         "edge.osm_id",
+        "edge.id",
         "edge.use",
-        "edge.ramp"
+        "edge.road_class",
+        "edge.ramp",
+        "edge.tunnel",
+        "edge.bridge",
+        "edge.surface",
+        "edge.truck_speed"
       ]
     }
   };
@@ -18351,13 +18997,27 @@ async function prefetchExactRouteSpeedProfile({
         speedType:normalizeValhallaSpeedType(
           edge?.speed_type
         ),
+        speedTypeRaw:
+          edge?.speed_type ?? null,
         name:normalizeValhallaEdgeName(edge),
         osmId:
           edge?.osm_id ??
           edge?.way_id ??
           null,
+        edgeId:
+          edge?.id ??
+          edge?.edge_id ??
+          null,
         use:String(edge?.use||""),
-        ramp:edge?.ramp===true
+        roadClass:String(edge?.road_class||""),
+        ramp:edge?.ramp===true,
+        tunnel:edge?.tunnel===true,
+        bridge:edge?.bridge===true,
+        surface:String(edge?.surface||""),
+        truckSpeed:
+          Number.isFinite(Number(edge?.truck_speed))
+            ?Number(edge.truck_speed)
+            :null
       };
 
       parsed.push(item);
@@ -18384,6 +19044,8 @@ async function prefetchExactRouteSpeedProfile({
       edge.endM*=scale;
       edge.lengthM*=scale;
     });
+
+    resolveExactProfileRoadNames(parsed);
 
     profile.status="ready";
     profile.edges=parsed;
@@ -18871,7 +19533,166 @@ function updateTrafficCameraApproach(
   }
 }
 
+
+let speedProvenanceOsmWays=new Map();
+
+function rebuildSpeedProvenanceOsmWays(elements){
+  speedProvenanceOsmWays=new Map();
+
+  for(const el of elements||[]){
+    if(el?.type!=="way")continue;
+
+    speedProvenanceOsmWays.set(
+      String(el.id),
+      {
+        id:el.id,
+        tags:{...(el.tags||{})}
+      }
+    );
+  }
+}
+
+function osmProvenanceForWayId(wayId){
+  if(wayId==null || wayId==="")return null;
+
+  return(
+    speedProvenanceOsmWays.get(
+      String(wayId)
+    )||null
+  );
+}
+
+function osmSpeedRawSnapshot(wayId){
+  const row=osmProvenanceForWayId(wayId);
+  const t=row?.tags||{};
+
+  return{
+    osm_way_id:row?.id ?? wayId ?? "",
+    osm_highway:t.highway||"",
+    osm_name:t["name:fa"]||t.name||"",
+    osm_ref:t.ref||"",
+    osm_maxspeed:t.maxspeed||"",
+    osm_maxspeed_forward:t["maxspeed:forward"]||"",
+    osm_maxspeed_backward:t["maxspeed:backward"]||"",
+    osm_maxspeed_hgv:t["maxspeed:hgv"]||"",
+    osm_maxspeed_goods:t["maxspeed:goods"]||"",
+    osm_maxspeed_motorcycle:t["maxspeed:motorcycle"]||"",
+    osm_maxspeed_conditional:t["maxspeed:conditional"]||"",
+    osm_source_maxspeed:t["source:maxspeed"]||t.maxspeed_source||"",
+    osm_oneway:t.oneway||""
+  };
+}
+
+function exactOpenDataProfileAtProgress(progress){
+  const exact=exactSpeedProfileAtProgress(progress);
+
+  if(!exact)return null;
+
+  const boundary=
+    speedBoundaryAtProgress(progress);
+
+  return{
+    source_kind:"valhalla-exact-edge",
+    route_limit:
+      Number.isFinite(Number(exact.limit))
+        ?Number(exact.limit)
+        :"",
+    road:exact.road||"",
+    road_raw:exact.roadRaw||"",
+    road_resolved:exact.roadResolved||exact.road||"",
+    road_name_source:exact.roadNameSource||"",
+    speed_boundary:
+      boundary ? "1":"0",
+    speed_from:
+      boundary?.from ?? "",
+    speed_to:
+      boundary?.to ?? "",
+    valhalla_speed_limit:
+      Number.isFinite(Number(exact.limit))
+        ?Number(exact.limit)
+        :"",
+    valhalla_speed_type:exact.speedType||"",
+    valhalla_speed_type_raw:exact.speedTypeRaw ?? "",
+    valhalla_edge_id:exact.edgeId ?? "",
+    valhalla_edge_use:exact.edgeUse||"",
+    valhalla_road_class:exact.edgeRoadClass||"",
+    valhalla_ramp:exact.edgeRamp ? "1":"0",
+    valhalla_tunnel:exact.edgeTunnel ? "1":"0",
+    valhalla_bridge:exact.edgeBridge ? "1":"0",
+    valhalla_surface:exact.edgeSurface||"",
+    valhalla_truck_speed:exact.truckSpeed ?? "",
+    ...osmSpeedRawSnapshot(exact.wayId)
+  };
+}
+
+function fallbackOpenDataProfileAtPoint(
+  point,
+  heading,
+  progress
+){
+  const fallback=
+    matchMappedSpeedLimitOpenDataOnly(
+      point,
+      heading,
+      100,
+      progress
+    );
+
+  if(!fallback)return null;
+
+  const road=
+    normalizeRoadDisplayName(
+      fallback.road||""
+    );
+
+  return{
+    source_kind:"overpass-fallback",
+    route_limit:
+      Number.isFinite(
+        Number(
+          fallback.openDataLimit ??
+          fallback.limit
+        )
+      )
+        ?Number(
+          fallback.openDataLimit ??
+          fallback.limit
+        )
+        :"",
+    road:
+      meaningfulRoadName(road)
+        ?road
+        :"",
+    road_raw:road,
+    road_resolved:
+      meaningfulRoadName(road)
+        ?road
+        :"",
+    road_name_source:
+      meaningfulRoadName(road)
+        ?"osm-name"
+        :"unresolved-ref",
+    speed_boundary:"",
+    speed_from:"",
+    speed_to:"",
+    valhalla_speed_limit:"",
+    valhalla_speed_type:"",
+    valhalla_speed_type_raw:"",
+    valhalla_edge_id:"",
+    valhalla_edge_use:"",
+    valhalla_road_class:"",
+    valhalla_ramp:"",
+    valhalla_tunnel:"",
+    valhalla_bridge:"",
+    valhalla_surface:"",
+    valhalla_truck_speed:"",
+    ...osmSpeedRawSnapshot(fallback.wayId)
+  };
+}
+
 function buildMappedSpeedSegments(elements){
+  rebuildSpeedProvenanceOsmWays(elements);
+
   const routeSamples=sampledCurrentRouteMeta();
   const segments=[];
   const seenWays=new Set();
