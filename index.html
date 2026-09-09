@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۴ Runtime Speed & Camera Integrity Fix</title>
+<title>POL | نسخه ۶.۲.۵ Trip Finish, RTL, Camera & Score Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5930,6 +5930,43 @@ body.driving-mode .traffic-camera-pill b{
   text-align:center!important;
 }
 
+
+/* ============================================================
+   v6.2.5 TRIP FINISH / RTL / CAMERA / SCORE FIX
+   ============================================================ */
+
+#tripSummarySheet{
+  z-index:9000!important;
+  direction:rtl!important;
+  unicode-bidi:isolate!important;
+}
+#tripSummarySheet .summary-card,
+#tripSummarySheet .summary-card *{
+  direction:rtl;
+}
+#tripSummarySheet .summary-score,
+#tripSummarySheet .summary-status,
+#tripSummarySheet .summary-shadow-confidence{
+  unicode-bidi:isolate;
+}
+
+body.drive-3d-active #drive3dMap{
+  direction:ltr!important;
+}
+
+/* Keep our own Persian UI RTL even though the GL canvas is LTR. */
+body.driving-mode #turnCard,
+body.driving-mode .nav-bottom-strip,
+body.driving-mode .drive-current-road-bar,
+body.driving-mode .traffic-camera-pill{
+  direction:rtl!important;
+  unicode-bidi:isolate!important;
+}
+
+.mission-speed-trust.blocked #missionSpeedTrustText{
+  line-height:1.7!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6734,7 +6771,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.4</span>
+              <span class="lab-version-chip">v6.2.5</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -7932,6 +7969,80 @@ async function ensureMapLibreRuntime(){
   }
 }
 
+
+let drive3DRtlPluginReady=false;
+let drive3DRtlPluginAttempted=false;
+
+async function ensureDrive3DRtlText(){
+  if(drive3DRtlPluginReady)return true;
+
+  if(
+    typeof window.maplibregl==="undefined" ||
+    typeof window.maplibregl.setRTLTextPlugin!=="function"
+  ){
+    return false;
+  }
+
+  try{
+    const status=
+      typeof window.maplibregl.getRTLTextPluginStatus==="function"
+        ?window.maplibregl.getRTLTextPluginStatus()
+        :"unavailable";
+
+    if(status==="loaded"){
+      drive3DRtlPluginReady=true;
+      return true;
+    }
+
+    if(status==="loading"){
+      // Give an already-started load a short chance to complete.
+      for(let i=0;i<20;i++){
+        await new Promise(r=>setTimeout(r,50));
+
+        const current=
+          window.maplibregl.getRTLTextPluginStatus?.();
+
+        if(current==="loaded"){
+          drive3DRtlPluginReady=true;
+          return true;
+        }
+
+        if(current==="error")break;
+      }
+    }
+
+    if(
+      !drive3DRtlPluginAttempted &&
+      (
+        status==="unavailable" ||
+        status==null
+      )
+    ){
+      drive3DRtlPluginAttempted=true;
+
+      await window.maplibregl.setRTLTextPlugin(
+        "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",
+        false
+      );
+    }
+
+    const finalStatus=
+      window.maplibregl.getRTLTextPluginStatus?.();
+
+    drive3DRtlPluginReady=
+      finalStatus==="loaded";
+
+    return drive3DRtlPluginReady;
+  }catch(e){
+    console.warn(
+      "RTL text plugin unavailable:",
+      e
+    );
+
+    return false;
+  }
+}
+
 async function isDrive3DSupported(){
   try{
     const runtime=await ensureMapLibreRuntime();
@@ -8825,6 +8936,10 @@ async function ensureDrive3DMap(){
     if(!supported){
       throw new Error("WebGL/MapLibre unavailable");
     }
+
+    // Persian / Arabic labels need MapLibre's RTL shaping plugin.
+    // Load it before the WebGL map is created so labels render correctly.
+    await ensureDrive3DRtlText();
 
     const first=
       routeCoords[0] ||
@@ -14045,7 +14160,40 @@ function updateTurnByTurn(progress){
   if($('turnArrow'))$('turnArrow').textContent=next.step.arrow||"↑";
   if($('turnDistance'))$('turnDistance').textContent=progress>=.995?"رسیدی":distanceTextFa(next.distance);
   if($('turnInstruction'))$('turnInstruction').textContent=progress>=.995?"به مقصد رسیدی":next.step.action;
-  if($('turnStreet'))$('turnStreet').textContent=progress>=.995?navDestination.label:next.step.street;
+  if($('turnStreet')){
+    if(progress>=.995){
+      $('turnStreet').textContent=
+        navDestination.label;
+    }else{
+      const stepProgress=
+        routeDistanceM>0
+          ?clamp(
+            Number(next.step.atDistance||travelled)/
+            routeDistanceM,
+            0,
+            1
+          )
+          :progress;
+
+      const exactRoad=
+        resolvedExactRoadNameAtProgress(
+          stepProgress
+        );
+
+      const rawStreet=
+        normalizeRoadDisplayName(
+          next.step.street||""
+        );
+
+      $('turnStreet').textContent=
+        exactRoad?.name ||
+        (
+          meaningfulRoadName(rawStreet)
+            ?rawStreet
+            :"مسیر فعلی"
+        );
+    }
+  }
 
   renderTurnMeta(progress>=.995?null:next.step);
   applyManeuverVisualClass(
@@ -16327,7 +16475,11 @@ function renderPreTripMission(){
 
     $('missionCameraStatus').textContent=
       status==="ready"
-        ?`${cameraCount.toLocaleString('fa-IR')} دوربین روی Route ثبت شده`
+        ?(
+          cameraCount>0
+            ?`${cameraCount.toLocaleString('fa-IR')} دوربین ثبت‌شده روی Route پیدا شد`
+            :"منبع دوربین با موفقیت بررسی شد؛ دوربین ثبت‌شده‌ای روی Route پیدا نشد"
+        )
         :status==="loading"
           ?"در حال بررسی مستقل دوربین‌ها"
           :status==="error"
@@ -16404,10 +16556,10 @@ function renderPreTripMission(){
       trust.classList.add('blocked');
 
       $('missionSpeedTrustTitle').textContent=
-        "امتیاز سرعت قفل است";
+        "بخش سرعت فعلاً خارج از امتیاز است";
 
       $('missionSpeedTrustText').textContent=
-        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Open Data برای Navigation دیده می‌شود اما راننده را جریمه نمی‌کند.`;
+        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Speed فعلاً وارد Score نمی‌شود؛ امتیاز سفر از ترمز، شتاب و پیچ محاسبه خواهد شد.`;
     }
   }
 }
@@ -19674,8 +19826,8 @@ function saveTrafficCameraCache(key,elements){
 }
 
 function sampledRouteForCameraQuery(
-  everyM=1100,
-  maxPoints=32
+  everyM=450,
+  maxPoints=100
 ){
   if(!routeCoords?.length)return[];
 
@@ -19708,7 +19860,7 @@ function sampledRouteForCameraQuery(
     last &&
     (
       !points.length ||
-      hav(points.at(-1),last)>250
+      hav(points.at(-1),last)>100
     )
   ){
     points.push(last);
@@ -19717,17 +19869,16 @@ function sampledRouteForCameraQuery(
   return points;
 }
 
-async function fetchRouteTrafficCameraNodes(){
-  const points=
-    sampledRouteForCameraQuery();
-
-  if(!points.length)return[];
+async function fetchTrafficCameraBatch(points){
+  if(!points?.length)return[];
 
   const clauses=[];
 
+  // 300m radius with 450m spacing creates overlapping coverage,
+  // so the route corridor has no geometric gaps between samples.
   for(const [lat,lng] of points){
     const around=
-      `(around:260,${Number(lat).toFixed(6)},${Number(lng).toFixed(6)})`;
+      `(around:300,${Number(lat).toFixed(6)},${Number(lng).toFixed(6)})`;
 
     clauses.push(
       `node["highway"="speed_camera"]${around};`
@@ -19786,23 +19937,7 @@ async function fetchRouteTrafficCameraNodes(){
         );
       }
 
-      const dedupe=new Map();
-
-      for(const el of data.elements){
-        if(
-          el?.type==="node" &&
-          el?.id!=null
-        ){
-          dedupe.set(
-            String(el.id),
-            el
-          );
-        }
-      }
-
-      return[
-        ...dedupe.values()
-      ];
+      return data.elements;
     }catch(e){
       lastError=e;
     }
@@ -19812,6 +19947,61 @@ async function fetchRouteTrafficCameraNodes(){
     new Error(
       "Traffic camera source unavailable"
     );
+}
+
+
+async function fetchRouteTrafficCameraNodes(){
+  const points=
+    sampledRouteForCameraQuery();
+
+  if(!points.length)return[];
+
+  // Split the continuous corridor into manageable Overpass requests.
+  // This is more reliable than one huge query and still has no coverage gaps.
+  const BATCH_SIZE=22;
+  const dedupe=new Map();
+
+  for(
+    let i=0;
+    i<points.length;
+    i+=BATCH_SIZE
+  ){
+    const batch=
+      points.slice(
+        i,
+        i+BATCH_SIZE
+      );
+
+    const elements=
+      await fetchTrafficCameraBatch(
+        batch
+      );
+
+    for(const el of elements||[]){
+      if(
+        el?.type==="node" &&
+        el?.id!=null
+      ){
+        dedupe.set(
+          String(el.id),
+          el
+        );
+      }
+    }
+
+    // Small spacing between public Overpass requests.
+    if(
+      i+BATCH_SIZE<points.length
+    ){
+      await new Promise(
+        r=>setTimeout(r,180)
+      );
+    }
+  }
+
+  return[
+    ...dedupe.values()
+  ];
 }
 
 async function prefetchRouteTrafficCameras({
@@ -24670,33 +24860,228 @@ function startCoreDrive(){
     timer=setInterval(step,100);
   }
 }
-function finish(){
-  const wasRealGps=realGpsState.active || isRealGpsMode();
-  if(timer)clearInterval(timer);
-  timer=null;
-  if(!wasRealGps)flush();
-  if(wasRealGps)flushRealTelemetryEvents();
-  stopRealGps();
-  $('scenario').disabled=false;
-  $('start').disabled=false;
-  $('stop').disabled=true;
-  $('csv').disabled=!rows.length;
-  $('status').textContent=wasRealGps?"سفر GPS واقعی پایان یافت.":"به مقصد رسیدی.";
-  if(!wasRealGps)updateTurnByTurn(1);
-  if(wasRealGps){
-    computeRealTripIntegrity({finalize:true});
+function fallbackTripResultAfterFinish(error=null){
+  const real=
+    realTelemetryState?.rows?.length>0;
 
-    if(realTelemetryState.validSamples>=4){
-      buildRealTelemetryResult();
-    }else{
-      buildRealGpsNavigationResult();
-    }
-  }else buildScore();
-  releaseScreenWakeLock();
-  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
-  exitDrivingMode();
-  setTimeout(()=>window.dispatchEvent(new CustomEvent('drivinglab:trip-finished')),180);
+  const behavioralScore=
+    real
+      ?calculateExposureNormalizedSafetyScore?.()
+      :null;
+
+  return{
+    id:
+      typeof trustedTripId==="function"
+        ?trustedTripId()
+        :`trip_${Date.now()}`,
+    savedAt:Date.now(),
+    navigationOnly:false,
+    telemetryOnly:real,
+    navigationMode:
+      isRealGpsMode()
+        ?"real-gps"
+        :"simulation",
+    score:
+      behavioralScore?.score ??
+      100,
+    scoreStatus:
+      behavioralScore?.status ??
+      "preliminary",
+    scoreConfidence:
+      behavioralScore?.confidence ??
+      50,
+    speedScore:null,
+    speedScoreIncluded:false,
+    brakeScore:
+      behavioralScore?.brakeScore ??
+      100,
+    accelScore:
+      behavioralScore?.accelScore ??
+      100,
+    cornerScore:
+      behavioralScore?.cornerScore ??
+      100,
+    tripConfidence:
+      behavioralScore?.confidence ??
+      50,
+    speedCompliance:null,
+    maxExcess:null,
+    rewardEligibility:"REVIEW",
+    shadowRewardStatus:"REVIEW",
+    integrityStatus:"REVIEW",
+    replayTrack:
+      rows
+        .map(r=>r.pos)
+        .filter(
+          p=>
+            Array.isArray(p) &&
+            p.length>=2
+        ),
+    replayEvents:[],
+    originLabel:
+      navOrigin?.label||
+      "مبدأ",
+    destinationLabel:
+      navDestination?.label||
+      "مقصد",
+    routeKm:
+      Number(
+        (
+          Number(routeDistanceM||0)/
+          1000
+        ).toFixed(1)
+      ),
+    coachTitle:
+      "سفر پایان یافت",
+    coachAction:
+      error
+        ?"بخشی از تحلیل داخلی کامل نشد، اما سفر بسته شد و نتیجه پایه نمایش داده شد."
+        :"نتیجه سفر آماده است.",
+    topRiskEvent:null,
+    finishFallback:true,
+    finishError:
+      error
+        ?String(error?.message||error)
+        :""
+  };
 }
+
+function presentTripSummaryAfterFinish(){
+  const show=()=>{
+    try{
+      if(
+        typeof window.POL_SHOW_TRIP_SUMMARY==="function"
+      ){
+        window.POL_SHOW_TRIP_SUMMARY();
+        return;
+      }
+    }catch(e){
+      console.error(
+        "Direct trip summary failed:",
+        e
+      );
+    }
+
+    window.dispatchEvent(
+      new CustomEvent(
+        'drivinglab:trip-finished'
+      )
+    );
+  };
+
+  requestAnimationFrame(()=>{
+    setTimeout(show,80);
+  });
+}
+
+function finish(){
+  const wasRealGps=
+    realGpsState.active ||
+    isRealGpsMode();
+
+  if(timer){
+    clearInterval(timer);
+  }
+
+  timer=null;
+
+  let scoringError=null;
+
+  try{
+    if(!wasRealGps){
+      flush();
+    }
+
+    if(wasRealGps){
+      flushRealTelemetryEvents();
+    }
+
+    stopRealGps();
+
+    $('scenario').disabled=false;
+    $('start').disabled=false;
+    $('stop').disabled=true;
+    $('csv').disabled=!rows.length;
+
+    $('status').textContent=
+      wasRealGps
+        ?"سفر GPS واقعی پایان یافت."
+        :"به مقصد رسیدی.";
+
+    if(!wasRealGps){
+      updateTurnByTurn(1);
+    }
+
+    if(wasRealGps){
+      computeRealTripIntegrity({
+        finalize:true
+      });
+
+      if(
+        realTelemetryState.validSamples>=4
+      ){
+        buildRealTelemetryResult();
+      }else{
+        buildRealGpsNavigationResult();
+      }
+    }else{
+      buildScore();
+    }
+  }catch(e){
+    scoringError=e;
+
+    console.error(
+      "Trip finish scoring pipeline:",
+      e
+    );
+
+    if(!lastTripResult){
+      lastTripResult=
+        fallbackTripResultAfterFinish(e);
+    }
+  }finally{
+    // UI cleanup must never depend on score calculation succeeding.
+    try{
+      stopRealGps();
+    }catch(e){}
+
+    try{
+      releaseScreenWakeLock();
+    }catch(e){}
+
+    try{
+      if(document.fullscreenElement){
+        document.exitFullscreen();
+      }
+    }catch(e){}
+
+    try{
+      exitDrivingMode();
+    }catch(e){
+      console.error(
+        "exitDrivingMode failed:",
+        e
+      );
+
+      document.body.classList.remove(
+        'driving-mode',
+        'drive-3d-active',
+        'map-manual-explore'
+      );
+    }
+
+    // Always give the user an actionable end state.
+    if(!lastTripResult){
+      lastTripResult=
+        fallbackTripResultAfterFinish(
+          scoringError
+        );
+    }
+
+    presentTripSummaryAfterFinish();
+  }
+}
+
 function reset(full=true,keepRoute=false){
   stopRealGps();
   resetRealTelemetry();
@@ -24815,7 +25200,28 @@ function buildScore(){
   const weightedSpeedExposure = valid.length
     ? speeding.reduce((sum,r)=>sum+r.speedMult,0)/valid.length
     : 0;
-  const speedScore=clamp(Math.round(100-weightedSpeedExposure*72-Math.max(0,maxExcess-10)*.35),0,100);
+  const speedScoreRaw=
+    clamp(
+      Math.round(
+        100-
+        weightedSpeedExposure*72-
+        Math.max(0,maxExcess-10)*.35
+      ),
+      0,
+      100
+    );
+
+  // Speed is only scoreable if verified legal-speed samples actually exist.
+  const speedIncluded=
+    valid.length>=Math.max(
+      6,
+      Math.round(rows.length*.12)
+    );
+
+  const speedScore=
+    speedIncluded
+      ?speedScoreRaw
+      :null;
 
   let bp=0,ap=0,cp=0;
   const scoredEvents=events.filter(e=>e.type!=="gps");
@@ -24837,11 +25243,67 @@ function buildScore(){
   const low=rows.filter(r=>r.tripConf<70).length/Math.max(1,rows.length);
   const conf=clamp(Math.round(avg-low*35),0,100);
 
-  const score=Math.round(.40*speedScore+.25*b+.15*a+.20*c);
+  const baseWeights={
+    speed:.40,
+    brake:.25,
+    accel:.15,
+    corner:.20
+  };
 
-  [['speed',speedScore],['brake',b],['accel',a],['corner',c],['confidence',conf]].forEach(([k,v])=>{
-    $(k+'N').textContent=Math.round(v);
-    $(k+'Bar').style.width=v+'%';
+  const activeWeights=
+    speedIncluded
+      ?baseWeights
+      :{
+        speed:0,
+        brake:
+          baseWeights.brake/
+          (
+            baseWeights.brake+
+            baseWeights.accel+
+            baseWeights.corner
+          ),
+        accel:
+          baseWeights.accel/
+          (
+            baseWeights.brake+
+            baseWeights.accel+
+            baseWeights.corner
+          ),
+        corner:
+          baseWeights.corner/
+          (
+            baseWeights.brake+
+            baseWeights.accel+
+            baseWeights.corner
+          )
+      };
+
+  const score=Math.round(
+    (speedIncluded
+      ?activeWeights.speed*Number(speedScore)
+      :0
+    )+
+    activeWeights.brake*b+
+    activeWeights.accel*a+
+    activeWeights.corner*c
+  );
+
+  const scoreRows=[
+    ['speed',speedScore],
+    ['brake',b],
+    ['accel',a],
+    ['corner',c],
+    ['confidence',conf]
+  ];
+
+  scoreRows.forEach(([k,v])=>{
+    if(v==null){
+      $(k+'N').textContent="--";
+      $(k+'Bar').style.width='0%';
+    }else{
+      $(k+'N').textContent=Math.round(v);
+      $(k+'Bar').style.width=v+'%';
+    }
   });
 
   const avgContext=rows.length
@@ -24868,7 +25330,23 @@ function buildScore(){
     $('whyText').textContent="Event پرریسک معتبری در این سفر ثبت نشد.";
   }
 
-  const worst=[["سرعت",speedScore],["ترمز",b],["شتاب",a],["پیچ",c]].sort((x,y)=>x[1]-y[1])[0];
+  const behaviorCandidates=[
+    ["ترمز",b],
+    ["شتاب",a],
+    ["پیچ",c]
+  ];
+
+  if(speedIncluded){
+    behaviorCandidates.push(
+      ["سرعت",speedScore]
+    );
+  }
+
+  const worst=
+    behaviorCandidates
+      .sort(
+        (x,y)=>Number(x[1])-Number(y[1])
+      )[0];
 
   const simCoach=worst[0]==="ترمز"
     ?{title:"ترمز را زودتر شروع کن",action:"قبل از توقف یا تقاطع زودتر گاز را رها کن تا ترمز نرم‌تر شود."}
@@ -24879,7 +25357,12 @@ function buildScore(){
         :{title:"ثبات سرعت",action:"در بخش‌های دارای حد سرعت مشخص، سرعت را یکنواخت‌تر و نزدیک‌تر به حد مجاز نگه دار."};
 
   $('insight').textContent=
-    `بزرگ‌ترین فرصت بهبود: ${worst[0]}. امتیاز بر اساس Severity × Road Context محاسبه شده است. `+
+    `بزرگ‌ترین فرصت بهبود: ${worst[0]}. `+
+    (
+      speedIncluded
+        ?"Speed با منبع تأییدشده داخل Score بوده است. "
+        :"Speed هنوز از Score خارج است و امتیاز از ترمز، شتاب و پیچ با وزن نرمال‌شده ساخته شده است. "
+    )+
     `GPS/Map Match نامطمئن همچنان از جریمه حذف می‌شود.`;
 
   $('scoreBox').style.display="block";
@@ -24889,12 +25372,23 @@ function buildScore(){
   lastTripResult={
     score,
     speedScore,
+    speedScoreIncluded:speedIncluded,
+    scoreScope:
+      speedIncluded
+        ?"speed+behavior"
+        :"behavior-only",
     brakeScore:b,
     accelScore:a,
     cornerScore:c,
     tripConfidence:conf,
-    speedCompliance:Math.round(compliance),
-    maxExcess:Math.round(maxExcess),
+    speedCompliance:
+      speedIncluded
+        ?Math.round(compliance)
+        :null,
+    maxExcess:
+      speedIncluded
+        ?Math.round(maxExcess)
+        :null,
     avgContextRisk:Number(avgContext.toFixed(2)),
     topRiskEvent:top?top.title:null,
     weakestBehavior:worst[0],
@@ -26853,7 +27347,9 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const safetyBreakdown=document.getElementById('summarySafetyBreakdown');
 
       if(safetyBreakdown){
-        const showBreakdown=!!r.telemetryOnly;
+        const showBreakdown=
+          !r.navigationOnly &&
+          r.score!=null;
         safetyBreakdown.classList.toggle('show',showBreakdown);
 
         if(showBreakdown){
@@ -26872,7 +27368,9 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
           document.getElementById('summaryScoreScope').textContent=
             r.scoreStatus==="insufficient"
               ?'Score متوقف'
-              :'Speed خارج از Score';
+              :r.speedScoreIncluded===true
+                ?'Speed داخل Score'
+                :'Speed خارج از Score • وزن رفتار نرمال‌شده';
         }
       }
       if(r.navigationOnly){
@@ -26897,7 +27395,10 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       }else{
         document.getElementById('summaryScore').classList.remove('insufficient');
         document.getElementById('summaryScore').textContent=fa(r.score||0);
-        document.getElementById('summaryCompliance').textContent=fa(r.speedCompliance||0)+'٪';
+        document.getElementById('summaryCompliance').textContent=
+          r.speedCompliance==null
+            ?'—'
+            :fa(r.speedCompliance)+'٪';
         document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
         document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
       }
@@ -26992,8 +27493,47 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
       const card=sheet.querySelector('.summary-card');
       if(card) card.scrollTop=0;
       refreshAppShell();
-    }catch(e){}
+    }catch(e){
+      console.error(
+        "Trip summary render failed:",
+        e
+      );
+
+      const sheet=
+        document.getElementById(
+          'tripSummarySheet'
+        );
+
+      if(sheet){
+        sheet.classList.add('open');
+
+        const score=
+          document.getElementById(
+            'summaryScore'
+          );
+
+        if(
+          score &&
+          (
+            !score.textContent ||
+            score.textContent==="--"
+          )
+        ){
+          score.textContent=
+            lastTripResult?.score==null
+              ?'—'
+              :Number(
+                lastTripResult.score
+              ).toLocaleString('fa-IR');
+        }
+      }
+    }
   }
+
+  // finish() lives in the main script; expose a direct, deterministic bridge
+  // instead of relying only on a delayed CustomEvent.
+  window.POL_SHOW_TRIP_SUMMARY=
+    showTripSummary;
 
 
 
@@ -27317,7 +27857,17 @@ setTimeout(()=>bootstrapMapFirstExperience(),650);
 
 
   window.addEventListener('drivinglab:trip-finished',()=>{
-    // Score/profile/reward calculation is complete at this point.
+    const sheet=
+      document.getElementById(
+        'tripSummarySheet'
+      );
+
+    if(
+      sheet?.classList.contains('open')
+    ){
+      return;
+    }
+
     showTripSummary();
   });
 
