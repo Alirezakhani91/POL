@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۱ Mission Brief & Speed Authority Gate</title>
+<title>POL | نسخه ۶.۲ Speed Limit Truth Engine</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5593,6 +5593,82 @@ body.driving-mode .traffic-camera-pill b{
   }
 }
 
+
+/* ============================================================
+   v6.2 SPEED LIMIT TRUTH ENGINE
+   ============================================================ */
+
+.speed-truth-debug-box{
+  border-color:rgba(59,130,246,.28)!important;
+}
+.speed-truth-debug-box .eligibilityStatus.good{
+  background:#12351d;
+  border-color:#28543c;
+  color:#86efac;
+}
+.speed-truth-debug-box .eligibilityStatus.review{
+  background:#3b2d0d;
+  border-color:#6d551d;
+  color:#fde68a;
+}
+.speed-truth-debug-box .eligibilityStatus.bad{
+  background:#441717;
+  border-color:#7d3030;
+  color:#fecaca;
+}
+.speed-truth-actions{
+  display:grid;
+  grid-template-columns:1.25fr 1fr 1fr;
+  gap:6px;
+  margin-top:8px;
+}
+.speed-truth-actions button{
+  min-height:38px!important;
+  padding:7px 8px!important;
+  border-radius:10px!important;
+  font-size:7px!important;
+  background:#172334!important;
+  color:#cbd8e6!important;
+  border:1px solid #304760!important;
+}
+.speed-truth-policy{
+  margin-top:8px;
+  padding:8px 9px;
+  border-radius:10px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.speed-truth-policy b{
+  display:block;
+  color:#75b9ff;
+  font-size:7px;
+}
+.speed-truth-policy span{
+  display:block;
+  margin-top:3px;
+  color:#9eafc1;
+  font-size:6.5px;
+  line-height:1.6;
+}
+
+/* The legal sign is only active for verified truth. */
+.speed-limit-source-badge.truth-verified{
+  background:#12351d!important;
+  border-color:#28543c!important;
+  color:#86efac!important;
+}
+.speed-limit-source-badge.truth-missing{
+  background:#441717!important;
+  border-color:#7d3030!important;
+  color:#fecaca!important;
+}
+
+@media(max-width:650px){
+  .speed-truth-actions{
+    grid-template-columns:1fr;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6388,9 +6464,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.1</span>
+              <span class="lab-version-chip">v6.2</span>
               <div>
-                <b>Mission Brief & Speed Authority Gate</b>
+                <b>Speed Limit Truth Engine</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6559,11 +6635,52 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               </div>
             </div>
 
+            <div class="eligibilityBox speed-truth-debug-box">
+              <div class="eligibilityHead">
+                <div>
+                  <b>Speed Limit Truth Engine</b>
+                  <div class="small">Verified Source → Segment → Direction → Vehicle → Score</div>
+                </div>
+                <div id="speedTruthStatus" class="eligibilityStatus review">بدون منبع</div>
+              </div>
+
+              <div class="eligibilityGrid">
+                <div class="eligibilityCell"><b id="speedTruthCoverage">۰٪</b><span>Route Coverage</span></div>
+                <div class="eligibilityCell"><b id="speedTruthResolved">۰</b><span>Verified Segment</span></div>
+                <div class="eligibilityCell"><b id="speedTruthGaps">۰</b><span>Unresolved Gap</span></div>
+              </div>
+
+              <div class="eligibilityGrid" style="margin-top:8px">
+                <div class="eligibilityCell"><b id="speedTruthConflicts">۰</b><span>Open-Data Conflict</span></div>
+                <div class="eligibilityCell"><b id="speedTruthSource">--</b><span>Authority Source</span></div>
+                <div class="eligibilityCell"><b id="speedTruthScoreState">LOCKED</b><span>Speed Score</span></div>
+              </div>
+
+              <div id="speedTruthReason" class="reasonList">
+                هنوز دیتاست تأییدشده Speed Limit بارگذاری نشده است.
+              </div>
+
+              <div class="speed-truth-actions">
+                <button id="speedTruthImportBtn">Import Verified Dataset</button>
+                <button id="speedTruthExportGapsBtn">Export Route Gaps</button>
+                <button id="speedTruthClearBtn">پاک‌کردن دیتاست تست</button>
+                <input id="speedTruthFileInput" type="file" accept=".json,application/json" hidden>
+              </div>
+
+              <div class="speed-truth-policy">
+                <b>Production Rule</b>
+                <span>
+                  OpenStreetMap و Valhalla هرگز به‌تنهایی Speed Penalty ایجاد نمی‌کنند.
+                  Speed Score فقط با Coverage تأییدشده Route فعال می‌شود.
+                </span>
+              </div>
+            </div>
+
             <div class="eligibilityBox mapped-speed-debug-box">
               <div class="eligibilityHead">
                 <div>
-                  <b>Mapped Speed Limit Layer</b>
-                  <div class="small">OSM maxspeed صریح • آزمایشی • بدون جریمه و Reward</div>
+                  <b>Open-Data Speed Reference</b>
+                  <div class="small">OSM / Valhalla • فقط Cross-check • هرگز Authority نیست</div>
                 </div>
                 <div id="mappedSpeedStatus" class="eligibilityStatus review">در انتظار</div>
               </div>
@@ -8680,6 +8797,1459 @@ const MAPPED_SPEED_CACHE_TTL=6*60*60*1000;
    verified source.
    ============================================================ */
 
+
+/* ============================================================
+   v6.2 SPEED LIMIT TRUTH ENGINE
+
+   Production contract:
+   legal limit = verified dataset only.
+
+   Supported authority modes:
+   1) remote route-profile API
+   2) imported verified GeoJSON-like JSON dataset
+   3) legacy manually verified OSM way registry
+
+   OpenStreetMap / Valhalla remain cross-check only.
+   ============================================================ */
+
+const SPEED_TRUTH_DATASET_KEY=
+  "pol_speed_truth_dataset_v2";
+
+const SPEED_TRUTH_CONFIG={
+  // Production:
+  // set this to a same-origin/backend endpoint, never expose provider secrets
+  // in public GitHub Pages.
+  remoteProfileEndpoint:"",
+
+  requiredCoveragePct:99.5,
+  sampleEveryM:65,
+  localMaxMatchM:18,
+  localMaxBearingDelta:34,
+  maxDatasetAgeDays:365,
+
+  // imported local JSON is only for pilot/testing.
+  // National production data belongs behind remoteProfileEndpoint.
+  maxLocalDatasetBytes:3_500_000
+};
+
+let speedTruthState={
+  status:"idle",
+  profile:[],
+  coverage:0,
+  resolvedSamples:0,
+  unresolved:[],
+  conflicts:[],
+  source:"",
+  datasetVersion:"",
+  lastError:"",
+  routeRef:null,
+  requestSeq:0,
+  localIndex:null
+};
+
+function emptySpeedTruthDataset(){
+  return{
+    schema:"pol-speed-truth-v1",
+    version:"",
+    source:"",
+    verified_at:"",
+    segments:[]
+  };
+}
+
+function loadSpeedTruthDataset(){
+  try{
+    const raw=localStorage.getItem(
+      SPEED_TRUTH_DATASET_KEY
+    );
+
+    if(!raw)return emptySpeedTruthDataset();
+
+    const data=JSON.parse(raw);
+
+    return(
+      data &&
+      Array.isArray(data.segments)
+    )
+      ?data
+      :emptySpeedTruthDataset();
+  }catch(e){
+    return emptySpeedTruthDataset();
+  }
+}
+
+function speedTruthDatasetAgeDays(dataset){
+  const d=new Date(
+    dataset?.verified_at ||
+    dataset?.updated_at ||
+    dataset?.version_date ||
+    ""
+  );
+
+  if(!Number.isFinite(d.getTime())){
+    return Infinity;
+  }
+
+  return(
+    Date.now()-d.getTime()
+  )/(24*60*60*1000);
+}
+
+function normalizeTruthVehicleLimit(segment,vehicleId){
+  const vehicles=
+    segment?.vehicle_limits ||
+    segment?.vehicles ||
+    {};
+
+  const specific=Number(
+    vehicles?.[vehicleId]
+  );
+
+  const general=Number(
+    segment?.limit
+  );
+
+  const limit=
+    Number.isFinite(specific) &&
+    specific>0
+      ?specific
+      :general;
+
+  return(
+    Number.isFinite(limit) &&
+    limit>=10 &&
+    limit<=160
+  )
+    ?limit
+    :null;
+}
+
+function normalizeTruthGeometry(segment){
+  const raw=
+    segment?.geometry?.coordinates ||
+    segment?.coordinates ||
+    [];
+
+  if(!Array.isArray(raw))return[];
+
+  return raw
+    .map(c=>{
+      if(!Array.isArray(c)||c.length<2){
+        return null;
+      }
+
+      // Dataset contract is GeoJSON [lng,lat].
+      const lng=Number(c[0]);
+      const lat=Number(c[1]);
+
+      return(
+        Number.isFinite(lat) &&
+        Number.isFinite(lng)
+      )
+        ?[lat,lng]
+        :null;
+    })
+    .filter(Boolean);
+}
+
+function truthSegmentScheduleApplies(segment,date=new Date()){
+  const schedules=
+    Array.isArray(segment?.schedules)
+      ?segment.schedules
+      :[];
+
+  if(!schedules.length)return true;
+
+  const day=date.getDay();
+  const hh=
+    String(date.getHours()).padStart(2,"0")+
+    ":"+
+    String(date.getMinutes()).padStart(2,"0");
+
+  for(const schedule of schedules){
+    const days=
+      Array.isArray(schedule?.days)
+        ?schedule.days.map(Number)
+        :null;
+
+    if(days && !days.includes(day)){
+      continue;
+    }
+
+    const from=
+      String(schedule?.from||"00:00");
+
+    const to=
+      String(schedule?.to||"23:59");
+
+    const inside=
+      from<=to
+        ?hh>=from && hh<=to
+        :hh>=from || hh<=to;
+
+    if(inside)return true;
+  }
+
+  return false;
+}
+
+function truthSegmentEffectiveLimit(
+  segment,
+  vehicleId=currentVehicleProfile.id,
+  date=new Date()
+){
+  if(!truthSegmentScheduleApplies(segment,date)){
+    return null;
+  }
+
+  const from=
+    segment?.effective_from
+      ?new Date(segment.effective_from)
+      :null;
+
+  const to=
+    segment?.effective_to
+      ?new Date(segment.effective_to)
+      :null;
+
+  if(
+    from &&
+    Number.isFinite(from.getTime()) &&
+    date<from
+  ){
+    return null;
+  }
+
+  if(
+    to &&
+    Number.isFinite(to.getTime()) &&
+    date>to
+  ){
+    return null;
+  }
+
+  return normalizeTruthVehicleLimit(
+    segment,
+    vehicleId
+  );
+}
+
+function truthGridKey(lat,lng,size=.004){
+  return(
+    `${Math.floor(Number(lat)/size)}`+
+    `:${Math.floor(Number(lng)/size)}`
+  );
+}
+
+function buildSpeedTruthLocalIndex(){
+  const dataset=loadSpeedTruthDataset();
+
+  const grid=new Map();
+  const normalized=[];
+
+  dataset.segments.forEach((segment,index)=>{
+    const geometry=
+      normalizeTruthGeometry(segment);
+
+    if(geometry.length<2)return;
+
+    const item={
+      ...segment,
+      _index:index,
+      _geometry:geometry
+    };
+
+    normalized.push(item);
+
+    geometry.forEach(point=>{
+      const key=truthGridKey(
+        point[0],
+        point[1]
+      );
+
+      if(!grid.has(key)){
+        grid.set(key,[]);
+      }
+
+      grid.get(key).push(item);
+    });
+  });
+
+  speedTruthState.localIndex={
+    dataset,
+    grid,
+    segments:normalized
+  };
+
+  return speedTruthState.localIndex;
+}
+
+function nearbyTruthSegments(point){
+  const index=
+    speedTruthState.localIndex ||
+    buildSpeedTruthLocalIndex();
+
+  if(!index?.segments?.length)return[];
+
+  const lat=Number(point?.[0]);
+  const lng=Number(point?.[1]);
+
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)){
+    return[];
+  }
+
+  const baseLat=Math.floor(lat/.004);
+  const baseLng=Math.floor(lng/.004);
+
+  const found=[];
+  const seen=new Set();
+
+  for(let dy=-1;dy<=1;dy++){
+    for(let dx=-1;dx<=1;dx++){
+      const key=
+        `${baseLat+dy}:${baseLng+dx}`;
+
+      for(const segment of index.grid.get(key)||[]){
+        const id=
+          segment.id ||
+          segment.segment_id ||
+          segment._index;
+
+        if(seen.has(id))continue;
+
+        seen.add(id);
+        found.push(segment);
+      }
+    }
+  }
+
+  return found.length
+    ?found
+    :index.segments;
+}
+
+function truthGeometryHeading(geometry){
+  if(!Array.isArray(geometry)||geometry.length<2){
+    return null;
+  }
+
+  return bearingDeg(
+    geometry[0],
+    geometry[geometry.length-1]
+  );
+}
+
+function truthDirectionMatches(segment,heading){
+  const direction=
+    String(segment?.direction||"both")
+      .toLowerCase();
+
+  if(direction==="both"||!direction){
+    return{
+      ok:true,
+      penalty:0
+    };
+  }
+
+  const geometry=
+    segment._geometry ||
+    normalizeTruthGeometry(segment);
+
+  const base=truthGeometryHeading(geometry);
+
+  if(!Number.isFinite(Number(base))){
+    return{
+      ok:false,
+      penalty:999
+    };
+  }
+
+  const expected=
+    direction==="backward"
+      ?normalizedBearingDegrees(base+180)
+      :base;
+
+  if(!Number.isFinite(Number(heading))){
+    return{
+      ok:false,
+      penalty:999
+    };
+  }
+
+  const delta=Math.abs(
+    shortestAngleDelta(
+      expected,
+      heading
+    )
+  );
+
+  return{
+    ok:delta<=SPEED_TRUTH_CONFIG.localMaxBearingDelta,
+    penalty:delta
+  };
+}
+
+function distanceToTruthGeometry(point,geometry){
+  let best=null;
+
+  for(let i=0;i<geometry.length-1;i++){
+    const hit=pointToSegmentMeters(
+      point,
+      geometry[i],
+      geometry[i+1]
+    );
+
+    if(
+      !best ||
+      hit.distance<best.distance
+    ){
+      best={
+        ...hit,
+        segmentIndex:i
+      };
+    }
+  }
+
+  return best;
+}
+
+function matchLocalSpeedTruth(
+  point,
+  heading,
+  vehicleId=currentVehicleProfile.id,
+  date=new Date()
+){
+  const dataset=
+    speedTruthState.localIndex?.dataset ||
+    loadSpeedTruthDataset();
+
+  if(!dataset?.segments?.length){
+    return null;
+  }
+
+  if(
+    speedTruthDatasetAgeDays(dataset)>
+    SPEED_TRUTH_CONFIG.maxDatasetAgeDays
+  ){
+    return null;
+  }
+
+  let best=null;
+
+  for(const segment of nearbyTruthSegments(point)){
+    const limit=
+      truthSegmentEffectiveLimit(
+        segment,
+        vehicleId,
+        date
+      );
+
+    if(!limit)continue;
+
+    const direction=
+      truthDirectionMatches(
+        segment,
+        heading
+      );
+
+    if(!direction.ok)continue;
+
+    const geometry=
+      segment._geometry ||
+      normalizeTruthGeometry(segment);
+
+    const hit=
+      distanceToTruthGeometry(
+        point,
+        geometry
+      );
+
+    if(
+      !hit ||
+      hit.distance>
+      SPEED_TRUTH_CONFIG.localMaxMatchM
+    ){
+      continue;
+    }
+
+    const score=
+      hit.distance+
+      direction.penalty*.16;
+
+    if(!best||score<best.score){
+      best={
+        segment,
+        limit,
+        distance:hit.distance,
+        score,
+        headingDelta:direction.penalty,
+        matchedPoint:hit.point
+      };
+    }
+  }
+
+  if(!best)return null;
+
+  return{
+    limit:Number(best.limit),
+    segmentId:String(
+      best.segment.id ||
+      best.segment.segment_id ||
+      best.segment._index
+    ),
+    road:String(
+      best.segment.road_name ||
+      best.segment.name ||
+      "Verified Road Segment"
+    ),
+    source:String(
+      best.segment.source ||
+      dataset.source ||
+      "Verified Dataset"
+    ),
+    authorityRef:String(
+      best.segment.source_ref ||
+      best.segment.ref ||
+      ""
+    ),
+    verifiedAt:
+      best.segment.verified_at ||
+      dataset.verified_at ||
+      null,
+    confidence:100,
+    scoreEligible:true,
+    authorityVerified:true,
+    truthMode:"local-dataset",
+    distance:best.distance
+  };
+}
+
+function sampleRouteForSpeedTruth(){
+  const total=Math.max(
+    1,
+    Number(routeDistanceM||0)
+  );
+
+  const every=
+    SPEED_TRUTH_CONFIG.sampleEveryM;
+
+  const samples=[];
+
+  for(
+    let d=0;
+    d<=total;
+    d+=every
+  ){
+    const p=routePointAtDistanceM(d);
+
+    const next=routePointAtDistanceM(
+      Math.min(total,d+30)
+    );
+
+    samples.push({
+      routeM:d,
+      point:p,
+      heading:
+        hav(p,next)>=2
+          ?bearingDeg(p,next)
+          :null
+    });
+  }
+
+  if(
+    !samples.length ||
+    samples.at(-1).routeM<total-5
+  ){
+    const p=routePointAtDistanceM(total);
+
+    samples.push({
+      routeM:total,
+      point:p,
+      heading:routeHeadingAtProgress(1)
+    });
+  }
+
+  return samples;
+}
+
+function compressTruthSamples(samples,totalRouteM){
+  const profile=[];
+
+  for(const sample of samples){
+    const truth=sample.truth;
+
+    if(!truth)continue;
+
+    const last=profile.at(-1);
+
+    if(
+      last &&
+      last.segmentId===truth.segmentId &&
+      last.limit===truth.limit
+    ){
+      last.endM=sample.routeM;
+      last.sampleCount++;
+      continue;
+    }
+
+    profile.push({
+      startM:sample.routeM,
+      endM:sample.routeM,
+      limit:truth.limit,
+      segmentId:truth.segmentId,
+      road:truth.road,
+      source:truth.source,
+      authorityRef:truth.authorityRef,
+      verifiedAt:truth.verifiedAt,
+      confidence:truth.confidence,
+      truthMode:truth.truthMode,
+      sampleCount:1
+    });
+  }
+
+  profile.forEach((row,index)=>{
+    const next=profile[index+1];
+
+    row.endM=
+      next
+        ?Math.max(
+          row.endM,
+          next.startM-
+          SPEED_TRUTH_CONFIG.sampleEveryM*.5
+        )
+        :Math.max(row.endM,totalRouteM);
+  });
+
+  return profile;
+}
+
+function speedTruthAtProgress(progress){
+  if(
+    speedTruthState.status!=="ready" ||
+    !speedTruthState.profile.length
+  ){
+    return null;
+  }
+
+  const currentM=
+    routeDistanceM*
+    clamp(Number(progress||0),0,1);
+
+  let selected=null;
+
+  for(const row of speedTruthState.profile){
+    if(
+      currentM>=row.startM-35 &&
+      currentM<=row.endM+35
+    ){
+      selected=row;
+      break;
+    }
+  }
+
+  if(!selected)return null;
+
+  return{
+    limit:Number(selected.limit),
+    confidence:100,
+    road:selected.road,
+    source:selected.source,
+    segmentId:selected.segmentId,
+    authorityRef:selected.authorityRef,
+    verifiedAt:selected.verifiedAt,
+    authorityVerified:true,
+    scoreEligible:true,
+    truthMode:selected.truthMode
+  };
+}
+
+function legacyRegistryTruthForSample(
+  sample,
+  openMatch
+){
+  if(!openMatch?.wayId)return null;
+
+  const verified=
+    verifiedSpeedForWay(
+      openMatch.wayId,
+      currentVehicleProfile.id
+    );
+
+  if(!verified)return null;
+
+  return{
+    limit:Number(verified.limit),
+    segmentId:`osm-way-${openMatch.wayId}`,
+    road:openMatch.road||"Verified OSM Way",
+    source:
+      verified.authority||
+      "Verified Way Registry",
+    authorityRef:String(openMatch.wayId),
+    verifiedAt:verified.verifiedAt,
+    confidence:100,
+    scoreEligible:true,
+    authorityVerified:true,
+    truthMode:"verified-way-registry"
+  };
+}
+
+async function requestRemoteSpeedTruthProfile(){
+  const endpoint=
+    String(
+      SPEED_TRUTH_CONFIG.remoteProfileEndpoint||""
+    ).trim();
+
+  if(!endpoint)return null;
+
+  const routeShape=
+    sampleRouteForSpeedTruth()
+      .map(s=>({
+        lat:Number(s.point[0]),
+        lng:Number(s.point[1]),
+        route_m:Number(s.routeM),
+        bearing:
+          Number.isFinite(Number(s.heading))
+            ?Number(s.heading)
+            :null
+      }));
+
+  const controller=
+    new AbortController();
+
+  const timer=setTimeout(
+    ()=>controller.abort(),
+    15000
+  );
+
+  try{
+    const res=await fetch(
+      endpoint,
+      {
+        method:"POST",
+        signal:controller.signal,
+        headers:{
+          "Content-Type":"application/json",
+          "Accept":"application/json"
+        },
+        body:JSON.stringify({
+          schema:"pol-speed-profile-request-v1",
+          vehicle:{
+            id:currentVehicleProfile.id,
+            ...(
+              currentVehicleProfile.id==="truck"
+                ?{truck:currentVehicleProfile.truck}
+                :{}
+            )
+          },
+          route:{
+            distance_m:Number(routeDistanceM||0),
+            shape:routeShape
+          }
+        })
+      }
+    );
+
+    if(!res.ok){
+      throw new Error(
+        `Speed Truth API ${res.status}`
+      );
+    }
+
+    const data=await res.json();
+
+    if(!Array.isArray(data?.segments)){
+      throw new Error(
+        "Speed Truth API profile invalid"
+      );
+    }
+
+    return data;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+function normalizeRemoteTruthProfile(data){
+  const total=
+    Math.max(
+      1,
+      Number(routeDistanceM||0)
+    );
+
+  const profile=[];
+
+  for(const row of data?.segments||[]){
+    const startM=Number(row.start_m);
+    const endM=Number(row.end_m);
+    const limit=Number(
+      row?.vehicle_limits?.[
+        currentVehicleProfile.id
+      ] ??
+      row.limit
+    );
+
+    if(
+      !Number.isFinite(startM) ||
+      !Number.isFinite(endM) ||
+      !Number.isFinite(limit) ||
+      limit<10 ||
+      limit>160
+    ){
+      continue;
+    }
+
+    if(
+      row.verified!==true &&
+      row.authority_verified!==true
+    ){
+      continue;
+    }
+
+    profile.push({
+      startM:clamp(startM,0,total),
+      endM:clamp(endM,0,total),
+      limit,
+      segmentId:String(
+        row.segment_id||row.id||""
+      ),
+      road:String(
+        row.road_name||row.name||"Verified Road"
+      ),
+      source:String(
+        row.source||data.source||"Speed Authority API"
+      ),
+      authorityRef:String(
+        row.source_ref||row.ref||""
+      ),
+      verifiedAt:
+        row.verified_at||
+        data.verified_at||
+        null,
+      confidence:100,
+      truthMode:"remote-api",
+      sampleCount:1
+    });
+  }
+
+  return profile.sort(
+    (a,b)=>a.startM-b.startM
+  );
+}
+
+function profileCoveragePct(profile,totalRouteM){
+  if(!profile?.length)return 0;
+
+  const intervals=
+    profile
+      .map(x=>[
+        clamp(Number(x.startM||0),0,totalRouteM),
+        clamp(Number(x.endM||0),0,totalRouteM)
+      ])
+      .filter(x=>x[1]>x[0])
+      .sort((a,b)=>a[0]-b[0]);
+
+  if(!intervals.length)return 0;
+
+  let covered=0;
+  let [start,end]=intervals[0];
+
+  for(let i=1;i<intervals.length;i++){
+    const [s,e]=intervals[i];
+
+    if(s<=end+1){
+      end=Math.max(end,e);
+    }else{
+      covered+=end-start;
+      start=s;
+      end=e;
+    }
+  }
+
+  covered+=end-start;
+
+  return clamp(
+    covered/Math.max(1,totalRouteM)*100,
+    0,
+    100
+  );
+}
+
+function truthOpenDataConflict(
+  sample,
+  truth
+){
+  if(!truth)return null;
+
+  const open=
+    exactSpeedProfileAtProgress(
+      sample.routeM/
+      Math.max(1,routeDistanceM)
+    ) ||
+    matchMappedSpeedLimitOpenDataOnly(
+      sample.point,
+      sample.heading,
+      100,
+      sample.routeM/
+      Math.max(1,routeDistanceM)
+    );
+
+  if(!open)return null;
+
+  const openLimit=
+    Number(
+      open.openDataLimit ??
+      open.limit
+    );
+
+  if(
+    !Number.isFinite(openLimit) ||
+    Math.abs(openLimit-truth.limit)<5
+  ){
+    return null;
+  }
+
+  return{
+    routeM:sample.routeM,
+    point:sample.point,
+    verifiedLimit:truth.limit,
+    openDataLimit:openLimit,
+    segmentId:truth.segmentId,
+    road:truth.road,
+    openWayId:open.wayId||null
+  };
+}
+
+async function buildSpeedTruthRouteProfile({
+  force=false
+}={}){
+  if(!routeCoords?.length)return false;
+
+  if(
+    !force &&
+    speedTruthState.status==="ready" &&
+    speedTruthState.routeRef===routeCoords
+  ){
+    return true;
+  }
+
+  const seq=
+    ++speedTruthState.requestSeq;
+
+  speedTruthState.status="loading";
+  speedTruthState.profile=[];
+  speedTruthState.coverage=0;
+  speedTruthState.resolvedSamples=0;
+  speedTruthState.unresolved=[];
+  speedTruthState.conflicts=[];
+  speedTruthState.source="";
+  speedTruthState.lastError="";
+  speedTruthState.routeRef=routeCoords;
+
+  renderSpeedTruthDiagnostics();
+
+  try{
+    // 1) Production remote authority provider
+    const remote=
+      await requestRemoteSpeedTruthProfile();
+
+    if(seq!==speedTruthState.requestSeq){
+      return false;
+    }
+
+    if(remote){
+      const profile=
+        normalizeRemoteTruthProfile(remote);
+
+      const coverage=
+        profileCoveragePct(
+          profile,
+          routeDistanceM
+        );
+
+      speedTruthState.profile=profile;
+      speedTruthState.coverage=coverage;
+      speedTruthState.resolvedSamples=profile.length;
+      speedTruthState.source=
+        String(
+          remote.source||
+          "Remote Speed Authority"
+        );
+      speedTruthState.datasetVersion=
+        String(remote.version||"");
+      speedTruthState.status=
+        coverage>=
+        SPEED_TRUTH_CONFIG.requiredCoveragePct
+          ?"ready"
+          :"partial";
+
+      renderSpeedTruthDiagnostics();
+      renderPreTripMission();
+
+      return(
+        speedTruthState.status==="ready"
+      );
+    }
+
+    // 2) Imported geometry dataset / verified-way registry
+    const samples=
+      sampleRouteForSpeedTruth();
+
+    const resolved=[];
+    const unresolved=[];
+    const conflicts=[];
+
+    for(const sample of samples){
+      let truth=
+        matchLocalSpeedTruth(
+          sample.point,
+          sample.heading,
+          currentVehicleProfile.id,
+          new Date()
+        );
+
+      // Legacy explicitly verified OSM-way registry
+      if(!truth){
+        const open=
+          matchMappedSpeedLimitOpenDataOnly(
+            sample.point,
+            sample.heading,
+            100,
+            sample.routeM/
+            Math.max(1,routeDistanceM)
+          );
+
+        truth=
+          legacyRegistryTruthForSample(
+            sample,
+            open
+          );
+      }
+
+      if(truth){
+        sample.truth=truth;
+        resolved.push(sample);
+
+        const conflict=
+          truthOpenDataConflict(
+            sample,
+            truth
+          );
+
+        if(conflict){
+          conflicts.push(conflict);
+        }
+      }else{
+        unresolved.push({
+          routeM:sample.routeM,
+          point:sample.point,
+          heading:sample.heading
+        });
+      }
+    }
+
+    if(seq!==speedTruthState.requestSeq){
+      return false;
+    }
+
+    const profile=
+      compressTruthSamples(
+        resolved,
+        routeDistanceM
+      );
+
+    const coverage=
+      samples.length
+        ?resolved.length/samples.length*100
+        :0;
+
+    const dataset=
+      loadSpeedTruthDataset();
+
+    speedTruthState.profile=profile;
+    speedTruthState.coverage=
+      clamp(coverage,0,100);
+    speedTruthState.resolvedSamples=
+      resolved.length;
+    speedTruthState.unresolved=
+      unresolved;
+    speedTruthState.conflicts=
+      conflicts;
+    speedTruthState.source=
+      dataset?.segments?.length
+        ?String(
+          dataset.source||
+          "Imported Verified Dataset"
+        )
+        :"Verified Way Registry";
+    speedTruthState.datasetVersion=
+      String(dataset.version||"");
+    speedTruthState.status=
+      speedTruthState.coverage>=
+      SPEED_TRUTH_CONFIG.requiredCoveragePct
+        ?"ready"
+        :profile.length
+          ?"partial"
+          :"missing";
+
+    renderSpeedTruthDiagnostics();
+    renderPreTripMission();
+
+    return(
+      speedTruthState.status==="ready"
+    );
+  }catch(e){
+    if(seq!==speedTruthState.requestSeq){
+      return false;
+    }
+
+    speedTruthState.status="error";
+    speedTruthState.lastError=
+      String(e?.message||e);
+
+    renderSpeedTruthDiagnostics();
+    renderPreTripMission();
+
+    return false;
+  }
+}
+
+function verifiedRouteSpeedStatsFromTruth(){
+  const profile=
+    speedTruthState.profile||[];
+
+  if(!profile.length){
+    return{
+      average:null,
+      coverage:0,
+      scoreReady:false
+    };
+  }
+
+  let weighted=0;
+  let covered=0;
+
+  for(const row of profile){
+    const length=
+      Math.max(
+        0,
+        Number(row.endM)-Number(row.startM)
+      );
+
+    if(
+      length<=0 ||
+      !Number.isFinite(Number(row.limit))
+    ){
+      continue;
+    }
+
+    covered+=length;
+    weighted+=
+      Number(row.limit)*length;
+  }
+
+  return{
+    average:
+      covered>0
+        ?weighted/covered
+        :null,
+    coverage:
+      Number(speedTruthState.coverage||0),
+    scoreReady:
+      speedTruthState.status==="ready" &&
+      Number(speedTruthState.coverage)>=
+      SPEED_TRUTH_CONFIG.requiredCoveragePct
+  };
+}
+
+function renderSpeedTruthDiagnostics(){
+  const status=$('speedTruthStatus');
+
+  if(status){
+    status.classList.remove(
+      'good','review','bad'
+    );
+
+    if(speedTruthState.status==="ready"){
+      status.classList.add('good');
+      status.textContent="VERIFIED";
+    }else if(
+      speedTruthState.status==="partial" ||
+      speedTruthState.status==="loading"
+    ){
+      status.classList.add('review');
+      status.textContent=
+        speedTruthState.status==="loading"
+          ?"در حال بررسی"
+          :"ناقص";
+    }else{
+      status.classList.add('bad');
+      status.textContent="LOCKED";
+    }
+  }
+
+  if($('speedTruthCoverage')){
+    $('speedTruthCoverage').textContent=
+      `${Math.round(
+        Number(speedTruthState.coverage||0)
+      ).toLocaleString('fa-IR')}٪`;
+  }
+
+  if($('speedTruthResolved')){
+    $('speedTruthResolved').textContent=
+      Number(
+        speedTruthState.resolvedSamples||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('speedTruthGaps')){
+    $('speedTruthGaps').textContent=
+      Number(
+        speedTruthState.unresolved?.length||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('speedTruthConflicts')){
+    $('speedTruthConflicts').textContent=
+      Number(
+        speedTruthState.conflicts?.length||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('speedTruthSource')){
+    $('speedTruthSource').textContent=
+      speedTruthState.source||"--";
+  }
+
+  const ready=
+    speedTruthState.status==="ready";
+
+  if($('speedTruthScoreState')){
+    $('speedTruthScoreState').textContent=
+      ready
+        ?"READY"
+        :"LOCKED";
+  }
+
+  if($('speedTruthReason')){
+    if(ready){
+      $('speedTruthReason').textContent=
+        `Coverage تأییدشده ${speedTruthState.coverage.toFixed(1)}٪ • Speed Score قابل فعال‌سازی است.`;
+    }else if(speedTruthState.status==="partial"){
+      $('speedTruthReason').textContent=
+        `Coverage فقط ${speedTruthState.coverage.toFixed(1)}٪ است؛ حداقل ${SPEED_TRUTH_CONFIG.requiredCoveragePct}٪ لازم است.`;
+    }else if(speedTruthState.status==="error"){
+      $('speedTruthReason').textContent=
+        `خطای Speed Authority: ${speedTruthState.lastError}`;
+    }else{
+      $('speedTruthReason').textContent=
+        "منبع تأییدشده برای این Route وجود ندارد؛ Speed Score قفل است.";
+    }
+  }
+}
+
+function validateImportedSpeedTruthDataset(data){
+  if(
+    !data ||
+    !Array.isArray(data.segments)
+  ){
+    throw new Error(
+      "فایل باید segments داشته باشد."
+    );
+  }
+
+  if(
+    data.schema &&
+    data.schema!=="pol-speed-truth-v1"
+  ){
+    throw new Error(
+      "Schema دیتاست پشتیبانی نمی‌شود."
+    );
+  }
+
+  if(!data.source){
+    throw new Error(
+      "source دیتاست الزامی است."
+    );
+  }
+
+  if(!data.verified_at){
+    throw new Error(
+      "verified_at دیتاست الزامی است."
+    );
+  }
+
+  const age=
+    speedTruthDatasetAgeDays(data);
+
+  if(
+    age>
+    SPEED_TRUTH_CONFIG.maxDatasetAgeDays
+  ){
+    throw new Error(
+      "دیتاست از حد مجاز قدیمی‌تر است."
+    );
+  }
+
+  let valid=0;
+
+  data.segments.forEach((segment,index)=>{
+    const geometry=
+      normalizeTruthGeometry(segment);
+
+    if(geometry.length<2){
+      throw new Error(
+        `Segment ${index+1}: geometry نامعتبر`
+      );
+    }
+
+    const hasLimit=
+      normalizeTruthVehicleLimit(
+        segment,
+        "car"
+      )!=null ||
+      Object.values(
+        segment.vehicle_limits||{}
+      ).some(v=>
+        Number.isFinite(Number(v)) &&
+        Number(v)>=10 &&
+        Number(v)<=160
+      );
+
+    if(!hasLimit){
+      throw new Error(
+        `Segment ${index+1}: speed limit نامعتبر`
+      );
+    }
+
+    if(
+      !segment.id &&
+      !segment.segment_id
+    ){
+      throw new Error(
+        `Segment ${index+1}: id الزامی است`
+      );
+    }
+
+    valid++;
+  });
+
+  if(!valid){
+    throw new Error(
+      "دیتاست Segment معتبر ندارد."
+    );
+  }
+
+  return true;
+}
+
+async function importSpeedTruthDatasetFile(file){
+  if(!file)return false;
+
+  if(
+    Number(file.size||0)>
+    SPEED_TRUTH_CONFIG.maxLocalDatasetBytes
+  ){
+    throw new Error(
+      "برای دیتاست ملی از Remote Speed Authority API استفاده کن؛ فایل محلی فقط برای Pilot است."
+    );
+  }
+
+  const raw=await file.text();
+  const data=JSON.parse(raw);
+
+  validateImportedSpeedTruthDataset(data);
+
+  localStorage.setItem(
+    SPEED_TRUTH_DATASET_KEY,
+    JSON.stringify(data)
+  );
+
+  speedTruthState.localIndex=null;
+  speedTruthState.routeRef=null;
+  speedTruthState.status="idle";
+
+  buildSpeedTruthLocalIndex();
+
+  await buildSpeedTruthRouteProfile({
+    force:true
+  });
+
+  return true;
+}
+
+function speedTruthGapCsv(){
+  const lines=[
+    [
+      "route_m",
+      "lat",
+      "lng",
+      "heading",
+      "vehicle",
+      "open_data_limit",
+      "open_data_way_id",
+      "open_data_road"
+    ].join(",")
+  ];
+
+  for(const gap of speedTruthState.unresolved||[]){
+    const progress=
+      Number(gap.routeM)/
+      Math.max(1,routeDistanceM);
+
+    const open=
+      exactSpeedProfileAtProgress(progress) ||
+      matchMappedSpeedLimitOpenDataOnly(
+        gap.point,
+        gap.heading,
+        100,
+        progress
+      );
+
+    lines.push([
+      Math.round(Number(gap.routeM||0)),
+      Number(gap.point?.[0]||0).toFixed(6),
+      Number(gap.point?.[1]||0).toFixed(6),
+      Number.isFinite(Number(gap.heading))
+        ?Math.round(gap.heading)
+        :"",
+      currentVehicleProfile.id,
+      Number.isFinite(Number(open?.limit))
+        ?Math.round(open.limit)
+        :"",
+      open?.wayId||"",
+      `"${String(open?.road||"").replaceAll('"','""')}"`
+    ].join(","));
+  }
+
+  return lines.join("\n");
+}
+
+function downloadTextFile(
+  filename,
+  content,
+  mime="text/plain;charset=utf-8"
+){
+  const blob=new Blob(
+    [content],
+    {type:mime}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+
+  a.href=url;
+  a.download=filename;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(
+    ()=>URL.revokeObjectURL(url),
+    1000
+  );
+}
+
 const VERIFIED_SPEED_REGISTRY_KEY=
   "pol_verified_speed_registry_v1";
 
@@ -9358,7 +10928,8 @@ function openVehicleSheet({
   if($('truckWeight'))$('truckWeight').value=
     Number(currentVehicleProfile.truck?.weight||18);
 
-  syncVehicleUi();
+  renderSpeedTruthDiagnostics();
+syncVehicleUi();
   $('vehicleSheet')?.classList.add('open');
 }
 
@@ -12338,6 +13909,13 @@ function selectRouteAlternative(index){
   mappedSpeedState.exactProfile.status="idle";
   mappedSpeedState.exactProfile.routeRef=null;
   mappedSpeedState.exactProfile.edges=[];
+
+  speedTruthState.status="idle";
+  speedTruthState.profile=[];
+  speedTruthState.coverage=0;
+  speedTruthState.unresolved=[];
+  speedTruthState.conflicts=[];
+  speedTruthState.routeRef=null;
   routeDurationS=route.duration||0;
   buildNavigationSteps(route);
   resetLiveEtaEngine();
@@ -13968,56 +15546,7 @@ function exactOpenDataSpeedStats(){
 }
 
 function verifiedRouteSpeedStats(){
-  const edges=
-    mappedSpeedState.exactProfile?.edges||[];
-
-  const totalRouteM=Math.max(
-    1,
-    Number(routeDistanceM||0)
-  );
-
-  let verifiedM=0;
-  let weighted=0;
-
-  for(const edge of edges){
-    const verified=
-      verifiedSpeedForWay(
-        edge?.osmId,
-        currentVehicleProfile.id
-      );
-
-    const length=
-      Number(edge?.lengthM||0);
-
-    if(
-      !verified ||
-      !Number.isFinite(length) ||
-      length<=0
-    ){
-      continue;
-    }
-
-    verifiedM+=length;
-    weighted+=
-      Number(verified.limit)*length;
-  }
-
-  const coverage=
-    clamp(
-      verifiedM/totalRouteM*100,
-      0,
-      100
-    );
-
-  return{
-    average:
-      verifiedM>0
-        ?weighted/verifiedM
-        :null,
-    coverage,
-    scoreReady:
-      coverage>=90
-  };
+  return verifiedRouteSpeedStatsFromTruth();
 }
 
 function renderPreTripMission(){
@@ -14105,7 +15634,7 @@ function renderPreTripMission(){
         "حد سرعت مسیر برای Score آماده است";
 
       $('missionSpeedTrustText').textContent=
-        `پوشش منبع تأییدشده ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است.`;
+        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است.`;
     }else{
       trust.classList.add('blocked');
 
@@ -14113,7 +15642,7 @@ function renderPreTripMission(){
         "امتیاز سرعت قفل است";
 
       $('missionSpeedTrustText').textContent=
-        `پوشش منبع تأییدشده ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Open Data برای Navigation دیده می‌شود اما راننده را جریمه نمی‌کند.`;
+        `پوشش Speed Truth ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Open Data برای Navigation دیده می‌شود اما راننده را جریمه نمی‌کند.`;
     }
   }
 }
@@ -14129,6 +15658,10 @@ async function refreshPreTripMissionIntel(){
       force:false
     })
   ]);
+
+  await buildSpeedTruthRouteProfile({
+    force:false
+  });
 
   renderPreTripMission();
 }
@@ -16947,7 +18480,7 @@ function mappedSpeedHeadingPenalty(segment,heading){
   return 22;
 }
 
-function matchMappedSpeedLimit(
+function matchMappedSpeedLimitOpenDataOnly(
   point,
   heading,
   temporalConfidence=0,
@@ -17117,6 +18650,50 @@ function matchMappedSpeedLimit(
     fallbackGeometryEligible:
       fallbackScoreEligible
   });
+}
+
+
+function matchMappedSpeedLimit(
+  point,
+  heading,
+  temporalConfidence=0,
+  routeProgress=null
+){
+  // Legal truth always wins.
+  if(Number.isFinite(Number(routeProgress))){
+    const truth=
+      speedTruthAtProgress(routeProgress);
+
+    if(truth){
+      return{
+        ...truth,
+        exactEdge:true,
+        openDataLimit:null
+      };
+    }
+  }
+
+  // Everything below this line is reference-only open data.
+  const open=
+    matchMappedSpeedLimitOpenDataOnly(
+      point,
+      heading,
+      temporalConfidence,
+      routeProgress
+    );
+
+  if(!open)return null;
+
+  return{
+    ...open,
+    scoreEligible:false,
+    authorityVerified:false,
+    truthMode:"open-data-reference",
+    openDataLimit:Number(
+      open.openDataLimit ??
+      open.limit
+    )
+  };
 }
 
 async function fetchOverpassSpeedWays(bbox){
@@ -17415,17 +18992,13 @@ function renderMappedSpeedLimit(
   }
 
   if(!match.authorityVerified){
-    // Critical safety rule:
-    // an open-data value must never masquerade as the legal road limit.
     sign.textContent="--";
 
     badge.textContent=
-      Number.isFinite(Number(match.openDataLimit))
-        ?`Open Data: ${Math.round(match.openDataLimit).toLocaleString('fa-IR')} • بدون امتیاز`
-        :"حد مجاز تأییدنشده";
+      "Speed Limit تأیید نشده";
 
     badge.classList.add(
-      'authority-locked'
+      'truth-missing'
     );
 
     if($('limit'))$('limit').textContent="--";
@@ -17444,9 +19017,9 @@ function renderMappedSpeedLimit(
   sign.classList.add('mapped-limit');
 
   badge.textContent=
-    `${match.road} • تأییدشده`;
+    `${match.road} • منبع تأییدشده`;
 
-  badge.classList.add('exact');
+  badge.classList.add('truth-verified');
 
   if($('limit')){
     $('limit').textContent=
@@ -20492,6 +22065,11 @@ function syncNavigationAfterReroute(){
   mappedSpeedState.exactProfile.edges=[];
   prefetchExactRouteSpeedProfile({force:true});
 
+  speedTruthState.status="idle";
+  speedTruthState.profile=[];
+  speedTruthState.routeRef=null;
+  buildSpeedTruthRouteProfile({force:true});
+
   clearDriveRouteCorridor();
   setDrivingRoutePresentation(
     document.body.classList.contains('driving-mode')
@@ -22084,6 +23662,96 @@ $('mapRouteVehicleBtn').onclick=()=>{
     startIntent:false
   });
 };
+
+$('speedTruthImportBtn')?.addEventListener(
+  'click',
+  ()=>{
+    $('speedTruthFileInput')?.click();
+  }
+);
+
+$('speedTruthFileInput')?.addEventListener(
+  'change',
+  async e=>{
+    const file=e.target?.files?.[0];
+
+    if(!file)return;
+
+    try{
+      showMapStatus(
+        "در حال Import دیتاست تأییدشده..."
+      );
+
+      await importSpeedTruthDatasetFile(
+        file
+      );
+
+      showMapStatus(
+        "Verified Speed Dataset بارگذاری شد"
+      );
+    }catch(err){
+      showMapStatus(
+        `Import ناموفق: ${err?.message||err}`,
+        "bad"
+      );
+    }finally{
+      e.target.value="";
+    }
+  }
+);
+
+$('speedTruthExportGapsBtn')?.addEventListener(
+  'click',
+  ()=>{
+    if(!routeCoords.length){
+      showMapStatus(
+        "ابتدا Route بساز.",
+        "bad"
+      );
+      return;
+    }
+
+    const csv=speedTruthGapCsv();
+
+    downloadTextFile(
+      `POL_speed_gaps_${Date.now()}.csv`,
+      "\ufeff"+csv,
+      "text/csv;charset=utf-8"
+    );
+  }
+);
+
+$('speedTruthClearBtn')?.addEventListener(
+  'click',
+  ()=>{
+    if(
+      !confirm(
+        "دیتاست Verified تستی پاک شود؟"
+      )
+    ){
+      return;
+    }
+
+    localStorage.removeItem(
+      SPEED_TRUTH_DATASET_KEY
+    );
+
+    speedTruthState.localIndex=null;
+    speedTruthState.status="idle";
+    speedTruthState.profile=[];
+    speedTruthState.coverage=0;
+    speedTruthState.unresolved=[];
+    speedTruthState.conflicts=[];
+    speedTruthState.routeRef=null;
+
+    buildSpeedTruthRouteProfile({
+      force:true
+    });
+
+    renderSpeedTruthDiagnostics();
+    renderPreTripMission();
+  }
+);
 
 $('closePreTripMissionBtn').onclick=
   closePreTripMission;
