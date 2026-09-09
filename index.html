@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲.۷ Speed Score, Camera & Clean Start</title>
+<title>POL | نسخه ۶.۲.۸ Camera Corridor Recovery</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6063,6 +6063,24 @@ body.map-first-mode:not(.driving-mode) #tripSummarySheet{
   color:#86efac!important;
 }
 
+
+/* ============================================================
+   v6.2.8 CAMERA CORRIDOR RECOVERY
+   ============================================================ */
+
+.leaflet-camera-marker{
+  position:relative;
+  z-index:1;
+}
+
+body:not(.driving-mode) .leaflet-marker-pane{
+  z-index:650!important;
+}
+
+body:not(.driving-mode) .leaflet-tooltip-pane{
+  z-index:660!important;
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6867,7 +6885,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2.7</span>
+              <span class="lab-version-chip">v6.2.8</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -11428,6 +11446,9 @@ let mappedSpeedState={
   cameraLastError:"",
   cameraUpdatedAt:0,
   cameraSourceSummary:"",
+  cameraQueryCoverage:0,
+  cameraBatchSuccess:0,
+  cameraBatchTotal:0,
   lastCameraAlertId:null,
   lastCameraVoiceStage:{},
 
@@ -16755,7 +16776,8 @@ function renderPreTripMission(){
       mappedSpeedState.cameraStatus;
 
     $('missionCameraCount').textContent=
-      status==="ready"
+      status==="ready" ||
+      status==="partial"
         ?cameraCount.toLocaleString('fa-IR')
         :status==="loading"
           ?"…"
@@ -16771,13 +16793,19 @@ function renderPreTripMission(){
         ?(
           cameraCount>0
             ?`${cameraCount.toLocaleString('fa-IR')} دوربین ثبت‌شده روی Route پیدا شد`
-            :"منابع دوربین بررسی شدند؛ دوربین ثبت‌شده‌ای روی این Route پیدا نشد"
+            :"Corridor کامل بررسی شد؛ دوربین ثبت‌شده‌ای روی Route پیدا نشد"
         )
-        :status==="loading"
-          ?"در حال بررسی مستقل دوربین‌ها"
-          :status==="error"
-            ?"داده دوربین دریافت نشد؛ صفر فرض نمی‌شود"
-            :"هنوز بررسی نشده";
+        :status==="partial"
+          ?(
+            cameraCount>0
+              ?`${cameraCount.toLocaleString('fa-IR')} دوربین پیدا شد • پوشش Query ${Math.round(mappedSpeedState.cameraQueryCoverage||0).toLocaleString('fa-IR')}٪`
+              :`بررسی دوربین ناقص است • پوشش Query ${Math.round(mappedSpeedState.cameraQueryCoverage||0).toLocaleString('fa-IR')}٪`
+          )
+          :status==="loading"
+            ?"در حال بررسی پیوسته‌ی کل Route"
+            :status==="error"
+              ?"منبع دوربین پاسخ نداد؛ صفر فرض نمی‌شود"
+              :"هنوز بررسی نشده";
   }
 
   if($('missionAvgSpeedLimit')){
@@ -20159,7 +20187,7 @@ function parseCameraDirection(value){
 
 
 const TRAFFIC_CAMERA_CACHE_KEY=
-  "pol_route_camera_cache_v1";
+  "pol_route_camera_cache_v2";
 
 const TRAFFIC_CAMERA_CACHE_TTL=
   6*60*60*1000;
@@ -20372,26 +20400,99 @@ async function fetchTrafficCameraBatch(points){
 }
 
 
-async function fetchRouteTrafficCameraNodes(){
-  const bbox=
-    routeSpeedBBox();
+function sampledCameraCorridorPoints(
+  everyM=400,
+  maxPoints=110
+){
+  if(!routeCoords?.length)return[];
 
-  if(!bbox)return[];
+  const total=Math.max(
+    1,
+    Number(routeDistanceM||0)
+  );
 
-  const box=
-    `(${bbox.south.toFixed(6)},${bbox.west.toFixed(6)},${bbox.north.toFixed(6)},${bbox.east.toFixed(6)})`;
+  const out=[];
+
+  for(
+    let d=0;
+    d<=total &&
+    out.length<maxPoints;
+    d+=everyM
+  ){
+    const point=routePointAtDistanceM(d);
+
+    if(
+      Array.isArray(point) &&
+      point.length>=2 &&
+      point.every(Number.isFinite)
+    ){
+      out.push({
+        routeM:d,
+        point
+      });
+    }
+  }
+
+  const last=
+    routePointAtDistanceM(total);
+
+  if(
+    last &&
+    (
+      !out.length ||
+      hav(out.at(-1).point,last)>80
+    )
+  ){
+    out.push({
+      routeM:total,
+      point:last
+    });
+  }
+
+  return out;
+}
+
+async function fetchCameraCorridorBatch(
+  samples,
+  {
+    radiusM=300
+  }={}
+){
+  if(!samples?.length)return[];
+
+  const clauses=[];
+
+  for(const sample of samples){
+    const [lat,lng]=sample.point;
+
+    const around=
+      `(around:${radiusM},${Number(lat).toFixed(6)},${Number(lng).toFixed(6)})`;
+
+    // Highest-value / most reliable OSM camera representation.
+    clauses.push(
+      `node["highway"="speed_camera"]${around};`
+    );
+
+    // Some datasets use enforcement directly on a node.
+    clauses.push(
+      `node["enforcement"~"maxspeed|traffic_signals|average_speed"]${around};`
+    );
+
+    // Relations are queried only inside the small local corridor,
+    // never across the entire Tehran route bbox.
+    clauses.push(
+      `relation["type"="enforcement"]["enforcement"~"maxspeed|traffic_signals|average_speed"]${around};`
+    );
+  }
 
   const query=
-    `[out:json][timeout:25];(`+
-      `node["highway"="speed_camera"]${box};`+
-      `node["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
-      `relation["type"="enforcement"]["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
-      `relation["enforcement"~"maxspeed|traffic_signals|average_speed"]${box};`+
+    `[out:json][timeout:16];(`+
+    clauses.join("")+
     `);out center tags;`;
 
   const endpoints=[
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter"
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter"
   ];
 
   let lastError=null;
@@ -20403,7 +20504,7 @@ async function fetchRouteTrafficCameraNodes(){
 
       const timeout=setTimeout(
         ()=>controller.abort(),
-        26000
+        18000
       );
 
       const res=await fetch(
@@ -20440,8 +20541,114 @@ async function fetchRouteTrafficCameraNodes(){
 
   throw lastError||
     new Error(
-      "Traffic camera source unavailable"
+      "Camera corridor batch unavailable"
     );
+}
+
+async function fetchRouteTrafficCameraNodes(){
+  const samples=
+    sampledCameraCorridorPoints();
+
+  if(!samples.length){
+    return{
+      elements:[],
+      successBatches:0,
+      totalBatches:0,
+      coverage:0,
+      partial:false
+    };
+  }
+
+  // Small batches prevent public Overpass overload/timeouts.
+  const BATCH_SIZE=14;
+  const batches=[];
+
+  for(
+    let i=0;
+    i<samples.length;
+    i+=BATCH_SIZE
+  ){
+    batches.push(
+      samples.slice(
+        i,
+        i+BATCH_SIZE
+      )
+    );
+  }
+
+  const dedupe=new Map();
+  let successBatches=0;
+  const errors=[];
+
+  for(let i=0;i<batches.length;i++){
+    try{
+      const elements=
+        await fetchCameraCorridorBatch(
+          batches[i],
+          {radiusM:300}
+        );
+
+      successBatches++;
+
+      for(const el of elements||[]){
+        if(
+          el?.id==null ||
+          !["node","relation","way"].includes(
+            el.type
+          )
+        ){
+          continue;
+        }
+
+        dedupe.set(
+          `${el.type}:${el.id}`,
+          el
+        );
+      }
+    }catch(e){
+      errors.push(
+        String(e?.message||e)
+      );
+
+      // Partial data is still valuable. Do not throw away
+      // successful batches because one public Overpass call failed.
+    }
+
+    if(i<batches.length-1){
+      await new Promise(
+        r=>setTimeout(r,160)
+      );
+    }
+  }
+
+  const totalBatches=
+    batches.length;
+
+  const coverage=
+    totalBatches
+      ?successBatches/
+       totalBatches*100
+      :0;
+
+  if(successBatches===0){
+    throw new Error(
+      errors[0]||
+      "All camera corridor batches failed"
+    );
+  }
+
+  return{
+    elements:[
+      ...dedupe.values()
+    ],
+    successBatches,
+    totalBatches,
+    coverage,
+    partial:
+      successBatches<
+      totalBatches,
+    errors
+  };
 }
 
 async function prefetchRouteTrafficCameras({
@@ -20477,6 +20684,9 @@ async function prefetchRouteTrafficCameras({
     );
 
     mappedSpeedState.cameraStatus="ready";
+    mappedSpeedState.cameraQueryCoverage=100;
+    mappedSpeedState.cameraBatchSuccess=1;
+    mappedSpeedState.cameraBatchTotal=1;
     mappedSpeedState.cameraUpdatedAt=
       Date.now();
 
@@ -20497,7 +20707,7 @@ async function prefetchRouteTrafficCameras({
     ++mappedSpeedState.cameraRequestSeq;
 
   try{
-    const elements=
+    const result=
       await fetchRouteTrafficCameraNodes();
 
     if(
@@ -20507,42 +20717,52 @@ async function prefetchRouteTrafficCameras({
       return false;
     }
 
+    const elements=
+      result.elements||[];
+
+    // Cache only successful corridor responses.
+    // The new v2 key already invalidates broken v1 empty caches.
     saveTrafficCameraCache(
       key,
       elements
     );
 
-    const beforeCount=
-      Number(
-        mappedSpeedState.cameras?.length||0
-      );
-
     buildMappedTrafficCameras(
       elements,
       {
-        source:"dedicated-camera-bbox",
+        source:
+          result.partial
+            ?"camera-corridor-partial"
+            :"camera-corridor",
         merge:true
       }
     );
 
-    const afterCount=
+    mappedSpeedState.cameraBatchSuccess=
       Number(
-        mappedSpeedState.cameras?.length||0
+        result.successBatches||0
       );
 
-    // An empty dedicated response must never erase cameras already found
-    // by the road-rules bbox source.
-    if(
-      !elements.length &&
-      beforeCount>0 &&
-      afterCount===0
-    ){
-      mappedSpeedState.cameras=
-        mappedSpeedState.cameras||[];
-    }
+    mappedSpeedState.cameraBatchTotal=
+      Number(
+        result.totalBatches||0
+      );
 
-    mappedSpeedState.cameraStatus="ready";
-    mappedSpeedState.cameraLastError="";
+    mappedSpeedState.cameraQueryCoverage=
+      Number(
+        result.coverage||0
+      );
+
+    mappedSpeedState.cameraStatus=
+      result.partial
+        ?"partial"
+        :"ready";
+
+    mappedSpeedState.cameraLastError=
+      result.partial
+        ?`بعضی Batchهای دوربین پاسخ ندادند`
+        :"";
+
     mappedSpeedState.cameraUpdatedAt=
       Date.now();
 
@@ -20566,7 +20786,15 @@ async function prefetchRouteTrafficCameras({
       mappedSpeedState.cameras?.length
     ){
       mappedSpeedState.cameraStatus=
-        "ready";
+        "partial";
+
+      mappedSpeedState.cameraQueryCoverage=
+        Math.max(
+          1,
+          Number(
+            mappedSpeedState.cameraQueryCoverage||0
+          )
+        );
     }else{
       mappedSpeedState.cameraStatus=
         "error";
@@ -20850,6 +21078,37 @@ function clearTrafficCameraMarkers(){
 
   drive3DTrafficCameraMarkers=[];
 }
+
+
+window.POL_CAMERA_DEBUG=()=>{
+  return{
+    status:
+      mappedSpeedState.cameraStatus,
+    count:
+      mappedSpeedState.cameras?.length||0,
+    coverage:
+      mappedSpeedState.cameraQueryCoverage||0,
+    batches:
+      `${mappedSpeedState.cameraBatchSuccess||0}/${mappedSpeedState.cameraBatchTotal||0}`,
+    source:
+      mappedSpeedState.cameraSourceSummary||"",
+    error:
+      mappedSpeedState.cameraLastError||"",
+    cameras:
+      (mappedSpeedState.cameras||[])
+        .map(c=>({
+          id:c.id,
+          routeM:
+            Math.round(c.routeM||0),
+          distanceM:
+            Math.round(
+              c.routeDistanceM||0
+            ),
+          type:c.type,
+          source:c.source
+        }))
+  };
+};
 
 function cameraMarkerLabel(camera){
   if(camera.type==="red_light"){
