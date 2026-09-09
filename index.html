@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۵.۷ Waze-View Camera Calibration</title>
+<title>POL | نسخه ۵.۸ Route-Up Waze Camera</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4977,6 +4977,51 @@ body.drive-3d-active #drive3dMap .maplibregl-ctrl-compass{
   }
 }
 
+
+/* ============================================================
+   v5.8 ROUTE-UP WAZE CAMERA
+   Main change: hard heading-up + stronger landscape perspective
+   ============================================================ */
+
+/* The driving map should visually prioritize the road directly ahead. */
+body.driving-mode.drive-3d-active #drive3dMap{
+  background:#e8ebed!important;
+}
+
+/* Slightly smaller vehicle on desktop keeps road geometry visible around it. */
+@media(min-width:900px){
+  .pol-3d-car-marker{
+    width:44px!important;
+    height:44px!important;
+  }
+  .pol-3d-car-shell{
+    width:40px!important;
+    height:40px!important;
+  }
+}
+
+/* On wide desktop screens the ETA card should not dominate the road. */
+@media(min-width:1000px){
+  body.driving-mode.drive-3d-active .nav-bottom-strip{
+    width:min(510px,38vw)!important;
+  }
+  body.driving-mode.drive-3d-active #turnCard{
+    width:min(570px,44vw)!important;
+  }
+}
+
+/* Mobile retains the strongest Waze-like composition. */
+@media(max-width:650px){
+  body.driving-mode.drive-3d-active #turnCard{
+    width:calc(100% - 12px)!important;
+    left:6px!important;
+    right:6px!important;
+  }
+  body.driving-mode.drive-3d-active .drive-current-road-bar{
+    bottom:82px!important;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5752,9 +5797,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v5.7</span>
+              <span class="lab-version-chip">v5.8</span>
               <div>
-                <b>Waze-View Camera Calibration</b>
+                <b>Route-Up Waze Camera</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6915,73 +6960,281 @@ function updateDrive3DCar(point,progress,speedKmh=0){
 
   // Heading-up keeps the vehicle pointing vertically up.
   // In North-Up mode the vehicle rotates to its true/route heading.
-  const heading=navigationHeadingForState(
+  const heading=drive3DHeadingForNavigation(
     progress,
     point,
     speedKmh
   );
 
   if(headingUpEnabled){
+    // When route-up is active the map itself rotates, so vehicle stays up.
     drive3DCarMarker.setRotation(0);
   }else if(Number.isFinite(Number(heading))){
     drive3DCarMarker.setRotation(Number(heading));
   }
 }
 
+
+function shortestAngleDelta(a,b){
+  let d=(Number(b)-Number(a)+540)%360-180;
+  return d;
+}
+
+function smoothBearingToward(current,target,factor=.34){
+  if(!Number.isFinite(Number(target)))return Number(current||0);
+
+  if(!Number.isFinite(Number(current))){
+    return normalizedBearingDegrees(target);
+  }
+
+  const delta=shortestAngleDelta(current,target);
+
+  return normalizedBearingDegrees(
+    Number(current)+delta*clamp(Number(factor||.34),0,1)
+  );
+}
+
+function drive3DRouteTangentBearing(progress,speedKmh=0){
+  if(!routeCoords.length)return null;
+
+  const travelled=
+    routeDistanceM*clamp(Number(progress||0),0,1);
+
+  const speed=Math.max(0,Number(speedKmh||0));
+
+  const behind=
+    speed>=80?35:
+    speed>=50?24:
+    16;
+
+  const ahead=
+    speed>=90?95:
+    speed>=60?72:
+    speed>=35?52:
+    36;
+
+  const a=routePointAtDistanceM(
+    Math.max(0,travelled-behind)
+  );
+
+  const b=routePointAtDistanceM(
+    Math.min(routeDistanceM,travelled+ahead)
+  );
+
+  if(
+    !Array.isArray(a) ||
+    !Array.isArray(b) ||
+    hav(a,b)<3
+  ){
+    return routeHeadingAtProgress(progress);
+  }
+
+  return normalizedBearingDegrees(
+    bearingDeg(a,b)
+  );
+}
+
+function drive3DHeadingForNavigation(progress,currentPoint,speedKmh=0){
+  const routeBearing=
+    drive3DRouteTangentBearing(progress,speedKmh);
+
+  // Simulator must follow route geometry exactly.
+  if(!isRealGpsMode()){
+    return routeBearing;
+  }
+
+  const gpsHeading=
+    Number.isFinite(Number(realGpsState?.heading)) &&
+    Number(speedKmh)>=7
+      ?normalizedBearingDegrees(realGpsState.heading)
+      :null;
+
+  if(!Number.isFinite(Number(gpsHeading))){
+    return routeBearing;
+  }
+
+  if(!Number.isFinite(Number(routeBearing))){
+    return gpsHeading;
+  }
+
+  const mismatch=Math.abs(
+    shortestAngleDelta(routeBearing,gpsHeading)
+  );
+
+  const routeConfidence=Math.max(
+    Number(realGpsState?.networkMatch?.confidence||0)*100,
+    Number(realGpsState?.temporalMatch?.confidence||0)
+  );
+
+  // If GPS compass disagrees strongly with a well-matched road,
+  // trust the road tangent so the route remains visually "up".
+  if(
+    mismatch>42 &&
+    routeConfidence>=55
+  ){
+    return routeBearing;
+  }
+
+  // Otherwise gently blend GPS heading with route geometry.
+  return smoothBearingToward(
+    routeBearing,
+    gpsHeading,
+    .22
+  );
+}
+
+function drive3DViewportProfile(){
+  const container=drive3DMap?.getContainer?.();
+
+  const width=Math.max(
+    320,
+    Number(container?.clientWidth||window.innerWidth||390)
+  );
+
+  const height=Math.max(
+    420,
+    Number(container?.clientHeight||window.innerHeight||700)
+  );
+
+  const aspect=width/height;
+
+  return{
+    width,
+    height,
+    aspect,
+    wide:aspect>=1.35,
+    portrait:aspect<.9
+  };
+}
+
 function drive3DPitchForState(progress,speedKmh=0){
   const d=nextTurnDistanceAtProgress(progress);
+  const viewport=drive3DViewportProfile();
 
-  // MapLibre GL JS CameraOptions currently caps pitch at 60°.
-  // We deliberately stay close to that limit for navigation mode.
-  if(d<35)return 57.5;
-  if(d<90)return 58.5;
-  return 60;
+  // Wide desktop view needs stronger pitch to visually resemble
+  // a portrait navigation camera.
+  if(viewport.wide){
+    if(d<35)return 66;
+    if(d<100)return 68;
+    return 71;
+  }
+
+  // Mobile already has a tall field of view, so slightly less pitch
+  // gives a similar visual result without excessive horizon distortion.
+  if(d<35)return 59;
+  if(d<100)return 62;
+  return 65;
 }
 
 function drive3DZoomForState(progress,speedKmh=0){
   const d=nextTurnDistanceAtProgress(progress);
   const speed=Math.max(0,Number(speedKmh||0));
+  const viewport=drive3DViewportProfile();
 
-  if(d<=30)return 19.05;
-  if(d<=70)return 18.75;
-  if(d<=140)return 18.45;
-  if(d<=260)return 18.05;
-  if(d<=450)return 17.65;
+  let zoom;
 
-  if(speed<25)return 17.65;
-  if(speed<45)return 17.45;
-  if(speed<65)return 17.10;
-  if(speed<85)return 16.65;
-  return 16.15;
+  if(d<=30)zoom=19.25;
+  else if(d<=70)zoom=19.0;
+  else if(d<=140)zoom=18.7;
+  else if(d<=260)zoom=18.35;
+  else if(d<=450)zoom=18.0;
+  else if(speed<25)zoom=17.95;
+  else if(speed<45)zoom=17.75;
+  else if(speed<65)zoom=17.45;
+  else if(speed<85)zoom=17.0;
+  else zoom=16.55;
+
+  // Landscape screens show much more map horizontally than Waze's
+  // portrait phone view. Add zoom so the visible street scale matches.
+  if(viewport.wide){
+    zoom+=.72;
+  }else if(viewport.portrait){
+    zoom+=.12;
+  }
+
+  return clamp(zoom,3,19.8);
 }
 
 function drive3DVehicleOffsetPx(){
-  const container=drive3DMap?.getContainer?.();
+  const viewport=drive3DViewportProfile();
 
-  const h=Math.max(
-    420,
-    Number(container?.clientHeight||window.innerHeight||700)
-  );
+  const ratio=
+    viewport.wide
+      ?.29
+      :viewport.portrait
+        ?.275
+        :.282;
 
-  // Positive Y means the tracked location finishes below screen center.
-  // 0.25–0.27 of viewport height puts the car around 75–78% down.
   return clamp(
-    Math.round(h*.265),
-    118,
-    255
+    Math.round(viewport.height*ratio),
+    125,
+    300
   );
 }
 
 function drive3DRouteBearing(progress,currentPoint,speedKmh=0){
-  const heading=navigationHeadingForState(
+  return drive3DHeadingForNavigation(
     progress,
     currentPoint,
     speedKmh
   );
+}
 
-  return Number.isFinite(Number(heading))
-    ?Number(heading)
-    :Number(drive3DLastBearing||0);
+function enforceDrive3DCameraPose({
+  bearing,
+  pitch,
+  zoom,
+  allowCenterCorrection=false,
+  center=null,
+  offsetY=0
+}={}){
+  if(!isDrive3DActive())return;
+
+  if(
+    manualExploreLock ||
+    userManuallyMovedDrivingMap
+  ){
+    return;
+  }
+
+  try{
+    const actualBearing=Number(
+      drive3DMap.getBearing()||0
+    );
+
+    const actualPitch=Number(
+      drive3DMap.getPitch()||0
+    );
+
+    const bearingError=Math.abs(
+      shortestAngleDelta(actualBearing,bearing)
+    );
+
+    const pitchError=Math.abs(
+      actualPitch-pitch
+    );
+
+    if(
+      bearingError>7 ||
+      pitchError>3.5
+    ){
+      drive3DMap.easeTo({
+        ...(allowCenterCorrection && center
+          ?{
+            center,
+            offset:[0,offsetY],
+            zoom
+          }
+          :{}),
+        bearing,
+        pitch,
+        duration:160,
+        easing:t=>1-Math.pow(1-t,3),
+        essential:true,
+        noMoveStart:true
+      });
+    }
+  }catch(e){}
 }
 
 function updateDrive3DCamera(
@@ -7004,7 +7257,7 @@ function updateDrive3DCamera(
 
   const now=performance.now();
 
-  if(!force && now-drive3DLastCameraAt<150){
+  if(!force && now-drive3DLastCameraAt<145){
     return;
   }
 
@@ -7013,33 +7266,44 @@ function updateDrive3DCamera(
   const zoom=drive3DZoomForState(progress,speedKmh);
   const pitch=drive3DPitchForState(progress,speedKmh);
 
-  const heading=drive3DRouteBearing(
+  const rawBearing=drive3DRouteBearing(
     progress,
     currentPoint,
     speedKmh
   );
 
   const bearing=
-    headingUpEnabled
-      ?heading
+    headingUpEnabled &&
+    Number.isFinite(Number(rawBearing))
+      ?smoothBearingToward(
+        drive3DLastBearing,
+        rawBearing,
+        force?1:.48
+      )
       :0;
 
   drive3DLastBearing=bearing;
 
   const carOffsetY=drive3DVehicleOffsetPx();
 
-  const center=
-    Array.isArray(currentPoint) && currentPoint.length>=2
-      ?[Number(currentPoint[1]),Number(currentPoint[0])]
-      :[
-        Number(routePointAtDistanceM(routeDistanceM*progress)[1]),
-        Number(routePointAtDistanceM(routeDistanceM*progress)[0])
-      ];
+  const fallbackPoint=
+    routePointAtDistanceM(
+      routeDistanceM*clamp(Number(progress||0),0,1)
+    );
+
+  const trackedPoint=
+    Array.isArray(currentPoint) &&
+    currentPoint.length>=2
+      ?currentPoint
+      :fallbackPoint;
+
+  const center=[
+    Number(trackedPoint[1]),
+    Number(trackedPoint[0])
+  ];
 
   try{
     drive3DMap.easeTo({
-      // v5.7 key change:
-      // track the VEHICLE itself, then place it below center via offset.
       center,
       offset:[0,carOffsetY],
       zoom,
@@ -7051,7 +7315,7 @@ function updateDrive3DCamera(
         bottom:0,
         left:0
       },
-      duration:force?430:225,
+      duration:force?380:210,
       easing:t=>1-Math.pow(1-t,3),
       essential:true,
       noMoveStart:true
@@ -7075,27 +7339,17 @@ function updateDrive3DCamera(
     }catch(_e){}
   }
 
-  // Verification guard: if another camera action flattened the view,
-  // restore navigation pitch immediately.
+  // Hard route-up / pitch verification.
   setTimeout(()=>{
-    if(
-      !isDrive3DActive() ||
-      manualExploreLock ||
-      userManuallyMovedDrivingMap
-    )return;
-
-    try{
-      if(Number(drive3DMap.getPitch()||0)<54){
-        drive3DMap.easeTo({
-          pitch,
-          bearing,
-          duration:180,
-          essential:true,
-          noMoveStart:true
-        });
-      }
-    }catch(e){}
-  },80);
+    enforceDrive3DCameraPose({
+      bearing,
+      pitch,
+      zoom,
+      allowCenterCorrection:true,
+      center,
+      offsetY:carOffsetY
+    });
+  },90);
 }
 
 function drive3DFitRoute(){
@@ -7123,7 +7377,7 @@ function drive3DFitRoute(){
     });
 
     drive3DMap.easeTo({
-      pitch:28,
+      pitch:24,
       bearing:0,
       duration:380,
       essential:true
@@ -7237,7 +7491,7 @@ async function ensureDrive3DMap(){
       pitch:60,
       minZoom:3,
       maxZoom:20,
-      maxPitch:60,
+      maxPitch:75,
       attributionControl:false,
       dragRotate:true,
       touchPitch:true,
@@ -7318,9 +7572,19 @@ async function activateDrive3DMap(){
 
     document.body.classList.add('drive-3d-active');
 
+    // Navigation starts in route-up mode by design.
+    headingUpEnabled=true;
+    updateHeadingModeButton();
+
     try{
       drive3DMap.resize();
-      drive3DMap.setMaxPitch?.(60);
+      drive3DMap.setMaxPitch?.(75);
+
+      // Remove any stale north-up pose before first recenter.
+      drive3DMap.jumpTo({
+        bearing:0,
+        pitch:0
+      });
     }catch(e){}
 
     installDrive3DRouteLayers();
@@ -7334,11 +7598,42 @@ async function activateDrive3DMap(){
         // Hard verification: active renderer must visibly be pitched.
         setTimeout(()=>{
           try{
-            const actualPitch=Number(drive3DMap.getPitch()||0);
+            const state=drive3DCurrentState();
 
-            if(actualPitch<54){
-              const state=drive3DCurrentState();
+            const targetPitch=
+              drive3DPitchForState(
+                state.progress,
+                state.speed
+              );
 
+            const targetBearing=
+              drive3DRouteBearing(
+                state.progress,
+                state.point,
+                state.speed
+              );
+
+            const actualPitch=Number(
+              drive3DMap.getPitch()||0
+            );
+
+            const actualBearing=Number(
+              drive3DMap.getBearing()||0
+            );
+
+            const poseWrong=
+              actualPitch<Math.min(57,targetPitch-4) ||
+              (
+                Number.isFinite(Number(targetBearing)) &&
+                Math.abs(
+                  shortestAngleDelta(
+                    actualBearing,
+                    targetBearing
+                  )
+                )>12
+              );
+
+            if(poseWrong){
               updateDrive3DCamera(
                 state.progress,
                 state.point,
