@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۰ Speed Integrity & Free Zoom</title>
+<title>POL | نسخه ۶.۱ Mission Brief & Speed Authority Gate</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5350,6 +5350,249 @@ body.driving-mode.zoom-follow-active #driveRecenterBtn:not(.is-needed){
     0 0 0 2px rgba(77,163,255,.10)!important;
 }
 
+
+/* ============================================================
+   v6.1 MISSION BRIEF & SPEED AUTHORITY GATE
+   ============================================================ */
+
+.pretrip-mission-sheet{
+  position:fixed;
+  inset:0;
+  z-index:5300;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:12px;
+  background:rgba(2,8,23,.55);
+  backdrop-filter:blur(7px);
+}
+.pretrip-mission-sheet.open{
+  display:flex;
+}
+.pretrip-mission-card{
+  width:min(680px,100%);
+  max-height:min(88dvh,760px);
+  overflow:auto;
+  padding:13px;
+  border-radius:25px;
+  background:#0b141f;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 25px 65px rgba(2,8,23,.48);
+}
+.pretrip-mission-handle{
+  width:42px;
+  height:4px;
+  margin:0 auto 12px;
+  border-radius:999px;
+  background:#40536d;
+}
+.pretrip-mission-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.pretrip-mission-head small{
+  color:#75b9ff;
+  font-size:7px;
+}
+.pretrip-mission-head h3{
+  margin:3px 0 0;
+  font-size:18px;
+}
+.pretrip-mission-head p{
+  margin:4px 0 0;
+  max-width:520px;
+  color:#8ea1b6;
+  font-size:8px;
+  line-height:1.55;
+}
+.pretrip-mission-head button{
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  background:#172334!important;
+  color:#cbd5e1!important;
+  border:1px solid rgba(148,163,184,.12)!important;
+}
+
+.pretrip-mission-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:7px;
+  margin-top:13px;
+}
+.pretrip-metric{
+  min-width:0;
+  padding:10px 7px;
+  border-radius:14px;
+  background:#101923;
+  border:1px solid #293b50;
+  text-align:center;
+}
+.pretrip-metric>span{
+  display:block;
+  color:#8396aa;
+  font-size:6.5px;
+}
+.pretrip-metric>b{
+  display:block;
+  margin-top:4px;
+  font-size:16px;
+  line-height:1.15;
+  color:#f1f5f9;
+}
+.pretrip-metric>small{
+  display:block;
+  margin-top:4px;
+  min-height:17px;
+  color:#788ba1;
+  font-size:6px;
+  line-height:1.35;
+}
+.pretrip-metric.speed{
+  border-color:#344a63;
+}
+.pretrip-metric.camera{
+  border-color:#604317;
+}
+.pretrip-metric.points{
+  border-color:#28543c;
+}
+.pretrip-metric.camera>b{
+  color:#fbbf24;
+}
+.pretrip-metric.points>b{
+  color:#86efac;
+}
+
+.mission-speed-trust{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+  margin-top:10px;
+  padding:9px 10px;
+  border-radius:12px;
+}
+.mission-speed-trust.good{
+  background:#12351d;
+  border:1px solid #28543c;
+}
+.mission-speed-trust.review{
+  background:#3b2d0d;
+  border:1px solid #6d551d;
+}
+.mission-speed-trust.blocked{
+  background:#441717;
+  border:1px solid #7d3030;
+}
+.mission-speed-trust-icon{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:rgba(255,255,255,.07);
+  font-size:15px;
+  font-weight:900;
+}
+.mission-speed-trust b{
+  display:block;
+  font-size:8px;
+}
+.mission-speed-trust span{
+  display:block;
+  margin-top:3px;
+  color:#b9c7d5;
+  font-size:7px;
+  line-height:1.6;
+}
+
+.pretrip-mission-rule{
+  margin-top:9px;
+  padding:8px 10px;
+  display:flex;
+  justify-content:space-between;
+  gap:9px;
+  border-radius:11px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.pretrip-mission-rule span{
+  flex:0 0 auto;
+  color:#75b9ff;
+  font-size:7px;
+}
+.pretrip-mission-rule b{
+  text-align:left;
+  font-size:7px;
+  color:#ccd7e3;
+}
+
+.pretrip-mission-actions{
+  display:grid;
+  grid-template-columns:1fr 1.7fr;
+  gap:7px;
+  margin-top:11px;
+}
+.pretrip-mission-actions button{
+  min-height:46px!important;
+  border-radius:13px!important;
+}
+
+/* Current speed becomes unmistakable. */
+body.driving-mode #currentSpeedGauge small{
+  display:block!important;
+  margin-bottom:1px!important;
+  color:#6b7280!important;
+  font-size:5.5px!important;
+  line-height:1!important;
+}
+body.driving-mode #currentSpeedGauge b{
+  margin-top:1px!important;
+}
+
+/* Camera warning text is a safety alert rather than only a POI label. */
+body.driving-mode .traffic-camera-pill.show{
+  min-width:170px!important;
+}
+body.driving-mode .traffic-camera-pill small{
+  color:#fde68a!important;
+  font-weight:850!important;
+}
+body.driving-mode .traffic-camera-pill b{
+  color:#fff4cf!important;
+}
+
+/* Unverified road speed is visibly non-authoritative. */
+.speed-limit-source-badge.authority-locked{
+  background:#441717!important;
+  border-color:#7d3030!important;
+  color:#fecaca!important;
+}
+
+@media(max-width:700px){
+  .pretrip-mission-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+  .pretrip-metric.points{
+    grid-column:1/-1;
+  }
+}
+
+@media(max-width:390px){
+  .pretrip-mission-card{
+    padding:11px;
+  }
+  .pretrip-metric>b{
+    font-size:14px;
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -5999,7 +6242,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <div id="trafficCameraPill" class="traffic-camera-pill">
                 <span>📷</span>
                 <div>
-                  <small id="trafficCameraType">دوربین ثبت‌شده</small>
+                  <small id="trafficCameraType">به دوربین نزدیک می‌شوید</small>
                   <b id="trafficCameraDistance">--</b>
                 </div>
               </div>
@@ -6072,6 +6315,7 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
               <button id="driveReportBtn" class="drive-report-btn" title="گزارش مسیر">!</button>
 
               <div id="currentSpeedGauge" class="current-speed-gauge">
+                <small>سرعت فعلی</small>
                 <b id="driveCurrentSpeed">۰</b>
                 <span>km/h</span>
               </div>
@@ -6144,9 +6388,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.0</span>
+              <span class="lab-version-chip">v6.1</span>
               <div>
-                <b>Speed Integrity & Free Zoom</b>
+                <b>Mission Brief & Speed Authority Gate</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -6810,6 +7054,71 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
   </div>
 </div>
 
+
+
+<div id="preTripMissionSheet" class="pretrip-mission-sheet">
+  <div class="pretrip-mission-card">
+    <div class="pretrip-mission-handle"></div>
+
+    <div class="pretrip-mission-head">
+      <div>
+        <small>ماموریت این سفر</small>
+        <h3 id="preTripMissionTitle">رانندگی ایمن تا مقصد</h3>
+        <p id="preTripMissionRoute">در حال آماده‌سازی اطلاعات مسیر...</p>
+      </div>
+      <button id="closePreTripMissionBtn" aria-label="بستن">×</button>
+    </div>
+
+    <div class="pretrip-mission-grid">
+      <div class="pretrip-metric">
+        <span>مسافت</span>
+        <b id="missionRouteDistance">--</b>
+      </div>
+
+      <div class="pretrip-metric">
+        <span>زمان تقریبی</span>
+        <b id="missionRouteEta">--</b>
+      </div>
+
+      <div class="pretrip-metric speed">
+        <span>میانگین حد مجاز معتبر</span>
+        <b id="missionAvgSpeedLimit">--</b>
+        <small id="missionSpeedOpenData">در حال بررسی</small>
+      </div>
+
+      <div class="pretrip-metric camera">
+        <span>دوربین ثبت‌شده</span>
+        <b id="missionCameraCount">--</b>
+      </div>
+
+      <div class="pretrip-metric points">
+        <span>حداکثر امتیاز سفر</span>
+        <b id="missionPossibleScore">۱۰۰</b>
+        <small id="missionScoreCoverage">در حال بررسی آمادگی Score</small>
+      </div>
+    </div>
+
+    <div id="missionSpeedTrustCard" class="mission-speed-trust review">
+      <div class="mission-speed-trust-icon">!</div>
+      <div>
+        <b id="missionSpeedTrustTitle">در حال بررسی دقت حد سرعت</b>
+        <span id="missionSpeedTrustText">
+          بخش سرعت فقط با منبع تأییدشده وارد امتیاز می‌شود.
+        </span>
+      </div>
+    </div>
+
+    <div class="pretrip-mission-rule">
+      <span>ماموریت</span>
+      <b>سرعت مطمئن • ترمز نرم • شتاب یکنواخت • پیچ کنترل‌شده</b>
+    </div>
+
+    <div class="pretrip-mission-actions">
+      <button id="preTripMissionBackBtn">بازگشت</button>
+      <button id="preTripMissionContinueBtn" class="primary">ادامه و شروع مسیر</button>
+    </div>
+  </div>
+</div>
 
 <div id="vehicleSheet" class="vehicle-sheet">
   <div class="vehicle-sheet-card">
@@ -8363,6 +8672,189 @@ let offRouteTestState={
 const MAPPED_SPEED_CACHE_KEY="pol_mapped_speed_cache_v1";
 const MAPPED_SPEED_CACHE_TTL=6*60*60*1000;
 
+
+/* ============================================================
+   SPEED AUTHORITY GATE
+   Open-data speed limits are useful for navigation preview,
+   but business-critical scoring requires an independently
+   verified source.
+   ============================================================ */
+
+const VERIFIED_SPEED_REGISTRY_KEY=
+  "pol_verified_speed_registry_v1";
+
+function loadVerifiedSpeedRegistry(){
+  try{
+    const data=JSON.parse(
+      localStorage.getItem(
+        VERIFIED_SPEED_REGISTRY_KEY
+      )||"{}"
+    );
+
+    return(
+      data &&
+      typeof data==="object"
+    )
+      ?data
+      :{};
+  }catch(e){
+    return{};
+  }
+}
+
+function verifiedSpeedRegistry(){
+  return loadVerifiedSpeedRegistry();
+}
+
+function verifiedSpeedForWay(
+  wayId,
+  vehicleId=currentVehicleProfile.id
+){
+  if(
+    wayId==null ||
+    wayId===""
+  ){
+    return null;
+  }
+
+  const registry=
+    verifiedSpeedRegistry();
+
+  const row=
+    registry[String(wayId)];
+
+  if(!row)return null;
+
+  const specific=
+    Number(
+      row?.vehicles?.[vehicleId]
+    );
+
+  const general=
+    Number(row?.limit);
+
+  const limit=
+    Number.isFinite(specific) &&
+    specific>0
+      ?specific
+      :general;
+
+  if(
+    !Number.isFinite(limit) ||
+    limit<10 ||
+    limit>160
+  ){
+    return null;
+  }
+
+  return{
+    limit,
+    authority:
+      String(row.authority||"verified"),
+    verifiedAt:
+      row.verifiedAt||null,
+    note:
+      String(row.note||"")
+  };
+}
+
+/* Developer/admin import hook for future official datasets.
+   No UI is exposed to drivers. */
+window.POL_SPEED_AUTHORITY={
+  list(){
+    return verifiedSpeedRegistry();
+  },
+  setWayLimit(
+    wayId,
+    limit,
+    {
+      vehicleId=null,
+      authority="verified-admin",
+      note=""
+    }={}
+  ){
+    const registry=
+      verifiedSpeedRegistry();
+
+    const key=String(wayId);
+
+    registry[key]=registry[key]||{
+      limit:null,
+      vehicles:{}
+    };
+
+    if(vehicleId){
+      registry[key].vehicles=
+        registry[key].vehicles||{};
+
+      registry[key].vehicles[vehicleId]=
+        Number(limit);
+    }else{
+      registry[key].limit=
+        Number(limit);
+    }
+
+    registry[key].authority=
+      authority;
+
+    registry[key].note=
+      note;
+
+    registry[key].verifiedAt=
+      new Date().toISOString();
+
+    localStorage.setItem(
+      VERIFIED_SPEED_REGISTRY_KEY,
+      JSON.stringify(registry)
+    );
+
+    return registry[key];
+  },
+  clear(){
+    localStorage.removeItem(
+      VERIFIED_SPEED_REGISTRY_KEY
+    );
+  }
+};
+
+function authorizeSpeedMatch(openMatch){
+  if(!openMatch)return null;
+
+  const verified=
+    verifiedSpeedForWay(
+      openMatch.wayId,
+      currentVehicleProfile.id
+    );
+
+  if(verified){
+    return{
+      ...openMatch,
+      openDataLimit:Number(openMatch.limit),
+      limit:Number(verified.limit),
+      confidence:100,
+      scoreEligible:true,
+      authorityVerified:true,
+      authoritySource:
+        verified.authority,
+      authorityNote:
+        verified.note||"",
+      source:
+        "Verified Speed Registry"
+    };
+  }
+
+  return{
+    ...openMatch,
+    openDataLimit:Number(openMatch.limit),
+    scoreEligible:false,
+    authorityVerified:false,
+    authoritySource:"open-data",
+    source:
+      openMatch.source||
+      "OpenStreetMap / Valhalla"
+  };
+}
+
 let mappedSpeedState={
   status:"idle",
   loading:false,
@@ -8846,7 +9338,12 @@ function syncVehicleUi(){
   );
 }
 
-function openVehicleSheet(){
+function openVehicleSheet({
+  startIntent=false
+}={}){
+  vehicleSheetStartIntent=
+    !!startIntent;
+
   pendingVehicleId=currentVehicleProfile.id;
 
   if($('truckHeight'))$('truckHeight').value=
@@ -8866,6 +9363,7 @@ function openVehicleSheet(){
 }
 
 function closeVehicleSheet(){
+  vehicleSheetStartIntent=false;
   $('vehicleSheet')?.classList.remove('open');
 }
 
@@ -13414,9 +13912,261 @@ function recenterDrivingCamera(){
     {force:true}
   );
 }
+
+let vehicleSheetStartIntent=false;
+
+function exactOpenDataSpeedStats(){
+  const edges=
+    mappedSpeedState.exactProfile?.edges||[];
+
+  const totalRouteM=Math.max(
+    1,
+    Number(routeDistanceM||0)
+  );
+
+  let knownM=0;
+  let weighted=0;
+
+  for(const edge of edges){
+    const limit=
+      Number(edge?.speedLimit||0);
+
+    const length=
+      Number(edge?.lengthM||0);
+
+    if(
+      !Number.isFinite(limit) ||
+      limit<10 ||
+      limit>160 ||
+      !Number.isFinite(length) ||
+      length<=0
+    ){
+      continue;
+    }
+
+    knownM+=length;
+    weighted+=limit*length;
+  }
+
+  const coverage=
+    clamp(
+      knownM/totalRouteM*100,
+      0,
+      100
+    );
+
+  const average=
+    knownM>0
+      ?weighted/knownM
+      :null;
+
+  return{
+    average,
+    coverage,
+    knownM
+  };
+}
+
+function verifiedRouteSpeedStats(){
+  const edges=
+    mappedSpeedState.exactProfile?.edges||[];
+
+  const totalRouteM=Math.max(
+    1,
+    Number(routeDistanceM||0)
+  );
+
+  let verifiedM=0;
+  let weighted=0;
+
+  for(const edge of edges){
+    const verified=
+      verifiedSpeedForWay(
+        edge?.osmId,
+        currentVehicleProfile.id
+      );
+
+    const length=
+      Number(edge?.lengthM||0);
+
+    if(
+      !verified ||
+      !Number.isFinite(length) ||
+      length<=0
+    ){
+      continue;
+    }
+
+    verifiedM+=length;
+    weighted+=
+      Number(verified.limit)*length;
+  }
+
+  const coverage=
+    clamp(
+      verifiedM/totalRouteM*100,
+      0,
+      100
+    );
+
+  return{
+    average:
+      verifiedM>0
+        ?weighted/verifiedM
+        :null,
+    coverage,
+    scoreReady:
+      coverage>=90
+  };
+}
+
+function renderPreTripMission(){
+  const route=
+    routeAlternatives[selectedRouteIndex]||null;
+
+  const verified=
+    verifiedRouteSpeedStats();
+
+  const openData=
+    exactOpenDataSpeedStats();
+
+  const cameraCount=
+    Number(
+      mappedSpeedState.cameras?.length||0
+    );
+
+  if($('preTripMissionTitle')){
+    $('preTripMissionTitle').textContent=
+      `${vehicleProfileIcon()} رانندگی ایمن تا مقصد`;
+  }
+
+  if($('preTripMissionRoute')){
+    $('preTripMissionRoute').textContent=
+      `${navOrigin?.label||"مبدأ"} ← ${navDestination?.label||"مقصد"}`;
+  }
+
+  if($('missionRouteDistance')){
+    $('missionRouteDistance').textContent=
+      routeDistanceM
+        ?formatKm(routeDistanceM)
+        :"--";
+  }
+
+  if($('missionRouteEta')){
+    $('missionRouteEta').textContent=
+      routeDurationS
+        ?formatDurationFa(routeDurationS)
+        :"--";
+  }
+
+  if($('missionCameraCount')){
+    $('missionCameraCount').textContent=
+      cameraCount.toLocaleString('fa-IR');
+  }
+
+  if($('missionAvgSpeedLimit')){
+    $('missionAvgSpeedLimit').textContent=
+      verified.scoreReady &&
+      Number.isFinite(Number(verified.average))
+        ?`${Math.round(verified.average).toLocaleString('fa-IR')} km/h`
+        :"—";
+  }
+
+  if($('missionSpeedOpenData')){
+    $('missionSpeedOpenData').textContent=
+      Number.isFinite(Number(openData.average))
+        ?`Open Data: ${Math.round(openData.average).toLocaleString('fa-IR')} • پوشش ${Math.round(openData.coverage).toLocaleString('fa-IR')}٪`
+        :"Open Data کافی نیست";
+  }
+
+  if($('missionPossibleScore')){
+    $('missionPossibleScore').textContent=
+      "۱۰۰";
+  }
+
+  if($('missionScoreCoverage')){
+    $('missionScoreCoverage').textContent=
+      verified.scoreReady
+        ?"۴۰ امتیاز سرعت آماده ارزیابی"
+        :"۴۰ امتیاز سرعت تا منبع معتبر قفل";
+  }
+
+  const trust=$('missionSpeedTrustCard');
+
+  if(trust){
+    trust.classList.remove(
+      'good','review','blocked'
+    );
+
+    if(verified.scoreReady){
+      trust.classList.add('good');
+
+      $('missionSpeedTrustTitle').textContent=
+        "حد سرعت مسیر برای Score آماده است";
+
+      $('missionSpeedTrustText').textContent=
+        `پوشش منبع تأییدشده ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است.`;
+    }else{
+      trust.classList.add('blocked');
+
+      $('missionSpeedTrustTitle').textContent=
+        "امتیاز سرعت قفل است";
+
+      $('missionSpeedTrustText').textContent=
+        `پوشش منبع تأییدشده ${Math.round(verified.coverage).toLocaleString('fa-IR')}٪ است. Open Data برای Navigation دیده می‌شود اما راننده را جریمه نمی‌کند.`;
+    }
+  }
+}
+
+async function refreshPreTripMissionIntel(){
+  renderPreTripMission();
+
+  await Promise.allSettled([
+    prefetchExactRouteSpeedProfile({
+      force:false
+    }),
+    prefetchMappedSpeedLimits({
+      force:false
+    })
+  ]);
+
+  renderPreTripMission();
+}
+
+async function openPreTripMission(){
+  vehicleSheetStartIntent=false;
+
+  const sheet=$('preTripMissionSheet');
+  sheet?.classList.add('open');
+
+  renderPreTripMission();
+
+  await refreshPreTripMissionIntel();
+}
+
+function closePreTripMission(){
+  $('preTripMissionSheet')?.classList.remove(
+    'open'
+  );
+}
+
+async function continueFromPreTripMission(){
+  closePreTripMission();
+
+  if(isRealGpsMode()){
+    await openTripReadiness();
+    return;
+  }
+
+  await startDrivingConfirmed();
+}
+
 async function smartStartTrip(){
   if(!routeAlternatives.length||!routeCoords.length){
-    showMapStatus("ابتدا یک مقصد انتخاب کن.","bad");
+    showMapStatus(
+      "ابتدا یک مقصد انتخاب کن.",
+      "bad"
+    );
     return;
   }
 
@@ -13428,16 +14178,13 @@ async function smartStartTrip(){
   }
 
   if(!vehicleConfirmedForRoute){
-    openVehicleSheet();
+    openVehicleSheet({
+      startIntent:true
+    });
     return;
   }
 
-  if(isRealGpsMode()){
-    openTripReadiness();
-    return;
-  }
-
-  await startDrivingConfirmed();
+  await openPreTripMission();
 }
 
 function openDriveReport(){$('driveReportSheet')?.classList.add('open')}
@@ -15364,12 +16111,17 @@ function exactSpeedProfileAtProgress(progress){
     confidence:
       selected.speedType==="tagged"
         ?97
-        :91,
+        :86,
     road:selected.name||"Road Edge",
-    source:"Valhalla exact edge",
+    source:"Valhalla exact edge • Open Data",
     wayId:selected.osmId||null,
     exactEdge:true,
-    scoreEligible:true,
+
+    // v6.1:
+    // exact geometry does not make the source legally authoritative.
+    scoreEligible:false,
+    authorityVerified:false,
+
     speedType:selected.speedType,
     edgeUse:selected.use||"",
     edgeRamp:!!selected.ramp,
@@ -16009,14 +16761,17 @@ function updateTrafficCameraApproach(
 
   if($('trafficCameraType')){
     $('trafficCameraType').textContent=
-      cameraMarkerLabel(camera);
+      "به دوربین نزدیک می‌شوید";
   }
 
   if($('trafficCameraDistance')){
-    $('trafficCameraDistance').textContent=
+    const distance=
       camera.aheadM<=25
         ?"اکنون"
         :distanceTextFa(camera.aheadM);
+
+    $('trafficCameraDistance').textContent=
+      `${distance} • ${cameraMarkerLabel(camera)}`;
   }
 
   const stages=
@@ -16032,7 +16787,7 @@ function updateTrafficCameraApproach(
     stages[camera.id]="500";
 
     coachVoice(
-      `${cameraMarkerLabel(camera)} ثبت‌شده در ${distanceTextFa(camera.aheadM)}`
+      `به دوربین ثبت‌شده نزدیک می‌شوید، ${distanceTextFa(camera.aheadM)}`
     );
   }
 
@@ -16044,7 +16799,7 @@ function updateTrafficCameraApproach(
     stages[camera.id]="150";
 
     coachVoice(
-      `${cameraMarkerLabel(camera)} ثبت‌شده نزدیک است`
+      `به دوربین ثبت‌شده نزدیک می‌شوید`
     );
   }
 }
@@ -16205,7 +16960,7 @@ function matchMappedSpeedLimit(
       exactSpeedProfileAtProgress(routeProgress);
 
     if(exact){
-      return exact;
+      return authorizeSpeedMatch(exact);
     }
   }
 
@@ -16337,7 +17092,7 @@ function matchMappedSpeedLimit(
     best.progressPenalty<=7 &&
     !best.ambiguous;
 
-  return{
+  return authorizeSpeedMatch({
     limit:best.limit,
     confidence,
     distance:best.distance,
@@ -16356,8 +17111,12 @@ function matchMappedSpeedLimit(
     vehicleId:currentVehicleProfile.id,
     routeProgressPenalty:best.progressPenalty,
     exactEdge:false,
-    scoreEligible:fallbackScoreEligible
-  };
+
+    // Geometry may be excellent but source is still open-data.
+    scoreEligible:false,
+    fallbackGeometryEligible:
+      fallbackScoreEligible
+  });
 }
 
 async function fetchOverpassSpeedWays(bbox){
@@ -16613,7 +17372,10 @@ function updateMappedSpeedPreview({
   return match;
 }
 
-function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
+function renderMappedSpeedLimit(
+  match,
+  {speedKmh=0,reliable=false}={}
+){
   const sign=$('speedSign');
   const badge=$('speedLimitSourceBadge');
 
@@ -16623,40 +17385,68 @@ function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
     'mapped-limit',
     'mapped-limit-low'
   );
+
   badge.classList.remove(
-    'good','warn','exact','fallback','blocked'
+    'good','warn','exact','fallback',
+    'blocked','authority-locked'
   );
 
-  if(!match||match.confidence<58){
+  if(!match){
     sign.textContent="--";
+
     badge.textContent=
+      mappedSpeedState.exactProfile.status==="loading" ||
       mappedSpeedState.status==="loading"
-        ?"در حال دریافت"
-        :"بدون داده";
+        ?"در حال بررسی حد سرعت"
+        :"حد مجاز تأییدنشده";
+
+    badge.classList.add(
+      'authority-locked'
+    );
+
     if($('limit'))$('limit').textContent="--";
     if($('excess'))$('excess').textContent="۰";
-    $('currentSpeedGauge')?.classList.remove('over');
+
+    $('currentSpeedGauge')?.classList.remove(
+      'over'
+    );
+
+    return;
+  }
+
+  if(!match.authorityVerified){
+    // Critical safety rule:
+    // an open-data value must never masquerade as the legal road limit.
+    sign.textContent="--";
+
+    badge.textContent=
+      Number.isFinite(Number(match.openDataLimit))
+        ?`Open Data: ${Math.round(match.openDataLimit).toLocaleString('fa-IR')} • بدون امتیاز`
+        :"حد مجاز تأییدنشده";
+
+    badge.classList.add(
+      'authority-locked'
+    );
+
+    if($('limit'))$('limit').textContent="--";
+    if($('excess'))$('excess').textContent="۰";
+
+    $('currentSpeedGauge')?.classList.remove(
+      'over'
+    );
+
     return;
   }
 
   sign.textContent=
     Number(match.limit).toLocaleString('fa-IR');
+
   sign.classList.add('mapped-limit');
 
-  if(match.exactEdge){
-    badge.textContent=
-      `${match.road} • Edge دقیق`;
-    badge.classList.add('exact');
-  }else if(match.scoreEligible){
-    badge.textContent=
-      `${match.road} • Match تأییدشده`;
-    badge.classList.add('good');
-  }else{
-    badge.textContent=
-      `${match.road} • فقط نمایش`;
-    badge.classList.add('fallback');
-    sign.classList.add('mapped-limit-low');
-  }
+  badge.textContent=
+    `${match.road} • تأییدشده`;
+
+  badge.classList.add('exact');
 
   if($('limit')){
     $('limit').textContent=
@@ -16670,7 +17460,10 @@ function renderMappedSpeedLimit(match,{speedKmh=0,reliable=false}={}){
 
   if($('excess')){
     $('excess').textContent=
-      Math.max(0,Math.round(over.excess)).toLocaleString('fa-IR');
+      Math.max(
+        0,
+        Math.round(over.excess)
+      ).toLocaleString('fa-IR');
   }
 
   $('currentSpeedGauge')?.classList.toggle(
@@ -16984,6 +17777,8 @@ function evaluateRealRewardShadow({integrity=null,scoreModel=null,finalize=false
   const scoreConfidence=Number(s.confidence||0);
   const speedCoverage=mappedSpeedCoveragePreview();
   const speedCompliance=mappedSpeedCompliancePreview();
+  const verifiedSpeedRoute=
+    verifiedRouteSpeedStats();
 
   const blockers=[],reviews=[],passes=[];
 
@@ -17010,19 +17805,45 @@ function evaluateRealRewardShadow({integrity=null,scoreModel=null,finalize=false
     else passes.push("Safety Score مناسب");
   }
 
-  if(speedCoverage==null||speedCoverage<35)reviews.push("Speed Limit Coverage پایین/ناموجود است");
-  else if(speedCoverage<70)reviews.push(`Speed Limit Coverage فقط ${Math.round(speedCoverage)}٪ است`);
-  else passes.push("Speed Limit Coverage مناسب برای Preview");
+  if(!verifiedSpeedRoute.scoreReady){
+    reviews.push(
+      `Speed Authority پوشش تأییدشده فقط ${Math.round(verifiedSpeedRoute.coverage).toLocaleString('fa-IR')}٪ است`
+    );
+  }else{
+    passes.push(
+      "Speed Authority برای این Route آماده است"
+    );
 
-  if(speedCompliance!=null){
-    if(speedCompliance<70)blockers.push(`Speed Compliance Preview ${Math.round(speedCompliance)}٪ است`);
-    else if(speedCompliance<85)reviews.push(`Speed Compliance Preview ${Math.round(speedCompliance)}٪ است`);
-    else passes.push("Speed Compliance Preview مناسب");
+    if(speedCoverage==null||speedCoverage<80){
+      reviews.push(
+        "Speed telemetry coverage سفر هنوز کافی نیست"
+      );
+    }else if(speedCompliance!=null){
+      if(speedCompliance<70){
+        blockers.push(
+          `Speed Compliance ${Math.round(speedCompliance)}٪ است`
+        );
+      }else if(speedCompliance<85){
+        reviews.push(
+          `Speed Compliance ${Math.round(speedCompliance)}٪ است`
+        );
+      }else{
+        passes.push(
+          "Speed Compliance مناسب"
+        );
+      }
+    }
   }
 
   let status="ELIGIBLE";
   if(blockers.length)status="NOT_ELIGIBLE";
   else if(reviews.length)status="REVIEW";
+
+  // Business-critical rule:
+  // no reward eligibility from unverified legal-speed data.
+  if(!verifiedSpeedRoute.scoreReady && status==="ELIGIBLE"){
+    status="REVIEW";
+  }
 
   let gateConfidence=
     Number(i?.confidence||0)*.36+
@@ -18670,7 +19491,12 @@ function buildRealTelemetryResult(){
     mappedSpeedCompliance:mappedCompliance,
     mappedSpeedCoverage:mappedCoverage,
     mappedSpeedEventCount:mappedSpeedState.overspeedEvents.length,
-    mappedSpeedSource:"OpenStreetMap explicit maxspeed prototype",
+    mappedSpeedSource:"Verified-only Speed Authority Gate",
+    speedAuthorityRequired:true,
+    speedAuthorityVerifiedCoverage:
+      Number(
+        verifiedRouteSpeedStats().coverage.toFixed(1)
+      ),
 
     brakeScore:scoreModel.brakeScore,
     accelScore:scoreModel.accelScore,
@@ -19924,22 +20750,26 @@ function step(){
 }
 function start(){
   if(!routeCoords.length){
-    loadRoute().then(()=>{
+    loadRoute().then(async()=>{
       if(!vehicleConfirmedForRoute){
-        openVehicleSheet();
+        openVehicleSheet({
+          startIntent:true
+        });
       }else{
-        openTripReadiness();
+        await openPreTripMission();
       }
     });
     return;
   }
 
   if(!vehicleConfirmedForRoute){
-    openVehicleSheet();
+    openVehicleSheet({
+      startIntent:true
+    });
     return;
   }
 
-  openTripReadiness();
+  openPreTripMission();
 }
 function startCoreDrive(){
   if(!routeCoords.length){loadRoute().then(()=>start());return}
@@ -21250,8 +22080,19 @@ $('mapStartBtn').onclick=smartStartTrip;
 $('mapRouteCloseBtn').onclick=closeMapRouteSheet;
 
 $('mapRouteVehicleBtn').onclick=()=>{
-  openVehicleSheet();
+  openVehicleSheet({
+    startIntent:false
+  });
 };
+
+$('closePreTripMissionBtn').onclick=
+  closePreTripMission;
+
+$('preTripMissionBackBtn').onclick=
+  closePreTripMission;
+
+$('preTripMissionContinueBtn').onclick=
+  continueFromPreTripMission;
 
 $('closeVehicleSheetBtn').onclick=closeVehicleSheet;
 $('vehicleSheetCancelBtn').onclick=closeVehicleSheet;
@@ -21264,6 +22105,11 @@ document.querySelectorAll('[data-vehicle]').forEach(btn=>{
 });
 
 $('vehicleSheetConfirmBtn').onclick=async()=>{
+  const continueToMission=
+    !!vehicleSheetStartIntent;
+
+  vehicleSheetStartIntent=false;
+
   const next=selectedVehicleFromSheet();
 
   const changed=
@@ -21310,6 +22156,10 @@ $('vehicleSheetConfirmBtn').onclick=async()=>{
       `مسیر ${vehicleProfileLabel()} آماده شد`
     );
 
+    if(continueToMission){
+      await openPreTripMission();
+    }
+
     return;
   }
 
@@ -21318,6 +22168,10 @@ $('vehicleSheetConfirmBtn').onclick=async()=>{
   showMapStatus(
     `${vehicleProfileLabel()} برای این سفر تأیید شد`
   );
+
+  if(continueToMission){
+    await openPreTripMission();
+  }
 };
 
 
