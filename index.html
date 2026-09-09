@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۷.۰ Driver-First Navigation UX</title>
+<title>POL | نسخه ۷.۰.۱ Mobile Search Hotfix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7374,6 +7374,198 @@ body.pol-consumer-mode .route-compare-card{
 }
 </style>
 
+
+<style id="pol-v7-0-1-mobile-search-hotfix">
+/* ============================================================
+   v7.0.1 — MOBILE SEARCH HOTFIX
+   Fixes legacy display:none!important from v3.0.
+   ============================================================ */
+
+/* Desktop/tablet: direct search field must actually be visible. */
+@media(min-width:701px){
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #mapFirstSearchPanel{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher{
+    display:none!important;
+  }
+}
+
+/* Mobile: use one obvious Waze-like "Where to?" launcher. */
+@media(max-width:700px){
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #mapFirstSearchPanel{
+    display:none!important;
+  }
+
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+
+    position:fixed!important;
+    z-index:2200!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+    width:auto!important;
+    transform:none!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton{
+    width:100%!important;
+    min-height:62px!important;
+    display:grid!important;
+    grid-template-columns:48px minmax(0,1fr)!important;
+    gap:10px!important;
+    align-items:center!important;
+
+    padding:7px 12px!important;
+    border-radius:999px!important;
+
+    background:rgba(255,255,255,.98)!important;
+    color:#172033!important;
+    border:1px solid rgba(15,23,42,.08)!important;
+
+    box-shadow:
+      0 14px 42px rgba(15,23,42,.22),
+      0 2px 8px rgba(15,23,42,.08)!important;
+
+    backdrop-filter:blur(18px)!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-icon{
+    width:46px!important;
+    height:46px!important;
+    display:grid!important;
+    place-items:center!important;
+    border-radius:50%!important;
+
+    background:#eef4fb!important;
+    color:#286fcb!important;
+    font-size:22px!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy{
+    min-width:0!important;
+    text-align:right!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy b{
+    display:block!important;
+    color:#172033!important;
+    font-size:15px!important;
+    font-weight:900!important;
+    line-height:1.25!important;
+  }
+
+  body.pol-consumer-mode #navLauncherButton .nav-launcher-copy small{
+    display:block!important;
+    margin-top:3px!important;
+    color:#6e7f91!important;
+    font-size:7px!important;
+    font-weight:650!important;
+  }
+
+  /* Search bottom sheet is a true mobile destination picker. */
+  body.pol-consumer-mode #navSearchSheet{
+    z-index:6000!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet.open{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+    width:100%!important;
+    max-height:88dvh!important;
+    padding:
+      10px
+      10px
+      calc(12px + env(safe-area-inset-bottom,0px))
+      10px!important;
+
+    border-radius:26px 26px 0 0!important;
+    background:#f8fafc!important;
+    color:#172033!important;
+
+    border:1px solid rgba(15,23,42,.08)!important;
+    box-shadow:0 -14px 45px rgba(15,23,42,.18)!important;
+  }
+
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row{
+    display:grid!important;
+    grid-template-columns:42px minmax(0,1fr)!important;
+    gap:8px!important;
+    align-items:center!important;
+  }
+
+  body.pol-consumer-mode #navSheetSearchInput{
+    min-height:52px!important;
+    padding:0 14px!important;
+    border-radius:16px!important;
+
+    background:#fff!important;
+    color:#172033!important;
+    border:1px solid rgba(15,23,42,.10)!important;
+
+    font-size:15px!important;
+    font-weight:750!important;
+    box-shadow:0 4px 14px rgba(15,23,42,.06)!important;
+  }
+
+  body.pol-consumer-mode #navSheetSearchInput::placeholder{
+    color:#778699!important;
+    opacity:1!important;
+  }
+
+  body.pol-consumer-mode #navSearchBackBtn{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    border-radius:50%!important;
+
+    background:#edf3f8!important;
+    color:#334155!important;
+    border:0!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-section-title,
+  body.pol-consumer-mode .nav-sheet-section-title b,
+  body.pol-consumer-mode .nav-sheet-section-title button{
+    color:#334155!important;
+  }
+
+  body.pol-consumer-mode .nav-sheet-result,
+  body.pol-consumer-mode .nav-sheet-recent-item{
+    color:#172033!important;
+    background:#fff!important;
+    border-color:rgba(15,23,42,.08)!important;
+  }
+
+  /* Keep floating controls above the launcher. */
+  body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) .floating-map-controls{
+    right:10px!important;
+    bottom:92px!important;
+  }
+}
+
+/* When search sheet or route selection is open, launcher must not overlap UI. */
+body.pol-consumer-mode.search-sheet-open #navLauncher,
+body.pol-consumer-mode.route-selection-mode #navLauncher,
+body.pol-consumer-mode.driving-mode #navLauncher{
+  display:none!important;
+}
+</style>
+
 </head>
 
 <body>
@@ -7661,7 +7853,7 @@ body.pol-consumer-mode .route-compare-card{
                   <span class="nav-launcher-icon">⌕</span>
                   <span class="nav-launcher-copy">
                     <b>کجا می‌خوای بری؟</b>
-                    <small>اول محله یا خیابان را پیدا کن</small>
+                    <small>مقصد، خیابان یا محله را جست‌وجو کن</small>
                   </span>
                 </button>
               </div>
@@ -8000,7 +8192,7 @@ body.pol-consumer-mode .route-compare-card{
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v7.0</span>
+              <span class="lab-version-chip">v7.0.1</span>
               <div>
                 <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
@@ -30181,6 +30373,51 @@ setTimeout(
       simplifyDrivingChrome();
     }
   },1200);
+})();
+</script>
+
+
+<script id="pol-v7-0-1-mobile-search-runtime">
+(function(){
+  const sheet=document.getElementById('navSearchSheet');
+  const launcher=document.getElementById('navLauncherButton');
+  const back=document.getElementById('navSearchBackBtn');
+  const input=document.getElementById('navSheetSearchInput');
+
+  function syncSearchState(){
+    const open=!!sheet?.classList.contains('open');
+    document.body.classList.toggle('search-sheet-open',open);
+  }
+
+  launcher?.addEventListener('click',()=>{
+    setTimeout(()=>{
+      syncSearchState();
+      if(sheet?.classList.contains('open')){
+        setTimeout(()=>{
+          try{input?.focus({preventScroll:true})}catch(e){input?.focus()}
+        },120);
+      }
+    },30);
+  },true);
+
+  back?.addEventListener('click',()=>{
+    setTimeout(syncSearchState,30);
+  },true);
+
+  if(sheet){
+    const observer=new MutationObserver(syncSearchState);
+    observer.observe(sheet,{
+      attributes:true,
+      attributeFilter:['class']
+    });
+  }
+
+  window.addEventListener('pageshow',()=>{
+    document.body.classList.remove('search-sheet-open');
+    setTimeout(syncSearchState,80);
+  });
+
+  syncSearchState();
 })();
 </script>
 
