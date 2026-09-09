@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۳ Mobile Driving Focus</title>
+<title>POL | نسخه ۷.۳.۳ MapLibre Vehicle Anchor & Start CTA Fix</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10653,6 +10653,126 @@ body.pol-consumer-mode #navSheetResults{
 }
 </style>
 
+
+<style id="pol-v7-3-3-final-mobile-route-driving-fix">
+@media(max-width:700px){
+  /* Route selection must fit fully inside the visual viewport. */
+  body.pol-consumer-mode.route-selection-mode #mapRouteSheet,
+  body.pol-consumer-mode #mapRouteSheet{
+    position:fixed!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;
+    top:auto!important;
+
+    width:auto!important;
+    height:auto!important;
+    max-height:none!important;
+
+    margin:0!important;
+    padding:12px!important;
+
+    overflow:hidden!important;
+    border-radius:24px!important;
+  }
+
+  /* Keep route-selection decisional UI minimal. */
+  body.pol-consumer-mode.route-selection-mode #mapRouteReason,
+  body.pol-consumer-mode.route-selection-mode .route-confidence-row,
+  body.pol-consumer-mode.route-selection-mode #mapSpeedTruthBtn{
+    display:none!important;
+  }
+
+  body.pol-consumer-mode.route-selection-mode #mapRouteSheet .map-route-sheet-main{
+    margin:0 0 8px!important;
+    padding:10px 11px!important;
+    min-height:64px!important;
+  }
+
+  body.pol-consumer-mode.route-selection-mode .map-route-primary{
+    margin:0!important;
+    padding:0 2px!important;
+  }
+
+  body.pol-consumer-mode.route-selection-mode .map-route-vehicle-btn{
+    width:100%!important;
+    min-height:44px!important;
+    margin:8px 0 0!important;
+  }
+
+  /* Explicitly override every earlier sticky/grid rule. */
+  body.pol-consumer-mode.route-selection-mode .map-route-actions{
+    position:relative!important;
+    inset:auto!important;
+
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    grid-template-rows:58px 44px!important;
+    gap:7px!important;
+
+    margin:9px 0 0!important;
+    padding:0!important;
+
+    overflow:visible!important;
+    background:transparent!important;
+  }
+
+  body.pol-consumer-mode.route-selection-mode #mapStartBtn{
+    grid-column:1 / -1!important;
+    grid-row:1!important;
+
+    width:100%!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+
+    margin:0!important;
+    padding:0 14px!important;
+
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+
+    overflow:visible!important;
+
+    border-radius:18px!important;
+    font-size:17px!important;
+    line-height:1!important;
+    font-weight:900!important;
+  }
+
+  body.pol-consumer-mode.route-selection-mode #mapRouteCompareBtn,
+  body.pol-consumer-mode.route-selection-mode #mapRoutePreviewBtn{
+    grid-row:2!important;
+
+    width:100%!important;
+    height:44px!important;
+    min-height:44px!important;
+    max-height:44px!important;
+
+    margin:0!important;
+    padding:0 8px!important;
+
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+
+    border-radius:15px!important;
+    font-size:12px!important;
+    line-height:1!important;
+  }
+
+  /* The driving road-name pill belongs close to the vehicle, but not above it. */
+  body.pol-consumer-mode.driving-mode #driveCurrentRoadBar{
+    bottom:132px!important;
+  }
+}
+</style>
+
 </head>
 
 <body>
@@ -13004,18 +13124,32 @@ function drive3DZoomForState(progress,speedKmh=0){
 function drive3DVehicleOffsetPx(){
   const viewport=drive3DViewportProfile();
 
+  /*
+    IMPORTANT:
+    MapLibre panBy([0,+Y]) moves the tracked vehicle visually UP.
+    The previous implementation therefore pushed the car toward the
+    turn card. We need a NEGATIVE camera pan so the car sits lower on
+    screen and the driver sees substantially more road ahead.
+
+    Target visual anchor:
+    - portrait mobile: ~72% of usable map height
+    - normal/tablet:    ~70%
+    - wide desktop:     ~68%
+  */
   const ratio=
     viewport.wide
-      ?.29
+      ?.18
       :viewport.portrait
-        ?.275
-        :.282;
+        ?.22
+        :.20;
 
-  return clamp(
+  const pixels=clamp(
     Math.round(viewport.height*ratio),
-    125,
-    300
+    115,
+    viewport.wide?245:210
   );
+
+  return -pixels;
 }
 
 function drive3DRouteBearing(progress,currentPoint,speedKmh=0){
@@ -36050,6 +36184,42 @@ window.POL_DRIVING_UI_AUDIT=()=>{
   }
 }
 </style>
+
+
+<script id="pol-v7-3-3-camera-audit">
+window.POL_VEHICLE_ANCHOR_DEBUG=()=>{
+  const mapEl=document.getElementById('drive3dMap');
+  const markerEl=document.querySelector('.pol-3d-car-marker');
+  const mapRect=mapEl?.getBoundingClientRect?.();
+  const markerRect=markerEl?.getBoundingClientRect?.();
+
+  return{
+    driving:document.body.classList.contains('driving-mode'),
+    drive3DActive:document.body.classList.contains('drive-3d-active'),
+    offsetPx:typeof drive3DVehicleOffsetPx==='function'?drive3DVehicleOffsetPx():null,
+    viewport:typeof drive3DViewportProfile==='function'?drive3DViewportProfile():null,
+    markerScreenY:markerRect&&mapRect
+      ?Math.round((markerRect.top+markerRect.height/2)-mapRect.top)
+      :null,
+    markerRatio:markerRect&&mapRect
+      ?Number((((markerRect.top+markerRect.height/2)-mapRect.top)/mapRect.height).toFixed(3))
+      :null,
+    expected:'approximately 0.68–0.74 of map height'
+  };
+};
+
+window.POL_START_CTA_DEBUG=()=>{
+  const el=document.getElementById('mapStartBtn');
+  const r=el?.getBoundingClientRect?.();
+  const vv=window.visualViewport;
+  return{
+    visible:!!r && r.width>0 && r.height>0,
+    rect:r?{top:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}:null,
+    viewportHeight:Math.round(vv?.height||window.innerHeight),
+    fullyInside:!!r && r.top>=0 && r.bottom<=(vv?.height||window.innerHeight)+1
+  };
+};
+</script>
 
 </body>
 </html>
