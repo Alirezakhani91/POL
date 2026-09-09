@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POL | نسخه ۶.۲ Speed Limit Truth Engine</title>
+<title>POL | نسخه ۶.۲.۱ Speed Truth Direct Access</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5669,6 +5669,246 @@ body.driving-mode .traffic-camera-pill b{
   }
 }
 
+
+/* ============================================================
+   v6.2.1 SPEED TRUTH DIRECT ACCESS
+   ============================================================ */
+
+.map-speed-truth-btn{
+  width:100%!important;
+  min-height:45px!important;
+  margin-top:7px!important;
+  padding:6px 9px!important;
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+  text-align:right!important;
+  border-radius:12px!important;
+  background:#111f2e!important;
+  color:#e8eef5!important;
+  border:1px solid #2d4d6d!important;
+}
+.map-speed-truth-btn .map-speed-truth-icon{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#16324d;
+  color:#75b9ff;
+  font-size:15px;
+}
+.map-speed-truth-btn small{
+  display:block;
+  color:#7e98b2;
+  font-size:6.5px;
+}
+.map-speed-truth-btn b{
+  display:block;
+  margin-top:2px;
+  font-size:8.5px;
+}
+.map-speed-truth-btn em{
+  font-style:normal;
+  color:#78b7f6;
+  font-size:7px;
+}
+.map-speed-truth-btn.ready{
+  border-color:#28543c!important;
+  background:#10291b!important;
+}
+.map-speed-truth-btn.partial{
+  border-color:#6d551d!important;
+  background:#2f270f!important;
+}
+.map-speed-truth-btn.locked{
+  border-color:#6b3030!important;
+  background:#2d1515!important;
+}
+
+.speed-truth-quick-sheet{
+  position:fixed;
+  inset:0;
+  z-index:5400;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:12px;
+  background:rgba(2,8,23,.56);
+  backdrop-filter:blur(7px);
+}
+.speed-truth-quick-sheet.open{
+  display:flex;
+}
+.speed-truth-quick-card{
+  width:min(620px,100%);
+  max-height:min(86dvh,700px);
+  overflow:auto;
+  padding:13px;
+  border-radius:24px;
+  background:#0b141f;
+  color:#eef4fb;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 25px 65px rgba(2,8,23,.48);
+}
+.speed-truth-quick-handle{
+  width:42px;
+  height:4px;
+  margin:0 auto 11px;
+  border-radius:999px;
+  background:#40536d;
+}
+.speed-truth-quick-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+}
+.speed-truth-quick-head small{
+  color:#75b9ff;
+  font-size:7px;
+}
+.speed-truth-quick-head h3{
+  margin:3px 0 0;
+  font-size:17px;
+}
+.speed-truth-quick-head p{
+  margin:4px 0 0;
+  color:#8ea1b6;
+  font-size:7.5px;
+}
+.speed-truth-quick-head button{
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  background:#172334!important;
+  color:#cbd5e1!important;
+}
+
+.speed-truth-quick-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:12px;
+}
+.speed-truth-quick-grid>div{
+  padding:9px 6px;
+  border-radius:12px;
+  background:#101923;
+  border:1px solid #293b50;
+  text-align:center;
+}
+.speed-truth-quick-grid span{
+  display:block;
+  color:#8396aa;
+  font-size:6.2px;
+}
+.speed-truth-quick-grid b{
+  display:block;
+  margin-top:4px;
+  font-size:15px;
+}
+
+.quick-truth-state{
+  margin-top:9px;
+  padding:9px 10px;
+  display:grid;
+  grid-template-columns:100px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  border-radius:12px;
+}
+.quick-truth-state.locked{
+  background:#441717;
+  border:1px solid #7d3030;
+}
+.quick-truth-state.partial{
+  background:#3b2d0d;
+  border:1px solid #6d551d;
+}
+.quick-truth-state.ready{
+  background:#12351d;
+  border:1px solid #28543c;
+}
+.quick-truth-state small{
+  display:block;
+  font-size:6px;
+  color:#aebdca;
+}
+.quick-truth-state b{
+  display:block;
+  margin-top:2px;
+  font-size:13px;
+}
+.quick-truth-state>span{
+  font-size:7px;
+  line-height:1.55;
+  color:#c3d0dc;
+}
+
+.quick-truth-source-row{
+  display:flex;
+  justify-content:space-between;
+  gap:9px;
+  margin-top:8px;
+  padding:8px 9px;
+  border-radius:10px;
+  background:#101923;
+  border:1px solid #293b50;
+}
+.quick-truth-source-row span{
+  color:#8396aa;
+  font-size:7px;
+}
+.quick-truth-source-row b{
+  max-width:70%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:7.5px;
+}
+
+.speed-truth-quick-actions{
+  display:grid;
+  grid-template-columns:1fr 1.35fr;
+  gap:7px;
+  margin-top:9px;
+}
+.speed-truth-quick-actions button{
+  min-height:44px!important;
+  border-radius:12px!important;
+}
+
+.quick-truth-help{
+  margin-top:8px;
+  padding:8px 9px;
+  border-radius:10px;
+  background:#111b27;
+  border:1px solid #293b50;
+}
+.quick-truth-help b{
+  display:block;
+  color:#75b9ff;
+  font-size:7px;
+}
+.quick-truth-help span{
+  display:block;
+  margin-top:2px;
+  color:#91a4b7;
+  font-size:6.5px;
+  line-height:1.55;
+}
+
+@media(max-width:600px){
+  .speed-truth-quick-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
 </style>
 
 <style id="v12-mobile-app">
@@ -6255,6 +6495,15 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
                   <em>تغییر</em>
                 </button>
 
+                <button id="mapSpeedTruthBtn" class="map-speed-truth-btn">
+                  <span class="map-speed-truth-icon">⚑</span>
+                  <div>
+                    <small>دقت حد سرعت مسیر</small>
+                    <b id="mapSpeedTruthSummary">در حال بررسی...</b>
+                  </div>
+                  <em>داده سرعت</em>
+                </button>
+
                 <div class="map-route-actions">
                   <button id="mapRouteCompareBtn">مقایسه</button>
                   <button id="mapRoutePreviewBtn">جزئیات مسیر</button>
@@ -6464,9 +6713,9 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
             <summary>جزئیات فنی سفر</summary>
 
             <div class="lab-version-row">
-              <span class="lab-version-chip">v6.2</span>
+              <span class="lab-version-chip">v6.2.1</span>
               <div>
-                <b>Speed Limit Truth Engine</b>
+                <b>Speed Truth Direct Access</b>
                 <small>نسخه در حال اجرا روی همین صفحه</small>
               </div>
             </div>
@@ -7233,6 +7482,68 @@ body{background:var(--app-bg)!important;padding-bottom:84px!important}
     <div class="pretrip-mission-actions">
       <button id="preTripMissionBackBtn">بازگشت</button>
       <button id="preTripMissionContinueBtn" class="primary">ادامه و شروع مسیر</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="speedTruthQuickSheet" class="speed-truth-quick-sheet">
+  <div class="speed-truth-quick-card">
+    <div class="speed-truth-quick-handle"></div>
+
+    <div class="speed-truth-quick-head">
+      <div>
+        <small>Speed Limit Truth Engine</small>
+        <h3>دقت حد سرعت همین مسیر</h3>
+        <p>این بخش مستقیماً از صفحه مسیر در دسترس است؛ نیازی به Lab نیست.</p>
+      </div>
+      <button id="closeSpeedTruthQuickBtn" aria-label="بستن">×</button>
+    </div>
+
+    <div class="speed-truth-quick-grid">
+      <div>
+        <span>پوشش تأییدشده</span>
+        <b id="quickTruthCoverage">۰٪</b>
+      </div>
+      <div>
+        <span>Segment تأییدشده</span>
+        <b id="quickTruthResolved">۰</b>
+      </div>
+      <div>
+        <span>Gap بدون داده</span>
+        <b id="quickTruthGaps">۰</b>
+      </div>
+      <div>
+        <span>Conflict با Open Data</span>
+        <b id="quickTruthConflicts">۰</b>
+      </div>
+    </div>
+
+    <div id="quickTruthStateCard" class="quick-truth-state locked">
+      <div>
+        <small>Speed Score</small>
+        <b id="quickTruthScoreState">LOCKED</b>
+      </div>
+      <span id="quickTruthReason">
+        هنوز منبع تأییدشده برای این Route نداریم.
+      </span>
+    </div>
+
+    <div class="quick-truth-source-row">
+      <span>منبع Authority</span>
+      <b id="quickTruthSource">--</b>
+    </div>
+
+    <div class="speed-truth-quick-actions">
+      <button id="quickTruthRefreshBtn">بررسی دوباره مسیر</button>
+      <button id="quickTruthExportBtn" class="primary">دانلود CSV مسیر</button>
+    </div>
+
+    <div class="quick-truth-help">
+      <b>CSV کجا می‌رود؟</b>
+      <span>
+        بعد از زدن «دانلود CSV مسیر»، فایل معمولاً داخل پوشه Downloads ویندوز ذخیره می‌شود.
+      </span>
     </div>
   </div>
 </div>
@@ -9961,6 +10272,226 @@ function verifiedRouteSpeedStatsFromTruth(){
   };
 }
 
+
+function renderSpeedTruthQuickSummary(){
+  const btn=$('mapSpeedTruthBtn');
+  const summary=$('mapSpeedTruthSummary');
+
+  if(btn){
+    btn.classList.remove(
+      'ready','partial','locked'
+    );
+  }
+
+  const coverage=
+    Number(speedTruthState.coverage||0);
+
+  if(speedTruthState.status==="ready"){
+    btn?.classList.add('ready');
+
+    if(summary){
+      summary.textContent=
+        `تأییدشده • ${coverage.toFixed(1)}٪ پوشش`;
+    }
+  }else if(
+    speedTruthState.status==="partial" ||
+    speedTruthState.status==="loading"
+  ){
+    btn?.classList.add('partial');
+
+    if(summary){
+      summary.textContent=
+        speedTruthState.status==="loading"
+          ?"در حال بررسی..."
+          :`ناقص • ${coverage.toFixed(1)}٪ پوشش`;
+    }
+  }else{
+    btn?.classList.add('locked');
+
+    if(summary){
+      summary.textContent=
+        routeCoords.length
+          ?"Speed Limit معتبر هنوز کامل نیست"
+          :"بعد از ساخت مسیر قابل بررسی است";
+    }
+  }
+}
+
+function renderSpeedTruthQuickSheet(){
+  const coverage=
+    Number(speedTruthState.coverage||0);
+
+  if($('quickTruthCoverage')){
+    $('quickTruthCoverage').textContent=
+      `${coverage.toFixed(1)}٪`;
+  }
+
+  if($('quickTruthResolved')){
+    $('quickTruthResolved').textContent=
+      Number(
+        speedTruthState.resolvedSamples||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('quickTruthGaps')){
+    $('quickTruthGaps').textContent=
+      Number(
+        speedTruthState.unresolved?.length||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('quickTruthConflicts')){
+    $('quickTruthConflicts').textContent=
+      Number(
+        speedTruthState.conflicts?.length||0
+      ).toLocaleString('fa-IR');
+  }
+
+  if($('quickTruthSource')){
+    $('quickTruthSource').textContent=
+      speedTruthState.source||"--";
+  }
+
+  const card=$('quickTruthStateCard');
+
+  card?.classList.remove(
+    'ready','partial','locked'
+  );
+
+  if(speedTruthState.status==="ready"){
+    card?.classList.add('ready');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "READY";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        `پوشش تأییدشده ${coverage.toFixed(1)}٪ است؛ Speed Score می‌تواند فعال باشد.`;
+    }
+  }else if(speedTruthState.status==="partial"){
+    card?.classList.add('partial');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "LOCKED";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        `پوشش فقط ${coverage.toFixed(1)}٪ است؛ Gapهای مسیر باید با منبع معتبر تکمیل شوند.`;
+    }
+  }else if(speedTruthState.status==="loading"){
+    card?.classList.add('partial');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "CHECKING";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        "در حال بررسی Segmentهای مسیر...";
+    }
+  }else{
+    card?.classList.add('locked');
+
+    if($('quickTruthScoreState')){
+      $('quickTruthScoreState').textContent=
+        "LOCKED";
+    }
+
+    if($('quickTruthReason')){
+      $('quickTruthReason').textContent=
+        speedTruthState.lastError
+          ?`خطا: ${speedTruthState.lastError}`
+          :"هنوز دیتای Speed Limit تأییدشده برای این Route نداریم.";
+    }
+  }
+
+  renderSpeedTruthQuickSummary();
+}
+
+async function refreshSpeedTruthQuickSheet({
+  force=false
+}={}){
+  renderSpeedTruthQuickSheet();
+
+  if(!routeCoords.length){
+    return false;
+  }
+
+  await Promise.allSettled([
+    prefetchExactRouteSpeedProfile({
+      force
+    }),
+    prefetchMappedSpeedLimits({
+      force
+    })
+  ]);
+
+  await buildSpeedTruthRouteProfile({
+    force
+  });
+
+  renderSpeedTruthQuickSheet();
+
+  return true;
+}
+
+async function openSpeedTruthQuickSheet(){
+  if(!routeCoords.length){
+    showMapStatus(
+      "اول یک Route بساز.",
+      "bad"
+    );
+    return;
+  }
+
+  $('speedTruthQuickSheet')?.classList.add(
+    'open'
+  );
+
+  renderSpeedTruthQuickSheet();
+
+  await refreshSpeedTruthQuickSheet({
+    force:false
+  });
+}
+
+function closeSpeedTruthQuickSheet(){
+  $('speedTruthQuickSheet')?.classList.remove(
+    'open'
+  );
+}
+
+async function exportCurrentRouteTruthGaps(){
+  if(!routeCoords.length){
+    showMapStatus(
+      "اول یک Route بساز.",
+      "bad"
+    );
+    return;
+  }
+
+  await refreshSpeedTruthQuickSheet({
+    force:false
+  });
+
+  const csv=speedTruthGapCsv();
+
+  downloadTextFile(
+    `POL_speed_gaps_${Date.now()}.csv`,
+    "\ufeff"+csv,
+    "text/csv;charset=utf-8"
+  );
+
+  showMapStatus(
+    "CSV مسیر دانلود شد؛ پوشه Downloads را بررسی کن."
+  );
+}
+
 function renderSpeedTruthDiagnostics(){
   const status=$('speedTruthStatus');
 
@@ -10045,6 +10576,8 @@ function renderSpeedTruthDiagnostics(){
         "منبع تأییدشده برای این Route وجود ندارد؛ Speed Score قفل است.";
     }
   }
+
+  renderSpeedTruthQuickSheet();
 }
 
 function validateImportedSpeedTruthDataset(data){
@@ -15907,6 +16440,7 @@ function renderMapRouteSheet(){
   if(!sheet)return;
 
   syncVehicleUi();
+  renderSpeedTruthQuickSummary();
 
   if(!routeAlternatives.length || !routeCoords.length){
     sheet.classList.remove('show');
@@ -23662,6 +24196,23 @@ $('mapRouteVehicleBtn').onclick=()=>{
     startIntent:false
   });
 };
+
+$('mapSpeedTruthBtn').onclick=
+  openSpeedTruthQuickSheet;
+
+$('closeSpeedTruthQuickBtn').onclick=
+  closeSpeedTruthQuickSheet;
+
+$('quickTruthRefreshBtn').onclick=
+  async()=>{
+    await refreshSpeedTruthQuickSheet({
+      force:true
+    });
+  };
+
+$('quickTruthExportBtn').onclick=
+  exportCurrentRouteTruthGaps;
+
 
 $('speedTruthImportBtn')?.addEventListener(
   'click',
