@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۵.۰ | Ahead Intelligence</title>
+<title>POL | نسخه ۷.۶.۰ | Road Attention Intelligence</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37176,14 +37176,14 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
       const atM=Number(edge?.startM||0);
       if(!finite(atM))continue;
 
-      if(edge?.edgeTunnel===true && !tunnelOpen){
+      if((edge?.edgeTunnel===true || edge?.tunnel===true) && !tunnelOpen){
         state.features.push({kind:'tunnel',atM,road:edge?.resolvedName||edge?.rawName||''});
       }
-      if(edge?.edgeRamp===true && !rampOpen){
+      if((edge?.edgeRamp===true || edge?.ramp===true) && !rampOpen){
         state.features.push({kind:'ramp',atM,road:edge?.resolvedName||edge?.rawName||''});
       }
-      tunnelOpen=edge?.edgeTunnel===true;
-      rampOpen=edge?.edgeRamp===true;
+      tunnelOpen=(edge?.edgeTunnel===true || edge?.tunnel===true);
+      rampOpen=(edge?.edgeRamp===true || edge?.ramp===true);
     }
     state.features.sort((a,b)=>a.atM-b.atM);
   }
@@ -37342,6 +37342,466 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
   }
 
   window.addEventListener('pagehide',hideAhead);
+})();
+</script>
+
+
+<style id="pol-v7-6-0-road-attention-intelligence">
+/* ============================================================
+   v7.6.0 — ROAD ATTENTION INTELLIGENCE
+   Route-derived attention zones. This is not a crash-risk claim.
+   One message surface, shared with Ahead Intelligence.
+   ============================================================ */
+#driveAheadPill.road-attention{
+  border-color:rgba(245,158,11,.26)!important;
+  background:linear-gradient(180deg,rgba(46,34,12,.96),rgba(27,24,18,.94))!important;
+}
+#driveAheadPill.road-attention .drive-ahead-icon{
+  background:rgba(245,158,11,.14)!important;
+  color:#fde68a!important;
+}
+#driveAheadPill.road-attention-high{
+  border-color:rgba(251,146,60,.38)!important;
+  box-shadow:0 13px 34px rgba(2,8,23,.28),0 0 0 2px rgba(245,158,11,.07)!important;
+}
+#driveAheadPill.road-attention-surface{
+  border-color:rgba(148,163,184,.22)!important;
+  background:linear-gradient(180deg,rgba(24,31,40,.96),rgba(16,23,31,.94))!important;
+}
+#driveAheadPill.road-attention-surface .drive-ahead-icon{
+  background:rgba(148,163,184,.12)!important;
+  color:#dbe5ef!important;
+}
+
+/* Route segment that needs extra attention. Leaflet fallback. */
+.drive-attention-halo,
+.drive-attention-line{
+  pointer-events:none!important;
+}
+.drive-attention-line{
+  filter:drop-shadow(0 3px 6px rgba(180,83,9,.22));
+}
+
+/* Tiny developer-only signal; hidden in the consumer surface. */
+.road-attention-debug-chip{display:none}
+</style>
+
+<script id="pol-v7-6-0-road-attention-intelligence-runtime">
+(function(){
+  'use strict';
+
+  const state={
+    key:'',
+    zones:[],
+    active:null,
+    ownsPill:false,
+    leafletHalo:null,
+    leafletLine:null,
+    lastHighlightKey:'',
+    source3D:'pol-road-attention-zone',
+    layer3DHalo:'pol-road-attention-zone-halo',
+    layer3D:'pol-road-attention-zone-line'
+  };
+
+  const byId=id=>document.getElementById(id);
+  const finite=v=>Number.isFinite(Number(v));
+  const clamp01=v=>Math.max(0,Math.min(1,Number(v||0)));
+
+  function angleDelta(deg){
+    let d=((Number(deg||0)+180)%360+360)%360-180;
+    return d;
+  }
+
+  function bearing(a,b){
+    if(!Array.isArray(a)||!Array.isArray(b))return 0;
+    const p1=Number(a[0])*Math.PI/180;
+    const p2=Number(b[0])*Math.PI/180;
+    const dl=(Number(b[1])-Number(a[1]))*Math.PI/180;
+    const y=Math.sin(dl)*Math.cos(p2);
+    const x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+    return (Math.atan2(y,x)*180/Math.PI+360)%360;
+  }
+
+  function routeSignature(){
+    const first=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[0]:null;
+    const last=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[routeCoords.length-1]:null;
+    const exact=(typeof mappedSpeedState!=='undefined')?mappedSpeedState?.exactProfile:null;
+    return [
+      Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0).toFixed(0),
+      routeCoords?.length||0,
+      first?.[0]?.toFixed?.(4)||'',first?.[1]?.toFixed?.(4)||'',
+      last?.[0]?.toFixed?.(4)||'',last?.[1]?.toFixed?.(4)||'',
+      exact?.status||'',Array.isArray(exact?.edges)?exact.edges.length:0
+    ].join('|');
+  }
+
+  function exactEdgeAtM(m){
+    const profile=(typeof mappedSpeedState!=='undefined')?mappedSpeedState?.exactProfile:null;
+    const edges=(profile?.status==='ready'&&Array.isArray(profile?.edges))?profile.edges:[];
+    for(const edge of edges){
+      if(Number(m)>=Number(edge.startM||0)-10 && Number(m)<=Number(edge.endM||0)+10)return edge;
+    }
+    return null;
+  }
+
+  function verifiedLimitAtM(m){
+    const profile=(typeof speedTruthState!=='undefined'&&speedTruthState?.status==='ready'&&Array.isArray(speedTruthState?.profile))
+      ?speedTruthState.profile:[];
+    for(const row of profile){
+      if(Number(m)>=Number(row.startM||0)-5 && Number(m)<=Number(row.endM||0)+5){
+        const n=Number(row.limit||0);
+        if(n>=10&&n<=160)return {limit:n,verified:true};
+      }
+    }
+    const edge=exactEdgeAtM(m);
+    const n=Number(edge?.speedLimit||0);
+    if(n>=10&&n<=160)return {limit:n,verified:false};
+    return {limit:0,verified:false};
+  }
+
+  function meaningfulManeuver(step){
+    if(!step)return false;
+    const type=(typeof normalizedManeuverType==='function')
+      ?normalizedManeuverType(step.type)
+      :String(step.type||'').toLowerCase();
+    const mod=String(step.modifier||'').toLowerCase();
+    return [
+      'turn','roundabout','fork','merge','on ramp','off ramp','end of road'
+    ].includes(type) || mod.includes('sharp') || mod.includes('uturn');
+  }
+
+  function maneuverNear(m,radius=135){
+    if(typeof navigationSteps==='undefined'||!Array.isArray(navigationSteps))return false;
+    return navigationSteps.some(step=>
+      meaningfulManeuver(step) && Math.abs(Number(step.atDistance||0)-Number(m||0))<=radius
+    );
+  }
+
+  function roughSurfaceLabel(surface){
+    const s=String(surface||'').toLowerCase().trim();
+    if(!s)return null;
+    if(/gravel|fine_gravel/.test(s))return 'سطح شنی یا سنگ‌ریزه‌ای جلوتر';
+    if(/dirt|earth|ground|mud|sand/.test(s))return 'سطح خاکی جلوتر';
+    if(/unpaved/.test(s))return 'سطح غیرآسفالتی جلوتر';
+    if(/cobble|sett/.test(s))return 'سطح ناهموار سنگفرش جلوتر';
+    return null;
+  }
+
+  function mergeZones(items){
+    if(!items.length)return[];
+    items.sort((a,b)=>a.startM-b.startM);
+    const out=[];
+    for(const item of items){
+      const last=out[out.length-1];
+      if(
+        last && item.kind===last.kind && item.direction===last.direction &&
+        item.startM<=last.endM+90
+      ){
+        last.endM=Math.max(last.endM,item.endM);
+        if(Number(item.priority||0)>Number(last.priority||0)){
+          last.priority=item.priority;
+          last.peakM=item.peakM;
+          last.angle=item.angle;
+          last.limit=item.limit;
+          last.verifiedLimit=item.verifiedLimit;
+          last.label=item.label;
+          last.reason=item.reason;
+        }
+      }else{
+        out.push({...item});
+      }
+    }
+    return out;
+  }
+
+  function buildGeometryZones(){
+    const total=Math.max(0,Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0));
+    if(total<260 || typeof routePointAtDistanceM!=='function')return[];
+
+    const raw=[];
+    const step=34;
+    for(let m=105;m<total-105;m+=step){
+      const speed=verifiedLimitAtM(m);
+      const expected=Number(speed.limit||0)||55;
+      const half=expected>=90?85:expected>=70?78:expected>=50?70:62;
+      const a=routePointAtDistanceM(Math.max(0,m-half));
+      const c=routePointAtDistanceM(m);
+      const b=routePointAtDistanceM(Math.min(total,m+half));
+      const signed=angleDelta(bearing(c,b)-bearing(a,c));
+      const mag=Math.abs(signed);
+
+      const threshold=expected>=90?19:expected>=70?23:expected>=50?28:34;
+      if(mag<threshold)continue;
+      if(maneuverNear(m,145))continue;
+
+      const excess=Math.max(0,mag-threshold);
+      let priority=70+Math.min(22,excess*.72);
+      if(expected>=80)priority+=4;
+      if(mag>=48)priority+=5;
+      priority=Math.min(98,Math.round(priority));
+
+      const direction=signed>=0?'right':'left';
+      const faDir=direction==='right'?'راست':'چپ';
+      const label=mag>=48?`قوس تند مسیر به ${faDir}`:`قوس پیوسته مسیر به ${faDir}`;
+      const span=Math.round(half*2);
+      const reason=speed.limit
+        ?`تغییر جهت محسوس مسیر طی حدود ${span.toLocaleString('fa-IR')} متر • حد سرعت ${Math.round(speed.limit).toLocaleString('fa-IR')}`
+        :`تغییر جهت محسوس مسیر طی حدود ${span.toLocaleString('fa-IR')} متر`;
+
+      raw.push({
+        kind:'curve',direction,startM:Math.max(0,m-half),peakM:m,endM:Math.min(total,m+half),
+        priority,angle:mag,limit:speed.limit,verifiedLimit:speed.verified,label,reason
+      });
+    }
+    return mergeZones(raw).filter(z=>Number(z.endM)-Number(z.startM)>=80);
+  }
+
+  function buildSurfaceZones(){
+    const profile=(typeof mappedSpeedState!=='undefined')?mappedSpeedState?.exactProfile:null;
+    const edges=(profile?.status==='ready'&&Array.isArray(profile?.edges))?profile.edges:[];
+    const out=[];
+    for(const edge of edges){
+      const label=roughSurfaceLabel(edge?.surface);
+      if(!label)continue;
+      const start=Number(edge.startM||0),end=Number(edge.endM||0);
+      if(!finite(start)||!finite(end)||end-start<25)continue;
+      out.push({
+        kind:'surface',direction:'',startM:start,peakM:start,endM:end,priority:86,
+        label,reason:'اطلاعات سطح مسیر از دادهٔ مسیریابی Open Data آمده است.'
+      });
+    }
+    return mergeZones(out);
+  }
+
+  function rebuildZones(){
+    const key=routeSignature();
+    if(key===state.key)return;
+    state.key=key;
+    state.zones=[...buildGeometryZones(),...buildSurfaceZones()]
+      .sort((a,b)=>Number(a.startM)-Number(b.startM));
+  }
+
+  function speedAdaptiveLookahead(speedKmh){
+    const s=Math.max(0,Number(speedKmh||0));
+    if(s>=100)return 1050;
+    if(s>=80)return 900;
+    if(s>=60)return 760;
+    if(s>=40)return 620;
+    return 480;
+  }
+
+  function candidateAt(progress){
+    rebuildZones();
+    const total=Math.max(0,Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0));
+    if(!total||!state.zones.length)return null;
+    const currentM=total*clamp01(progress);
+    const speed=(typeof currentGuidanceSpeedKmh==='function')?Number(currentGuidanceSpeedKmh()||0):0;
+    const lookahead=speedAdaptiveLookahead(speed);
+    const candidates=[];
+
+    for(const zone of state.zones){
+      if(Number(zone.endM)<currentM-25)continue;
+      const ahead=Math.max(0,Number(zone.startM)-currentM);
+      if(ahead>lookahead)break;
+      const inside=currentM>=Number(zone.startM)&&currentM<=Number(zone.endM);
+      const nearPeak=Math.abs(Number(zone.peakM||zone.startM)-currentM);
+      let score=Number(zone.priority||0);
+      score+=Math.max(0,1-ahead/Math.max(1,lookahead))*13;
+      if(inside)score+=9;
+      if(nearPeak<90)score+=4;
+      candidates.push({...zone,aheadM:ahead,currentM,score,inside});
+    }
+
+    if(!candidates.length)return null;
+    candidates.sort((a,b)=>Number(b.score)-Number(a.score)||Number(a.aheadM)-Number(b.aheadM));
+    return candidates[0];
+  }
+
+  function currentAheadIsProtected(){
+    const pill=byId('driveAheadPill');
+    if(!pill?.classList.contains('show'))return false;
+    // Verified speed truth and camera warnings keep ownership.
+    return pill.classList.contains('verified') || pill.classList.contains('camera');
+  }
+
+  function showAttention(candidate){
+    const pill=byId('driveAheadPill');
+    if(!pill||!candidate)return false;
+    if(currentAheadIsProtected())return false;
+
+    const icon=byId('driveAheadIcon');
+    const label=byId('driveAheadLabel');
+    const text=byId('driveAheadText');
+    const distance=byId('driveAheadDistance');
+
+    pill.className='drive-ahead-pill show road-attention';
+    if(Number(candidate.priority)>=92)pill.classList.add('road-attention-high');
+    if(candidate.kind==='surface')pill.classList.add('road-attention-surface');
+
+    if(icon)icon.textContent=candidate.kind==='surface'?'≋':(candidate.direction==='left'?'↶':'↷');
+    if(label)label.textContent=candidate.inside?'در این بخش مسیر':'بخش نیازمند توجه جلوتر';
+    if(text)text.textContent=candidate.label||'بخش مسیر نیازمند توجه بیشتر است';
+    if(distance){
+      distance.textContent=candidate.inside?'اکنون':(typeof distanceTextFa==='function'
+        ?distanceTextFa(candidate.aheadM)
+        :`${Math.round(candidate.aheadM)} متر`);
+    }
+    state.ownsPill=true;
+    return true;
+  }
+
+  function ensureLeafletLayers(){
+    if(typeof map==='undefined'||typeof L==='undefined')return false;
+    if(!state.leafletHalo){
+      state.leafletHalo=L.polyline([],{
+        color:'#fff7ed',weight:16,opacity:.90,lineCap:'round',lineJoin:'round',interactive:false,className:'drive-attention-halo'
+      }).addTo(map);
+    }
+    if(!state.leafletLine){
+      state.leafletLine=L.polyline([],{
+        color:'#f59e0b',weight:10,opacity:.96,lineCap:'round',lineJoin:'round',interactive:false,className:'drive-attention-line'
+      }).addTo(map);
+    }
+    return true;
+  }
+
+  function emptyGeoLine(){
+    return {type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[]}};
+  }
+
+  function lineFeature(coords){
+    const safe=(coords||[]).filter(p=>Array.isArray(p)&&p.length>=2)
+      .map(p=>[Number(p[1]),Number(p[0])]).filter(p=>p.every(Number.isFinite));
+    return {type:'Feature',properties:{},geometry:{type:'LineString',coordinates:safe}};
+  }
+
+  function ensure3DLayers(){
+    if(typeof drive3DMap==='undefined'||!drive3DMap||!drive3DMapLoaded)return false;
+    try{
+      if(!drive3DMap.getSource(state.source3D)){
+        drive3DMap.addSource(state.source3D,{type:'geojson',data:emptyGeoLine()});
+      }
+      if(!drive3DMap.getLayer(state.layer3DHalo)){
+        drive3DMap.addLayer({
+          id:state.layer3DHalo,type:'line',source:state.source3D,
+          layout:{'line-cap':'round','line-join':'round'},
+          paint:{'line-color':'#fff7ed','line-width':16,'line-opacity':.93}
+        });
+      }
+      if(!drive3DMap.getLayer(state.layer3D)){
+        drive3DMap.addLayer({
+          id:state.layer3D,type:'line',source:state.source3D,
+          layout:{'line-cap':'round','line-join':'round'},
+          paint:{'line-color':'#f59e0b','line-width':9,'line-opacity':.96}
+        });
+      }
+      return true;
+    }catch(_e){return false;}
+  }
+
+  function clearHighlight(){
+    state.lastHighlightKey='';
+    try{state.leafletHalo?.setLatLngs([])}catch(_e){}
+    try{state.leafletLine?.setLatLngs([])}catch(_e){}
+    try{drive3DMap?.getSource?.(state.source3D)?.setData?.(emptyGeoLine())}catch(_e){}
+  }
+
+  function highlight(candidate){
+    if(!candidate||typeof routeSliceByDistanceM!=='function'){clearHighlight();return;}
+    const total=Math.max(0,Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0));
+    const currentM=total*clamp01((typeof currentRouteProgress==='function')?currentRouteProgress():candidate.currentM/Math.max(1,total));
+    const start=Math.max(currentM+8,Number(candidate.startM||0));
+    const end=Math.max(start+25,Math.min(total,Number(candidate.endM||start+120)));
+    const key=[Math.round(start/20),Math.round(end/20),candidate.kind].join(':');
+    if(key===state.lastHighlightKey)return;
+    state.lastHighlightKey=key;
+    const coords=routeSliceByDistanceM(start,end);
+
+    try{
+      if(ensureLeafletLayers()){
+        state.leafletHalo.setLatLngs(coords);
+        state.leafletLine.setLatLngs(coords);
+        state.leafletHalo.bringToFront();
+        state.leafletLine.bringToFront();
+      }
+    }catch(_e){}
+
+    try{
+      if(ensure3DLayers()){
+        drive3DMap.getSource(state.source3D)?.setData?.(lineFeature(coords));
+      }
+    }catch(_e){}
+  }
+
+  function update(progress){
+    if(!document.body.classList.contains('driving-mode')){
+      state.active=null;clearHighlight();return;
+    }
+    if(document.body.classList.contains('map-manual-explore')){
+      state.active=null;clearHighlight();return;
+    }
+    if(byId('rerouteBanner')?.classList.contains('show')){
+      state.active=null;clearHighlight();return;
+    }
+
+    const candidate=candidateAt(progress);
+    state.active=candidate;
+    if(!candidate){clearHighlight();return;}
+
+    // Low-confidence geometry stays invisible unless it becomes meaningfully close.
+    if(candidate.kind==='curve' && Number(candidate.priority)<78 && Number(candidate.aheadM)>360){
+      clearHighlight();return;
+    }
+
+    highlight(candidate);
+
+    // Preserve high-authority speed/camera alerts. Otherwise use the same single surface.
+    if(Number(candidate.score)>=84 || !byId('driveAheadPill')?.classList.contains('show')){
+      showAttention(candidate);
+    }
+  }
+
+  function debug(){
+    rebuildZones();
+    return {
+      version:'7.6.0',
+      principle:'attention zones are route-derived context, not crash-risk claims',
+      routeKey:state.key,
+      zoneCount:state.zones.length,
+      curveZones:state.zones.filter(x=>x.kind==='curve').length,
+      surfaceZones:state.zones.filter(x=>x.kind==='surface').length,
+      active:state.active?{...state.active}:null,
+      zones:state.zones.map(z=>({
+        kind:z.kind,label:z.label,startM:Math.round(z.startM),endM:Math.round(z.endM),
+        peakM:Math.round(z.peakM||z.startM),priority:z.priority,angle:z.angle?Number(z.angle.toFixed(1)):null
+      }))
+    };
+  }
+
+  window.POL_ROAD_ATTENTION={state,update,rebuild:()=>{state.key='';rebuildZones();},debug};
+  window.POL_ROAD_ATTENTION_DEBUG=debug;
+
+  // v7.5 already owns the turn-by-turn wrapper. We run after it so the
+  // arbitration sees the current Ahead Intelligence message on every tick.
+  if(typeof updateTurnByTurn==='function'){
+    const base=updateTurnByTurn;
+    updateTurnByTurn=function(progress){
+      const result=base.apply(this,arguments);
+      try{update(progress)}catch(_e){clearHighlight();}
+      return result;
+    };
+  }
+
+  if(typeof resetTurnByTurn==='function'){
+    const baseReset=resetTurnByTurn;
+    resetTurnByTurn=function(){
+      const result=baseReset.apply(this,arguments);
+      state.active=null;state.key='';state.ownsPill=false;clearHighlight();
+      return result;
+    };
+  }
+
+  window.addEventListener('pagehide',clearHighlight);
 })();
 </script>
 
