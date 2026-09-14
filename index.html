@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۷.۰ | Simple Navigation Experience</title>
+<title>POL | نسخه ۷.۸.۰ | Effortless Navigation UX</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11534,6 +11534,311 @@ body.pol-consumer-mode #tripSummarySheet #summaryReplay.show{
   body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip{bottom:148px!important}
   body.pol-consumer-mode.route-selection-mode .map-route-eta-block b{font-size:27px!important}
   body.pol-consumer-mode.route-selection-mode #mapRouteDestination{font-size:14px!important}
+}
+</style>
+
+
+<style id="pol-v7-8-effortless-navigation-ux">
+/* ============================================================
+   POL v7.8.0 — EFFORTLESS NAVIGATION UX
+   No new product complexity. Faster search, clearer feedback,
+   softer transitions, cleaner arrival and trip completion.
+   ============================================================ */
+
+/* ---------- Motion language: short, quiet, consistent ---------- */
+:root{
+  --pol-ease:cubic-bezier(.22,.8,.28,1);
+  --pol-fast:150ms;
+  --pol-normal:240ms;
+}
+body.pol-consumer-mode button,
+body.pol-consumer-mode .nav-sheet-result,
+body.pol-consumer-mode .nav-sheet-recent-item,
+body.pol-consumer-mode .pol-place-chip,
+body.pol-consumer-mode .map-route-choice-chip{
+  -webkit-tap-highlight-color:transparent;
+}
+body.pol-consumer-mode button:active{
+  transform:scale(.975);
+}
+body.pol-consumer-mode :focus-visible{
+  outline:3px solid rgba(35,111,211,.22)!important;
+  outline-offset:2px!important;
+}
+
+/* ---------- Search: type, see, choose ---------- */
+body.pol-consumer-mode #navSearchSheet{
+  background:rgba(15,23,42,.24)!important;
+  backdrop-filter:blur(4px)!important;
+}
+body.pol-consumer-mode #navSearchSheet.open .nav-sheet-card{
+  animation:polSheetIn var(--pol-normal) var(--pol-ease) both;
+}
+@keyframes polSheetIn{
+  from{transform:translateY(18px);opacity:.70}
+  to{transform:none;opacity:1}
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row{
+  grid-template-columns:40px minmax(0,1fr) 38px!important;
+}
+body.pol-consumer-mode #navSearchBackBtn{
+  font-size:0!important;
+}
+body.pol-consumer-mode #navSearchBackBtn::after{
+  content:"×";
+  font-size:22px;
+  font-weight:500;
+}
+body.pol-consumer-mode #navSheetSearchBtn{
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  min-width:38px!important;
+  height:52px!important;
+  min-height:52px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:#f1f4f8!important;
+  color:#536174!important;
+  font-size:21px!important;
+  box-shadow:none!important;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--pol-fast) ease!important;
+}
+body.pol-consumer-mode #navSearchSheet.has-query #navSheetSearchBtn{
+  opacity:1;
+  pointer-events:auto;
+}
+body.pol-consumer-mode #navSheetSearchInput{
+  transition:background var(--pol-fast) ease, box-shadow var(--pol-fast) ease!important;
+}
+body.pol-consumer-mode #navSheetSearchInput:focus{
+  background:#fff!important;
+  box-shadow:0 0 0 3px rgba(35,111,211,.10)!important;
+}
+body.pol-consumer-mode #navSheetResults:not(:empty){
+  padding-top:5px!important;
+}
+body.pol-consumer-mode #navSheetResults .pol-search-result{
+  opacity:0;
+  transform:translateY(5px);
+  animation:polResultIn 190ms var(--pol-ease) forwards;
+}
+body.pol-consumer-mode #navSheetResults .pol-search-result:nth-child(2){animation-delay:18ms}
+body.pol-consumer-mode #navSheetResults .pol-search-result:nth-child(3){animation-delay:36ms}
+body.pol-consumer-mode #navSheetResults .pol-search-result:nth-child(4){animation-delay:54ms}
+body.pol-consumer-mode #navSheetResults .pol-search-result:nth-child(5){animation-delay:72ms}
+@keyframes polResultIn{to{opacity:1;transform:none}}
+body.pol-consumer-mode #navSheetResults .nav-live-search-status{
+  min-height:52px!important;
+  padding:10px 8px!important;
+  color:#6b7788!important;
+}
+body.pol-consumer-mode #navSheetResults .pol-search-empty{
+  margin:8px 2px!important;
+  padding:18px 14px!important;
+  border-radius:16px!important;
+  background:#f5f7fa!important;
+  text-align:center!important;
+}
+body.pol-consumer-mode #navSheetResults .pol-search-empty b{
+  display:block!important;font-size:11px!important;color:#334155!important;
+}
+body.pol-consumer-mode #navSheetResults .pol-search-empty span{
+  display:block!important;margin-top:4px!important;font-size:8px!important;color:#8491a2!important;line-height:1.7!important;
+}
+
+/* ---------- Route selection: calm confidence ---------- */
+body.pol-consumer-mode.route-selection-mode #mapRouteSheet.show{
+  animation:polRouteSheetIn 230ms var(--pol-ease) both;
+}
+@keyframes polRouteSheetIn{
+  from{transform:translateY(12px);opacity:.72}
+  to{transform:none;opacity:1}
+}
+body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip.show{
+  animation:polChoiceIn 210ms var(--pol-ease) both;
+}
+@keyframes polChoiceIn{
+  from{transform:translateY(7px);opacity:0}
+  to{transform:none;opacity:1}
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip{
+  transition:background var(--pol-fast) ease,border-color var(--pol-fast) ease,box-shadow var(--pol-fast) ease,transform 90ms ease!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip.active{
+  box-shadow:0 8px 22px rgba(35,111,211,.18)!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn{
+  position:relative!important;
+  overflow:hidden!important;
+  transition:transform 90ms ease,filter var(--pol-fast) ease,opacity var(--pol-fast) ease!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn:active{
+  transform:scale(.985)!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn:disabled{
+  opacity:.92!important;
+  cursor:wait!important;
+  filter:saturate(.86)!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn:disabled::before{
+  content:"";
+  width:17px;height:17px;
+  margin-left:8px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.42);
+  border-top-color:#fff;
+  animation:polSpin .72s linear infinite;
+}
+@keyframes polSpin{to{transform:rotate(360deg)}}
+
+/* Status feedback should feel like part of the product, not debug text. */
+body.pol-consumer-mode #mapStatusToast.show{
+  max-width:min(calc(100% - 28px),420px)!important;
+  min-height:38px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:8px 13px!important;
+  border-radius:999px!important;
+  border:0!important;
+  background:rgba(23,32,45,.94)!important;
+  color:#f8fafc!important;
+  font-size:8px!important;
+  box-shadow:0 9px 24px rgba(15,23,42,.18)!important;
+  backdrop-filter:blur(12px)!important;
+  animation:polToastIn 180ms var(--pol-ease) both!important;
+}
+body.pol-consumer-mode #mapStatusToast.show.bad{
+  background:rgba(111,29,29,.95)!important;
+  color:#fff1f2!important;
+}
+@keyframes polToastIn{
+  from{opacity:0;transform:translate(-50%,6px)}
+  to{opacity:1;transform:translate(-50%,0)}
+}
+
+/* ---------- Driving: smooth information changes, no decorative motion ---------- */
+body.pol-consumer-mode.driving-mode #turnCard,
+body.pol-consumer-mode.driving-mode #driveCurrentRoadBar,
+body.pol-consumer-mode.driving-mode #driveAheadPill{
+  transition:opacity var(--pol-fast) ease, border-color var(--pol-fast) ease, background var(--pol-fast) ease!important;
+}
+body.pol-consumer-mode.driving-mode #turnDistance,
+body.pol-consumer-mode.driving-mode #turnInstruction,
+body.pol-consumer-mode.driving-mode #turnStreet,
+body.pol-consumer-mode.driving-mode #navBottomArrival,
+body.pol-consumer-mode.driving-mode #navBottomDistance,
+body.pol-consumer-mode.driving-mode #navBottomTime{
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---------- Arrival: one warm, unmistakable moment ---------- */
+body.pol-consumer-mode.driving-mode #arrivalBanner.show{
+  position:fixed!important;
+  z-index:8000!important;
+  top:50%!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%)!important;
+  width:min(calc(100% - 38px),330px)!important;
+  min-height:150px!important;
+  padding:20px 18px!important;
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  gap:4px!important;
+  border:0!important;
+  border-radius:28px!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#172033!important;
+  box-shadow:0 26px 80px rgba(15,23,42,.30)!important;
+  backdrop-filter:blur(18px)!important;
+  text-align:center!important;
+  animation:polArriveIn 280ms var(--pol-ease) both!important;
+}
+body.pol-consumer-mode.driving-mode #arrivalBanner .pol-arrival-check{
+  width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  background:#e8f7ee;color:#15803d;font-size:27px;font-weight:950;
+  margin-bottom:5px;
+}
+body.pol-consumer-mode.driving-mode #arrivalBanner b{
+  display:block;font-size:22px;line-height:1.2;font-weight:950;color:#111827;
+}
+body.pol-consumer-mode.driving-mode #arrivalBanner small{
+  display:block;max-width:250px;margin-top:4px;font-size:9px;line-height:1.7;color:#6b7788;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+@keyframes polArriveIn{
+  from{opacity:0;transform:translate(-50%,-46%) scale(.94)}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1)}
+}
+
+/* ---------- Trip completion: result + one useful thought ---------- */
+body.pol-consumer-mode #tripSummarySheet{
+  background:rgba(15,23,42,.32)!important;
+  backdrop-filter:blur(5px)!important;
+}
+body.pol-consumer-mode #tripSummarySheet.open .summary-card{
+  animation:polSummaryIn var(--pol-normal) var(--pol-ease) both;
+}
+@keyframes polSummaryIn{
+  from{transform:translateY(18px);opacity:.72}
+  to{transform:none;opacity:1}
+}
+body.pol-consumer-mode #tripSummarySheet #summaryEligibility,
+body.pol-consumer-mode #tripSummarySheet #summaryWhy{
+  display:none!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-label{
+  margin-top:4px!important;
+  text-align:center!important;
+  font-size:10px!important;
+  color:#64748b!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryScore{
+  color:#172033!important;
+  letter-spacing:-1px!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryCoach{
+  margin-top:11px!important;
+  background:#f1f6fc!important;
+  color:#213e60!important;
+  text-align:right!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryCoach b{
+  font-size:10px!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryCoach span{
+  font-size:9px!important;line-height:1.8!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryReplay.show{
+  background:transparent!important;
+  color:#526175!important;
+}
+
+@media(max-width:700px){
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+    max-height:92dvh!important;
+  }
+  body.pol-consumer-mode #navSheetSearchInput{
+    font-size:16px!important; /* prevents iOS zoom */
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.pol-consumer-mode *,
+  body.pol-consumer-mode *::before,
+  body.pol-consumer-mode *::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
 }
 </style>
 
@@ -38085,7 +38390,7 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
   const byId=id=>document.getElementById(id);
 
   function setSimpleCopy(){
-    document.title='POL | نسخه ۷.۷.۰ | Simple Navigation Experience';
+    document.title='POL | نسخه ۷.۸.۰ | Effortless Navigation UX';
 
     const launcher=byId('navLauncherButton');
     const launcherTitle=launcher?.querySelector('.nav-launcher-copy b');
@@ -38216,7 +38521,7 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
   keepSimpleState();
 
   window.POL_SIMPLE_UX_DEBUG=()=>({
-    version:'7.7.0',
+    version:'7.8.0',
     principle:'one destination, one route decision, one start tap',
     routeSheetOpen:!!byId('mapRouteSheet')?.classList.contains('show'),
     searchOpen:!!byId('navSearchSheet')?.classList.contains('open'),
@@ -38229,6 +38534,196 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
       const el=byId(id);if(!el)return true;
       return getComputedStyle(el).display==='none';
     })
+  });
+})();
+</script>
+
+
+<script id="pol-v7-8-effortless-navigation-runtime">
+(function(){
+  const byId=id=>document.getElementById(id);
+  document.title='POL | نسخه ۷.۸.۰ | Effortless Navigation UX';
+  document.body.classList.add('pol-effortless-ux');
+
+  /* Quiet haptics: enhancement only; never required for a workflow. */
+  function haptic(pattern=8){
+    try{
+      if(typeof navigator.vibrate==='function')navigator.vibrate(pattern);
+    }catch(_e){}
+  }
+
+  /* Search close/clear affordance: the right-side icon only appears when text exists. */
+  const searchInput=byId('navSheetSearchInput');
+  const searchAction=byId('navSheetSearchBtn');
+  const searchBack=byId('navSearchBackBtn');
+  if(searchBack){
+    searchBack.setAttribute('aria-label','بستن جست‌وجو');
+    searchBack.title='بستن';
+  }
+  if(searchAction){
+    searchAction.textContent='×';
+    searchAction.setAttribute('aria-label','پاک‌کردن جست‌وجو');
+    searchAction.title='پاک‌کردن';
+    searchAction.onclick=()=>{
+      if(!searchInput)return;
+      searchInput.value='';
+      searchInput.dispatchEvent(new Event('input',{bubbles:true}));
+      searchInput.focus();
+      haptic(5);
+    };
+  }
+
+  /* Enter means "use the first thing I can see", not "run another search". */
+  if(searchInput){
+    searchInput.addEventListener('keydown',event=>{
+      if(event.key!=='Enter')return;
+      const first=byId('navSheetResults')?.querySelector('.pol-search-result, .nav-sheet-result');
+      if(!first)return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      first.click();
+      haptic(7);
+    },true);
+  }
+
+  /* Exact POIs should be one tap. Broad streets/neighbourhoods still open map picking. */
+  function directSearchResult(item){
+    const category=String(item?.category||'').toLowerCase();
+    const type=String(item?.type||'').toLowerCase();
+    const house=String(item?.address?.house_number||'').trim();
+
+    if(house)return true;
+
+    const directCategories=new Set([
+      'amenity','shop','tourism','office','healthcare','building','railway','aeroway','leisure','historic','craft'
+    ]);
+    if(directCategories.has(category))return true;
+
+    const broadCategories=new Set(['place','boundary','highway']);
+    const broadTypes=new Set([
+      'city','town','village','hamlet','suburb','neighbourhood','quarter','district','county','state','region',
+      'residential','primary','secondary','tertiary','trunk','motorway','unclassified','living_street','pedestrian','service','road','street'
+    ]);
+    if(broadCategories.has(category)||broadTypes.has(type))return false;
+
+    const bb=Array.isArray(item?.boundingbox)?item.boundingbox.map(Number):null;
+    if(bb?.length===4 && bb.every(Number.isFinite)){
+      const latSpan=Math.abs(bb[1]-bb[0]);
+      const lngSpan=Math.abs(bb[3]-bb[2]);
+      if(latSpan<.008 && lngSpan<.010)return true;
+    }
+    return false;
+  }
+
+  try{
+    if(typeof focusSearchArea==='function' && !focusSearchArea.__polEffortlessWrapped){
+      const baseFocus=focusSearchArea;
+      const wrapped=function(item){
+        if(!directSearchResult(item))return baseFocus(item);
+        const lat=Number(item?.lat),lng=Number(item?.lon);
+        if(!Number.isFinite(lat)||!Number.isFinite(lng))return baseFocus(item);
+        const label=typeof destinationLabelFromItem==='function'?destinationLabelFromItem(item):(item?.name||'مقصد');
+        const address=typeof destinationAddressFromItem==='function'?destinationAddressFromItem(item):(item?.display_name||label);
+        closeNavSearchSheet?.();
+        haptic(8);
+        showMapStatus?.('در حال آماده‌سازی مسیر…');
+        return stageDestination({lat,lng,label,address},{source:'search',autoRoute:true});
+      };
+      wrapped.__polEffortlessWrapped=true;
+      focusSearchArea=wrapped;
+    }
+  }catch(error){console.warn('POL direct destination enhancement unavailable',error)}
+
+  /* Active route remains visible if the alternatives overflow on a small phone. */
+  function keepSelectedRouteVisible(){
+    const active=byId('mapRouteChoiceStrip')?.querySelector('.map-route-choice-chip.active');
+    if(active){
+      try{active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}catch(_e){}
+    }
+  }
+  const choiceStrip=byId('mapRouteChoiceStrip');
+  if(choiceStrip){
+    const choiceObserver=new MutationObserver(()=>requestAnimationFrame(keepSelectedRouteVisible));
+    choiceObserver.observe(choiceStrip,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    choiceStrip.addEventListener('click',event=>{
+      if(event.target.closest('.map-route-choice-chip'))haptic(7);
+    },true);
+  }
+
+  /* Start, launcher and recenter get tiny tactile acknowledgement, not extra UI. */
+  byId('navLauncherButton')?.addEventListener('click',()=>haptic(6),true);
+  byId('mapStartBtn')?.addEventListener('click',()=>haptic(10),true);
+  byId('driveRecenterBtn')?.addEventListener('click',()=>haptic(6),true);
+  byId('summaryClose')?.addEventListener('click',()=>haptic(6),true);
+
+  /* Arrival reuses the existing trusted arrival event; only presentation changes. */
+  const arrival=byId('arrivalBanner');
+  if(arrival){
+    let arrivalAnnounced=false;
+    const renderArrival=()=>{
+      const visible=arrival.classList.contains('show');
+      if(visible){
+        const destination=(typeof navDestination!=='undefined' && navDestination?.label)?navDestination.label:'مقصد';
+        arrival.innerHTML='<span class="pol-arrival-check">✓</span><b>رسیدی</b><small></small>';
+        const small=arrival.querySelector('small');
+        if(small)small.textContent=destination;
+        if(!arrivalAnnounced){haptic([18,35,24]);arrivalAnnounced=true;}
+      }else{
+        arrivalAnnounced=false;
+      }
+    };
+    new MutationObserver(renderArrival).observe(arrival,{attributes:true,attributeFilter:['class']});
+    renderArrival();
+  }
+
+  /* Search/result state should never look stale while a sheet is reopened. */
+  const searchSheet=byId('navSearchSheet');
+  if(searchSheet){
+    new MutationObserver(()=>{
+      if(searchSheet.classList.contains('open')){
+        requestAnimationFrame(()=>{
+          if(searchInput && document.activeElement!==searchInput)searchInput.focus({preventScroll:true});
+        });
+      }
+    }).observe(searchSheet,{attributes:true,attributeFilter:['class']});
+  }
+
+  /* A completed trip is an arrival, not an audit screen. */
+  const summary=byId('tripSummarySheet');
+  if(summary){
+    let wasOpen=false;
+    new MutationObserver(()=>{
+      const open=summary.classList.contains('open');
+      if(open&&!wasOpen){
+        const label=summary.querySelector('.summary-label');
+        if(label)label.textContent='این سفر';
+        const coach=byId('summaryCoach');
+        const coachTitle=coach?.querySelector('b');
+        if(coachTitle && /دستیار ایمنی|اقدام بعدی/.test(coachTitle.textContent||''))coachTitle.textContent='نکته این سفر';
+        haptic(10);
+      }
+      wasOpen=open;
+    }).observe(summary,{attributes:true,attributeFilter:['class']});
+  }
+
+  /* Keep the UX layer resilient when older runtime code rewrites button copy. */
+  const uxObserver=new MutationObserver(()=>{
+    if(searchAction && searchAction.textContent!=='×')searchAction.textContent='×';
+    const start=byId('mapStartBtn');
+    if(start && !start.disabled && !document.body.classList.contains('driving-mode')){
+      if(start.textContent.trim()!=='شروع مسیر')start.textContent='شروع مسیر';
+    }
+  });
+  uxObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
+
+  window.POL_EFFORTLESS_UX_DEBUG=()=>({
+    version:'7.8.0',
+    searchClearVisible:!!searchAction && getComputedStyle(searchAction).pointerEvents!=='none',
+    searchOpen:!!searchSheet?.classList.contains('open'),
+    routeSelection:document.body.classList.contains('route-selection-mode'),
+    driving:document.body.classList.contains('driving-mode'),
+    summaryOpen:!!summary?.classList.contains('open'),
+    principle:'type → choose → start; intelligence stays behind the interface'
   });
 })();
 </script>
