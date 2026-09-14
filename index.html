@@ -39058,5 +39058,442 @@ body.pol-consumer-mode.route-selection-mode #mapStartBtn:not(:disabled){
 })();
 </script>
 
+
+
+<style id="pol-v7-10-glance-first-driving-ux">
+/* ============================================================
+   POL v7.10.0 — GLANCE-FIRST DRIVING UX
+   Simpler visual hierarchy while moving. No new product feature.
+   ============================================================ */
+
+/* Driving has one visual question: what do I need to know now? */
+body.pol-consumer-mode.driving-mode{
+  --pol-drive-edge:8px;
+  --pol-drive-bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  --pol-drive-blue:#236fd3;
+}
+
+/* ---------- Maneuver card: quiet when far, strong when near ---------- */
+body.pol-consumer-mode.driving-mode #turnCard{
+  top:calc(7px + env(safe-area-inset-top,0px))!important;
+  left:var(--pol-drive-edge)!important;
+  right:var(--pol-drive-edge)!important;
+  width:auto!important;
+  max-width:590px!important;
+  min-height:0!important;
+  margin-inline:auto!important;
+  padding:9px 10px!important;
+  grid-template-columns:64px minmax(0,1fr)!important;
+  gap:9px!important;
+  border-radius:20px!important;
+  background:rgba(8,16,25,.94)!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+  box-shadow:0 12px 36px rgba(2,8,23,.27)!important;
+  backdrop-filter:blur(15px)!important;
+  transition:min-height 170ms ease,padding 170ms ease,border-color 150ms ease,box-shadow 150ms ease!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard .turn-arrow{
+  width:58px!important;
+  height:58px!important;
+  border-radius:17px!important;
+  font-size:36px!important;
+  background:#17283c!important;
+  transition:width 170ms ease,height 170ms ease,font-size 170ms ease,background 150ms ease!important;
+}
+body.pol-consumer-mode.driving-mode #turnDistance{
+  margin:0 0 2px!important;
+  font-size:15px!important;
+  line-height:1.15!important;
+  color:#8dc5ff!important;
+  font-weight:950!important;
+}
+body.pol-consumer-mode.driving-mode #turnInstruction{
+  font-size:16px!important;
+  line-height:1.28!important;
+  font-weight:950!important;
+  color:#fff!important;
+}
+body.pol-consumer-mode.driving-mode #turnStreet{
+  margin-top:3px!important;
+  font-size:10px!important;
+  line-height:1.35!important;
+  color:#aebed0!important;
+}
+
+/* Far-away guidance occupies less map. */
+body.pol-consumer-mode.driving-mode #turnCard.guidance-prep{
+  padding-top:8px!important;
+  padding-bottom:8px!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard.guidance-prep .turn-arrow{
+  width:54px!important;
+  height:54px!important;
+  font-size:33px!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard.guidance-prep #nextTurnPreview,
+body.pol-consumer-mode.driving-mode #turnCard.guidance-prep #laneGuidance{
+  display:none!important;
+}
+
+/* Approaching/now: make the current maneuver unmistakable, not flashy. */
+body.pol-consumer-mode.driving-mode #turnCard.guidance-approach,
+body.pol-consumer-mode.driving-mode #turnCard.guidance-now,
+body.pol-consumer-mode.driving-mode #turnCard.turn-critical{
+  grid-template-columns:72px minmax(0,1fr)!important;
+  padding:10px 11px!important;
+  border-color:rgba(77,163,255,.30)!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard.guidance-approach .turn-arrow,
+body.pol-consumer-mode.driving-mode #turnCard.guidance-now .turn-arrow,
+body.pol-consumer-mode.driving-mode #turnCard.turn-critical .turn-arrow{
+  width:66px!important;
+  height:66px!important;
+  font-size:41px!important;
+  background:#1b3552!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard.guidance-approach #turnInstruction,
+body.pol-consumer-mode.driving-mode #turnCard.guidance-now #turnInstruction,
+body.pol-consumer-mode.driving-mode #turnCard.turn-critical #turnInstruction{
+  font-size:18px!important;
+}
+body.pol-consumer-mode.driving-mode #turnCard.guidance-now{
+  box-shadow:0 16px 42px rgba(2,8,23,.31),0 0 0 2px rgba(77,163,255,.08)!important;
+}
+
+/* Secondary information must never visually equal the current turn. */
+body.pol-consumer-mode.driving-mode #nextTurnPreview.show{
+  min-height:27px!important;
+  margin-top:6px!important;
+  padding:4px 7px!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.04)!important;
+}
+body.pol-consumer-mode.driving-mode #nextTurnPreview>span,
+body.pol-consumer-mode.driving-mode #nextTurnPreview>em{
+  font-size:7px!important;
+}
+body.pol-consumer-mode.driving-mode #nextTurnPreview>strong{
+  font-size:8.5px!important;
+}
+body.pol-consumer-mode.driving-mode #laneGuidance.show{
+  margin-top:6px!important;
+  padding:5px 7px!important;
+  background:rgba(255,255,255,.035)!important;
+  border:0!important;
+}
+
+/* ---------- Ahead message: one compact strip under the maneuver ---------- */
+body.pol-consumer-mode.driving-mode #driveAheadPill.show{
+  top:calc(96px + env(safe-area-inset-top,0px))!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translateX(-50%)!important;
+  width:auto!important;
+  max-width:min(calc(100% - 96px),390px)!important;
+  min-width:0!important;
+  min-height:34px!important;
+  padding:6px 9px!important;
+  border-radius:999px!important;
+  background:rgba(8,16,25,.88)!important;
+  border:1px solid rgba(148,163,184,.11)!important;
+  box-shadow:0 7px 20px rgba(2,8,23,.16)!important;
+  backdrop-filter:blur(10px)!important;
+}
+body.pol-consumer-mode.driving-mode #driveAheadPill .drive-ahead-icon{
+  width:23px!important;height:23px!important;border-radius:8px!important;font-size:12px!important;
+}
+body.pol-consumer-mode.driving-mode #driveAheadPill small{display:none!important}
+body.pol-consumer-mode.driving-mode #driveAheadPill b{font-size:8.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.pol-consumer-mode.driving-mode #driveAheadDistance{font-size:7.5px!important}
+
+/* ---------- Bottom trip dock: one readable line of trip status ---------- */
+body.pol-consumer-mode.driving-mode .nav-bottom-strip{
+  left:50%!important;
+  right:auto!important;
+  bottom:var(--pol-drive-bottom)!important;
+  transform:translateX(-50%)!important;
+  width:min(calc(100% - 158px),500px)!important;
+  min-height:61px!important;
+  padding:7px 8px!important;
+  border-radius:19px!important;
+  background:rgba(8,16,25,.94)!important;
+  border:1px solid rgba(255,255,255,.05)!important;
+  box-shadow:0 12px 34px rgba(2,8,23,.27)!important;
+  backdrop-filter:blur(14px)!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-main{
+  display:grid!important;
+  grid-template-columns:1.28fr .9fr .9fr!important;
+  gap:0!important;
+  align-items:center!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-main>div{
+  min-width:0!important;
+  padding:3px 7px!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-main>div+div{
+  border-right:1px solid rgba(148,163,184,.10)!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-arrival b{
+  font-size:18px!important;
+  color:#7ec0ff!important;
+  font-weight:950!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-distance b,
+body.pol-consumer-mode.driving-mode .nav-bottom-time b{
+  font-size:12px!important;
+  color:#f8fafc!important;
+  font-weight:900!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-main span{
+  margin-top:2px!important;
+  font-size:7px!important;
+  color:#8ea0b4!important;
+}
+body.pol-consumer-mode.driving-mode .live-eta-source,
+body.pol-consumer-mode.driving-mode .route-progress-rail{
+  display:none!important;
+}
+
+/* Current road is context, so keep it tiny and above ETA. */
+body.pol-consumer-mode.driving-mode #driveCurrentRoadBar{
+  bottom:calc(76px + env(safe-area-inset-bottom,0px))!important;
+  max-width:min(56vw,350px)!important;
+  min-height:28px!important;
+  padding:4px 10px!important;
+  border-radius:999px!important;
+  background:rgba(8,16,25,.80)!important;
+  border:1px solid rgba(148,163,184,.10)!important;
+  box-shadow:0 6px 18px rgba(2,8,23,.14)!important;
+}
+body.pol-consumer-mode.driving-mode #driveCurrentRoadBar span{display:none!important}
+body.pol-consumer-mode.driving-mode #driveCurrentRoad{
+  font-size:8.5px!important;
+  color:#e4edf6!important;
+}
+body.pol-consumer-mode.driving-mode.drive-3d-active #driveCurrentRoadBar{
+  background:rgba(35,111,211,.92)!important;
+  border-color:rgba(255,255,255,.18)!important;
+}
+
+/* ---------- Speed cluster: glanceable and visually grouped ---------- */
+body.pol-consumer-mode.driving-mode #currentSpeedGauge{
+  left:9px!important;
+  bottom:calc(9px + env(safe-area-inset-bottom,0px))!important;
+  width:64px!important;height:64px!important;min-width:64px!important;min-height:64px!important;
+  border-width:3px!important;
+  background:rgba(255,255,255,.98)!important;
+  border-color:#d7dee7!important;
+  color:#111827!important;
+  box-shadow:0 10px 28px rgba(2,8,23,.22)!important;
+}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge b{font-size:24px!important;color:#111827!important}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge span{
+  max-width:56px!important;
+  margin-top:2px!important;
+  color:#667085!important;
+  font-size:5.8px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge.over{
+  background:#fff7f7!important;
+  border-color:#ef4444!important;
+}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge.over b{color:#b91c1c!important}
+body.pol-consumer-mode.driving-mode .mapHUD{
+  left:17px!important;
+  bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;
+}
+body.pol-consumer-mode.driving-mode #speedSign{
+  width:43px!important;height:43px!important;min-width:43px!important;min-height:43px!important;
+  border-width:4px!important;
+  font-size:14px!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.16)!important;
+}
+
+/* ---------- Controls: only End is persistent. Recenter appears on demand. ---------- */
+body.pol-consumer-mode.driving-mode .drive-control-cluster{
+  right:9px!important;
+  bottom:calc(82px + env(safe-area-inset-bottom,0px))!important;
+}
+body.pol-consumer-mode.driving-mode #driveEndBtn{
+  width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;
+  background:rgba(50,20,23,.90)!important;
+  box-shadow:0 7px 18px rgba(2,8,23,.18)!important;
+  opacity:.90!important;
+}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed{
+  bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;
+  min-width:160px!important;
+  height:46px!important;min-height:46px!important;
+  box-shadow:0 9px 24px rgba(35,111,211,.24)!important;
+}
+
+/* ---------- Built-in end confirmation replaces browser confirm() ---------- */
+.pol-end-trip-sheet{
+  position:fixed;
+  inset:0;
+  z-index:9800;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));
+  background:rgba(15,23,42,.28);
+  backdrop-filter:blur(4px);
+}
+.pol-end-trip-sheet.open{display:flex}
+.pol-end-trip-card{
+  width:min(100%,430px);
+  padding:10px 13px 13px;
+  border-radius:24px;
+  background:#fff;
+  color:#111827;
+  box-shadow:0 20px 60px rgba(15,23,42,.28);
+  animation:polEndSheetIn 190ms cubic-bezier(.22,.8,.28,1) both;
+}
+@keyframes polEndSheetIn{from{transform:translateY(12px);opacity:.72}to{transform:none;opacity:1}}
+.pol-end-trip-handle{width:38px;height:4px;margin:0 auto 11px;border-radius:999px;background:#d8dee7}
+.pol-end-trip-card h3{margin:0;text-align:center;font-size:16px;font-weight:950}
+.pol-end-trip-card p{margin:5px 0 0;text-align:center;font-size:9px;line-height:1.7;color:#667085}
+.pol-end-trip-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.pol-end-trip-actions button{min-height:49px!important;border-radius:15px!important;font-size:11px!important;font-weight:900!important}
+.pol-end-trip-cancel{background:#f1f4f8!important;color:#334155!important;border:0!important}
+.pol-end-trip-confirm{background:#b4232f!important;color:#fff!important;border:0!important}
+
+/* ---------- Responsive clarity ---------- */
+@media(max-width:430px){
+  body.pol-consumer-mode.driving-mode #turnCard{
+    grid-template-columns:60px minmax(0,1fr)!important;
+    padding:8px 9px!important;
+  }
+  body.pol-consumer-mode.driving-mode #turnCard .turn-arrow{
+    width:55px!important;height:55px!important;font-size:34px!important;
+  }
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-approach,
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-now,
+  body.pol-consumer-mode.driving-mode #turnCard.turn-critical{
+    grid-template-columns:67px minmax(0,1fr)!important;
+  }
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-approach .turn-arrow,
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-now .turn-arrow,
+  body.pol-consumer-mode.driving-mode #turnCard.turn-critical .turn-arrow{
+    width:62px!important;height:62px!important;font-size:39px!important;
+  }
+  body.pol-consumer-mode.driving-mode #turnInstruction{font-size:15.5px!important}
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-approach #turnInstruction,
+  body.pol-consumer-mode.driving-mode #turnCard.guidance-now #turnInstruction{font-size:17px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-strip{width:calc(100% - 150px)!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-main>div{padding-inline:4px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-arrival b{font-size:16px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-distance b,
+  body.pol-consumer-mode.driving-mode .nav-bottom-time b{font-size:10.5px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-main span{font-size:6.3px!important}
+  body.pol-consumer-mode.driving-mode #driveAheadPill.show{top:calc(90px + env(safe-area-inset-top,0px))!important}
+}
+
+@media(max-width:370px){
+  body.pol-consumer-mode.driving-mode .nav-bottom-strip{width:calc(100% - 140px)!important;padding-inline:5px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-arrival b{font-size:15px!important}
+  body.pol-consumer-mode.driving-mode .nav-bottom-main span{font-size:5.8px!important}
+  .pol-end-trip-actions{grid-template-columns:1fr}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .pol-end-trip-card{animation:none!important}
+  body.pol-consumer-mode.driving-mode #turnCard,
+  body.pol-consumer-mode.driving-mode #turnCard .turn-arrow{transition:none!important}
+}
+</style>
+
+<script id="pol-v7-10-glance-first-driving-runtime">
+(function(){
+  const byId=id=>document.getElementById(id);
+  document.title='POL | نسخه ۷.۱۰.۰ | Glance-First Driving UX';
+  document.body.classList.add('pol-glance-driving-ux');
+
+  /* Persian speed unit: compact enough for the gauge, readable in context. */
+  const speedGauge=byId('currentSpeedGauge');
+  const speedUnit=speedGauge?.querySelector('span');
+  if(speedUnit)speedUnit.textContent='کیلومتر/ساعت';
+
+  /* Trip labels are intentionally short: glance, understand, return eyes to road. */
+  const arrivalLabel=document.querySelector('.nav-bottom-arrival span');
+  const distanceLabel=document.querySelector('.nav-bottom-distance span');
+  const timeLabel=document.querySelector('.nav-bottom-time span');
+  if(arrivalLabel)arrivalLabel.textContent='رسیدن';
+  if(distanceLabel)distanceLabel.textContent='باقی‌مانده';
+  if(timeLabel)timeLabel.textContent='تا مقصد';
+
+  /* Native browser confirm is visually inconsistent and interrupts the map. */
+  let endSheet=byId('polEndTripSheet');
+  if(!endSheet){
+    endSheet=document.createElement('div');
+    endSheet.id='polEndTripSheet';
+    endSheet.className='pol-end-trip-sheet';
+    endSheet.setAttribute('role','dialog');
+    endSheet.setAttribute('aria-modal','true');
+    endSheet.setAttribute('aria-labelledby','polEndTripTitle');
+    endSheet.innerHTML=`
+      <div class="pol-end-trip-card">
+        <div class="pol-end-trip-handle"></div>
+        <h3 id="polEndTripTitle">پایان سفر؟</h3>
+        <p>اگر هنوز در مسیر هستی، می‌توانی به ناوبری برگردی.</p>
+        <div class="pol-end-trip-actions">
+          <button type="button" class="pol-end-trip-cancel">ادامه مسیر</button>
+          <button type="button" class="pol-end-trip-confirm">پایان سفر</button>
+        </div>
+      </div>`;
+    document.body.append(endSheet);
+  }
+  const endCancel=endSheet.querySelector('.pol-end-trip-cancel');
+  const endConfirm=endSheet.querySelector('.pol-end-trip-confirm');
+  function closeEndSheet(){endSheet.classList.remove('open')}
+  function openEndSheet(){
+    if(!document.body.classList.contains('driving-mode'))return;
+    endSheet.classList.add('open');
+    try{navigator.vibrate?.(8)}catch(_e){}
+    setTimeout(()=>endCancel?.focus?.({preventScroll:true}),0);
+  }
+  endSheet.addEventListener('click',e=>{if(e.target===endSheet)closeEndSheet()});
+  endCancel?.addEventListener('click',closeEndSheet);
+  endConfirm?.addEventListener('click',()=>{
+    closeEndSheet();
+    try{navigator.vibrate?.([10,35,10])}catch(_e){}
+    try{finish()}catch(error){console.warn('POL end-trip action unavailable',error)}
+  });
+  const endBtn=byId('driveEndBtn');
+  if(endBtn){
+    endBtn.onclick=e=>{
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      openEndSheet();
+    };
+  }
+
+  /* If navigation ends elsewhere (arrival, replay, screen change), never leave modal behind. */
+  new MutationObserver(()=>{
+    if(!document.body.classList.contains('driving-mode'))closeEndSheet();
+  }).observe(document.body,{attributes:true,attributeFilter:['class']});
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&endSheet.classList.contains('open'))closeEndSheet();
+  });
+
+  /* Debug helper describes UX state, not internal route algorithms. */
+  window.POL_GLANCE_DRIVING_UX_DEBUG=()=>({
+    version:'7.10.0',
+    driving:document.body.classList.contains('driving-mode'),
+    maneuverState:[...byId('turnCard')?.classList||[]].filter(x=>x.startsWith('guidance-')||x==='turn-critical'),
+    aheadVisible:!!byId('driveAheadPill')?.classList.contains('show'),
+    recenterVisible:!!byId('driveRecenterBtn')?.classList.contains('is-needed'),
+    endSheetOpen:endSheet.classList.contains('open'),
+    principle:'one glance, one priority, back to the road'
+  });
+})();
+</script>
+
 </body>
 </html>
