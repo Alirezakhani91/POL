@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۳.۳ MapLibre Vehicle Anchor & Start CTA Fix</title>
+<title>POL | نسخه ۷.۳.۴ | گزارش معتبر سفر</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16976,6 +16976,7 @@ let activeSpeed=null,activeGPS=null,activeBrake=null,activeAccel=null,activeCorn
 
 const PROFILE_KEY='drivingLabProfileV07';
 let lastTripResult=null;
+let tripFinishHandled=false;
 
 const LEVELS=[
   {level:1,name:"تازه‌کار",min:0},
@@ -31940,89 +31941,56 @@ async function startCoreDrive(){
   }
 }
 function fallbackTripResultAfterFinish(error=null){
-  const real=
-    realTelemetryState?.rows?.length>0;
-
-  const behavioralScore=
-    real
-      ?calculateExposureNormalizedSafetyScore?.()
-      :null;
-
-  return{
-    id:
-      typeof trustedTripId==="function"
-        ?trustedTripId()
-        :`trip_${Date.now()}`,
-    savedAt:Date.now(),
-    navigationOnly:false,
-    telemetryOnly:real,
-    navigationMode:
-      isRealGpsMode()
-        ?"real-gps"
-        :"simulation",
-    score:
-      behavioralScore?.score ??
-      100,
-    scoreStatus:
-      behavioralScore?.status ??
-      "preliminary",
-    scoreConfidence:
-      behavioralScore?.confidence ??
-      50,
-    speedScore:null,
-    speedScoreIncluded:false,
-    brakeScore:
-      behavioralScore?.brakeScore ??
-      100,
-    accelScore:
-      behavioralScore?.accelScore ??
-      100,
-    cornerScore:
-      behavioralScore?.cornerScore ??
-      100,
-    tripConfidence:
-      behavioralScore?.confidence ??
-      50,
-    speedCompliance:null,
-    maxExcess:null,
-    rewardEligibility:"REVIEW",
-    shadowRewardStatus:"REVIEW",
-    integrityStatus:"REVIEW",
-    replayTrack:
-      rows
-        .map(r=>r.pos)
-        .filter(
-          p=>
-            Array.isArray(p) &&
-            p.length>=2
-        ),
-    replayEvents:[],
-    originLabel:
-      navOrigin?.label||
-      "مبدأ",
-    destinationLabel:
-      navDestination?.label||
-      "مقصد",
-    routeKm:
-      Number(
-        (
-          Number(routeDistanceM||0)/
-          1000
-        ).toFixed(1)
-      ),
-    coachTitle:
-      "سفر پایان یافت",
-    coachAction:
-      error
-        ?"بخشی از تحلیل داخلی کامل نشد، اما سفر بسته شد و نتیجه پایه نمایش داده شد."
-        :"نتیجه سفر آماده است.",
-    topRiskEvent:null,
-    finishFallback:true,
-    finishError:
-      error
-        ?String(error?.message||error)
-        :""
+  // This path must not invoke the analysis that may just have failed.
+  return {
+    id:`trip_${Date.now()}`, savedAt:Date.now(),
+    navigationOnly:false, telemetryOnly:false,
+    navigationMode:isRealGpsMode()?"real-gps":"simulation",
+    score:null, scoreStatus:"insufficient", scoreConfidence:0,
+    speedScore:null, speedScoreIncluded:false,
+    brakeScore:null, accelScore:null, cornerScore:null,
+    tripConfidence:0, speedCompliance:null, maxExcess:null,
+    rewardEligibility:"NOT_ELIGIBLE", shadowRewardStatus:"NOT_ELIGIBLE",
+    integrityStatus:"REVIEW", finishFallback:true,
+    finishError:error?String(error.message||error):"",
+    replayTrack:(rows||[]).map(r=>r.pos).filter(p=>
+      Array.isArray(p)&&p.length>=2&&p.every(Number.isFinite)),
+    replayEvents:[], originLabel:navOrigin?.label||"مبدأ",
+    destinationLabel:navDestination?.label||"مقصد",
+    routeKm:Number((Number(routeDistanceM||0)/1000).toFixed(1)),
+    coachTitle:error?"تحلیل سفر کامل نشد":"داده کافی نیست",
+    coachAction:error
+      ?"سفر پایان یافت، اما تحلیل کامل نشد؛ امتیاز و پاداشی برای این نتیجه اعلام نمی‌شود."
+      :"نمونه کافی برای ارزیابی این سفر ثبت نشد؛ امتیاز و پاداشی برای این نتیجه اعلام نمی‌شود.",
+    topRiskEvent:null
   };
+}
+
+function showUnavailableTripSummary(result,renderError=false){
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+  const title=renderError?"گزارش کامل نمایش داده نشد":result?.coachTitle||"داده کافی نیست";
+  put('summaryScore','—');
+  ['summaryCompliance','summaryXp','summaryCoins'].forEach(id=>put(id,'—'));
+  put('summaryEligibility',title);
+  const status=document.getElementById('summaryEligibility');
+  if(status)status.className='summary-status review';
+  put('summaryWhy',renderError
+    ?'نمایش گزارش با خطا روبه‌رو شد. نتیجهٔ سفر قبلی در این گزارش نمایش داده نمی‌شود.'
+    :result?.coachAction||'داده کافی برای محاسبهٔ امتیاز وجود ندارد.');
+  put('summaryCoach','برای این گزارش، توصیهٔ شخصی قابل اتکا در دسترس نیست.');
+  put('summaryComparison','این گزارش برای مقایسهٔ امتیاز سفرها قابل استفاده نیست.');
+  ['summaryShadowLedgerCard','summarySafeCoinShadowCard','summaryRewardShadowCard',
+   'summaryIntegrityCard','summarySafetyBreakdown'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('show');
+  });
+  const rewards=document.getElementById('summaryRewards');
+  if(rewards){rewards.disabled=true;rewards.textContent='پاداشی در این گزارش اعلام نمی‌شود';}
+  const replay=document.getElementById('summaryReplay');
+  if(replay){replay.disabled=true;replay.classList.remove('show');}
+  const sheet=document.getElementById('tripSummarySheet');
+  sheet?.classList.add('open');
+  const card=sheet?.querySelector('.summary-card');
+  if(card)card.scrollTop=0;
 }
 
 function presentTripSummaryAfterFinish(){
@@ -32054,6 +32022,9 @@ function presentTripSummaryAfterFinish(){
 }
 
 function finish(){
+  if(tripFinishHandled)return;
+  tripFinishHandled=true;
+  lastTripResult=null;
   const wasRealGps=
     realGpsState.active ||
     isRealGpsMode();
@@ -32114,12 +32085,14 @@ function finish(){
       e
     );
 
-    if(!lastTripResult){
-      lastTripResult=
-        fallbackTripResultAfterFinish(e);
-    }
+    lastTripResult=fallbackTripResultAfterFinish(e);
   }finally{
     // UI cleanup must never depend on score calculation succeeding.
+    $('scenario').disabled=false;
+    $('start').disabled=false;
+    $('stop').disabled=true;
+    $('csv').disabled=!rows.length;
+    if(scoringError)$('status').textContent='سفر پایان یافت؛ تحلیل کامل نشد.';
     try{
       stopRealGps();
     }catch(e){}
@@ -32162,6 +32135,8 @@ function finish(){
 }
 
 function reset(full=true,keepRoute=false){
+  tripFinishHandled=false;
+  lastTripResult=null;
   stopRealGps();
   resetRealTelemetry();
   resetSafeCoinShadow();
@@ -32270,6 +32245,13 @@ function renderEligibility(e){
 }
 
 function buildScore(){
+  const usable=rows.filter(r=>Number.isFinite(r.longA)&&Number.isFinite(r.latA)
+    &&r.mapMatch>=70&&r.gps<=35);
+  // An empty/very short simulation is not evidence of perfect driving.
+  if(usable.length<10){
+    lastTripResult=fallbackTripResultAfterFinish();
+    return;
+  }
   const valid=
     rows.filter(r=>
       r.validSpeed===true &&
@@ -32465,6 +32447,10 @@ function buildScore(){
   $('whyBox').style.display="block";
 
   lastTripResult={
+    navigationMode:"simulation",
+    scenario:$('scenario').value,
+    scoreStatus:"preliminary",
+    scoreConfidence:conf,
     score,
     speedScore,
     speedScoreIncluded:speedIncluded,
@@ -34441,6 +34427,7 @@ setTimeout(
       exitDrivingMode();
       if(!lastTripResult) return;
       const r=lastTripResult;
+      if(r.finishFallback){showUnavailableTripSummary(r);return;}
       const p=loadProfile();
       const lr=p.lastReward||{};
 
@@ -34625,6 +34612,11 @@ setTimeout(
         document.getElementById('summaryXp').textContent='+'+fa((lr.tripBaseXp||0)+(lr.achievementXp||0)+(lr.missionXp||0));
         document.getElementById('summaryCoins').textContent='+'+fa((lr.baseCoins||0)+(lr.missionCoins||0));
       }
+      if(r.navigationMode==="simulation"){
+        document.getElementById('summaryScoreScope').textContent=r.speedScoreIncluded
+          ?'آزمایشی: سرعت، ترمز، شتاب و پیچ'
+          :'آزمایشی: ترمز، شتاب و پیچ؛ سرعت ارزیابی نشد';
+      }
       const st=document.getElementById('summaryEligibility');
 
       if(r.navigationMode==="real-gps" && r.shadowRewardStatus==="ELIGIBLE"){
@@ -34692,6 +34684,13 @@ setTimeout(
             ? `<b>محدوده این امتیاز</b><span>Safety Score فعلی فقط ترمز، شتاب و پیچ را پوشش می‌دهد. Speed Limit فعلی OSM فقط Preview است و Reward / SafeCoin / Streak / Mission هنوز متوقف‌اند.</span>`
             : `<b>مقایسه با سفرهای قبلی</b><span>${tripComparisonText(r,p)}</span>`;
       }
+      if(r.navigationMode==="simulation"){
+        const why=document.getElementById('summaryWhy');
+        why.textContent='نتیجهٔ شبیه‌سازی — '+why.textContent;
+        if(!r.speedScoreIncluded){
+          why.textContent+=' حد سرعت تأییدشدهٔ کافی در دسترس نبود؛ بنابراین این عدد رعایت سرعت را ارزیابی نمی‌کند و سناریوی سرعت بالا ممکن است با رانندگی عادی هم‌امتیاز شود.';
+        }
+      }
       const replayBtn=document.getElementById('summaryReplay');
       if(replayBtn){
         const replayAvailable=
@@ -34722,34 +34721,7 @@ setTimeout(
         e
       );
 
-      const sheet=
-        document.getElementById(
-          'tripSummarySheet'
-        );
-
-      if(sheet){
-        sheet.classList.add('open');
-
-        const score=
-          document.getElementById(
-            'summaryScore'
-          );
-
-        if(
-          score &&
-          (
-            !score.textContent ||
-            score.textContent==="--"
-          )
-        ){
-          score.textContent=
-            lastTripResult?.score==null
-              ?'—'
-              :Number(
-                lastTripResult.score
-              ).toLocaleString('fa-IR');
-        }
-      }
+      showUnavailableTripSummary(lastTripResult,true);
     }
   }
 
