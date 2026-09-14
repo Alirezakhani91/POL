@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۶.۰ | Road Attention Intelligence</title>
+<title>POL | نسخه ۷.۷.۰ | Simple Navigation Experience</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11261,6 +11261,279 @@ body.pol-consumer-mode #navSheetResults{
   body.pol-consumer-mode.driving-mode #driveCurrentRoadBar{
     bottom:132px!important;
   }
+}
+</style>
+
+
+
+<style id="pol-v7-7-simple-navigation-experience">
+/* ============================================================
+   POL v7.7.0 — SIMPLE NAVIGATION EXPERIENCE
+   Product rule: strong intelligence, almost invisible UI.
+   ============================================================ */
+
+/* ---------- Destination search: one clear job ---------- */
+body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+  background:#fff!important;
+  color:#111827!important;
+  border-radius:28px 28px 0 0!important;
+  padding:10px 14px calc(18px + env(safe-area-inset-bottom,0px))!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-handle{
+  width:38px!important;height:4px!important;background:#d7dde5!important;margin-bottom:10px!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-search-row{
+  grid-template-columns:40px minmax(0,1fr)!important;
+  gap:8px!important;
+}
+body.pol-consumer-mode #navSearchSheet #navSheetSearchBtn{display:none!important}
+body.pol-consumer-mode #navSheetSearchInput{
+  height:52px!important;
+  border:0!important;
+  border-radius:17px!important;
+  background:#f1f4f8!important;
+  box-shadow:none!important;
+  font-size:15px!important;
+  font-weight:650!important;
+  padding-inline:15px!important;
+}
+body.pol-consumer-mode #navSheetSearchInput::placeholder{color:#7b8795!important}
+body.pol-consumer-mode #navSearchBackBtn{
+  width:40px!important;height:52px!important;min-height:52px!important;
+  border-radius:15px!important;background:#f1f4f8!important;color:#243244!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current{
+  margin-top:7px!important;padding:5px 6px!important;min-height:30px!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current small{display:none!important}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current b{
+  font-size:9px!important;color:#637083!important;font-weight:700!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-current-dot{
+  width:7px!important;height:7px!important;box-shadow:0 0 0 3px rgba(34,197,94,.10)!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-quick-actions{
+  display:flex!important;gap:7px!important;margin-top:7px!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-quick-actions button{
+  width:auto!important;min-height:38px!important;display:flex!important;
+  grid-template-columns:none!important;gap:6px!important;padding:6px 10px!important;
+  border-radius:999px!important;background:#f5f7fa!important;border:0!important;
+  color:#334155!important;box-shadow:none!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-quick-actions button>span{
+  width:24px!important;height:24px!important;font-size:13px!important;background:#e9eef4!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-quick-actions b{font-size:8px!important}
+body.pol-consumer-mode #navSearchSheet .nav-quick-actions small{display:none!important}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-section{margin-top:10px!important}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-section-title{
+  padding:7px 2px!important;border-bottom:0!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-section-title b{font-size:10px!important;color:#334155!important}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-result,
+body.pol-consumer-mode #navSearchSheet .nav-sheet-recent-item{
+  min-height:52px!important;padding-top:7px!important;padding-bottom:7px!important;
+}
+
+/* Home launcher: no marketing copy, just navigation. */
+body.pol-consumer-mode #navLauncherButton{
+  min-height:58px!important;border-radius:20px!important;
+}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-copy small{display:none!important}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-copy b{
+  font-size:14px!important;font-weight:900!important;
+}
+
+/* ---------- Route selection: route + ETA + one action ---------- */
+body.pol-consumer-mode.route-selection-mode #routeSelectionHint,
+body.pol-consumer-mode.route-selection-mode #mapRouteReason,
+body.pol-consumer-mode.route-selection-mode .route-confidence-row,
+body.pol-consumer-mode.route-selection-mode #mapRouteVehicleBtn,
+body.pol-consumer-mode.route-selection-mode #mapSpeedTruthBtn,
+body.pol-consumer-mode.route-selection-mode #mapRouteCompareBtn,
+body.pol-consumer-mode.route-selection-mode #mapRoutePreviewBtn,
+body.pol-consumer-mode.route-selection-mode #mapFitRouteBtn{
+  display:none!important;
+}
+
+body.pol-consumer-mode.route-selection-mode #mapRouteSheet{
+  left:10px!important;right:10px!important;
+  bottom:calc(9px + env(safe-area-inset-bottom,0px))!important;
+  max-width:590px!important;
+  padding:11px 12px 12px!important;
+  border-radius:23px!important;
+  background:rgba(255,255,255,.98)!important;
+  border:1px solid rgba(15,23,42,.06)!important;
+  box-shadow:0 16px 42px rgba(15,23,42,.20)!important;
+  color:#111827!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapRouteSheet .map-route-sheet-main{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 38px 38px!important;
+  gap:6px!important;align-items:center!important;
+  margin:0!important;padding:1px 0 8px!important;
+  background:transparent!important;border:0!important;box-shadow:none!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapRouteKicker{display:none!important}
+body.pol-consumer-mode.route-selection-mode #mapRouteDestination{
+  margin:0!important;color:#172033!important;font-size:15px!important;font-weight:900!important;
+  line-height:1.45!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+body.pol-consumer-mode.route-selection-mode #polSaveDestination,
+body.pol-consumer-mode.route-selection-mode #mapRouteCloseBtn{
+  width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;
+  padding:0!important;border-radius:13px!important;background:#f1f4f8!important;
+  color:#334155!important;border:0!important;box-shadow:none!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-primary{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;
+  align-items:end!important;margin:0!important;padding:5px 0 7px!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-eta-block b{
+  color:#236fd3!important;font-size:30px!important;font-weight:950!important;line-height:1!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-eta-block span{
+  color:#667085!important;font-size:8px!important;margin-top:4px!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-secondary b{
+  color:#1f2937!important;font-size:14px!important;font-weight:900!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-secondary span{display:none!important}
+body.pol-consumer-mode.route-selection-mode .map-route-actions{
+  display:block!important;position:relative!important;inset:auto!important;
+  margin:6px 0 0!important;padding:0!important;width:100%!important;height:auto!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn{
+  display:flex!important;width:100%!important;height:56px!important;min-height:56px!important;
+  align-items:center!important;justify-content:center!important;
+  border:0!important;border-radius:18px!important;background:#236fd3!important;color:#fff!important;
+  box-shadow:0 9px 24px rgba(35,111,211,.24)!important;
+  font-size:16px!important;font-weight:950!important;
+}
+
+/* Alternatives are optional, compact, and never become a second panel. */
+body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip{
+  left:8px!important;right:8px!important;bottom:154px!important;
+  justify-content:flex-start!important;gap:6px!important;z-index:1210!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip{
+  min-width:104px!important;max-width:150px!important;min-height:44px!important;
+  grid-template-columns:26px minmax(0,1fr)!important;gap:6px!important;
+  padding:6px 8px!important;border-radius:15px!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip .route-chip-number{
+  width:26px!important;height:26px!important;border-radius:9px!important;
+}
+body.pol-consumer-mode.route-selection-mode .route-chip-copy b{font-size:11px!important}
+body.pol-consumer-mode.route-selection-mode .route-chip-copy span{font-size:6.5px!important;margin-top:2px!important}
+body.pol-consumer-mode.route-selection-mode .route-chip-meta{display:none!important}
+
+/* Pre-drive intelligence stays active, but its screens disappear. */
+body.pol-consumer-mode #preTripMissionSheet,
+body.pol-consumer-mode #tripReadySheet{
+  display:none!important;
+}
+
+/* ---------- Driving: only what helps right now ---------- */
+body.pol-consumer-mode.driving-mode #driveReportBtn,
+body.pol-consumer-mode.driving-mode #driveOverviewBtn,
+body.pol-consumer-mode.driving-mode #driveZoomInBtn,
+body.pol-consumer-mode.driving-mode #driveZoomOutBtn,
+body.pol-consumer-mode.driving-mode #driveHeadingBtn,
+body.pol-consumer-mode.driving-mode #driveVoiceBtn,
+body.pol-consumer-mode.driving-mode #trafficCameraPill,
+body.pol-consumer-mode.driving-mode #map .leaflet-control-zoom,
+body.pol-consumer-mode.driving-mode #drive3dMap .maplibregl-ctrl-top-left{
+  display:none!important;
+}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn:not(.is-needed){display:none!important}
+body.pol-consumer-mode.driving-mode .drive-control-cluster{
+  position:fixed!important;z-index:6100!important;
+  right:10px!important;left:auto!important;top:auto!important;
+  bottom:calc(126px + env(safe-area-inset-bottom,0px))!important;
+  width:auto!important;max-width:none!important;gap:7px!important;
+  display:flex!important;align-items:flex-end!important;
+}
+body.pol-consumer-mode.driving-mode #driveEndBtn{
+  display:grid!important;width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+  place-items:center!important;border-radius:50%!important;background:rgba(43,17,19,.92)!important;
+  color:#fecaca!important;border:1px solid rgba(239,68,68,.22)!important;
+  box-shadow:0 7px 20px rgba(15,23,42,.20)!important;font-size:15px!important;
+}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed{
+  position:fixed!important;left:50%!important;right:auto!important;
+  bottom:calc(122px + env(safe-area-inset-bottom,0px))!important;
+  transform:translateX(-50%)!important;min-width:154px!important;width:auto!important;
+  height:46px!important;min-height:46px!important;border-radius:999px!important;
+  background:#236fd3!important;color:#fff!important;
+}
+body.pol-consumer-mode.driving-mode #turnMetaRow{display:none!important}
+body.pol-consumer-mode.driving-mode #driveAheadPill:not(.show){display:none!important}
+
+/* ---------- End of trip: one result, one useful note ---------- */
+body.pol-consumer-mode #tripSummarySheet .summary-safety-breakdown,
+body.pol-consumer-mode #tripSummarySheet #summarySafeCoinShadowCard,
+body.pol-consumer-mode #tripSummarySheet #summaryShadowLedgerCard,
+body.pol-consumer-mode #tripSummarySheet #summaryRewardShadowCard,
+body.pol-consumer-mode #tripSummarySheet #summaryIntegrityCard,
+body.pol-consumer-mode #tripSummarySheet #summaryComparison,
+body.pol-consumer-mode #tripSummarySheet #summaryRewards{
+  display:none!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-card{
+  max-width:480px!important;padding:14px 16px calc(17px + env(safe-area-inset-bottom,0px))!important;
+  border-radius:28px 28px 0 0!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-label{
+  color:#64748b!important;font-size:9px!important;font-weight:800!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryScore{
+  margin-top:3px!important;font-size:58px!important;line-height:1!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-grid{
+  margin-top:10px!important;gap:7px!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-item{
+  padding:10px 6px!important;border-radius:14px!important;background:#f4f7fa!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryWhy{
+  margin-top:10px!important;padding:11px 12px!important;border-radius:15px!important;
+  background:#f4f7fa!important;border:0!important;color:#334155!important;
+  font-size:10px!important;line-height:1.8!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryCoach{
+  margin-top:8px!important;padding:11px 12px!important;border-radius:15px!important;
+  background:#eef6ff!important;border:0!important;color:#234c78!important;
+}
+body.pol-consumer-mode #tripSummarySheet .summary-actions{
+  display:grid!important;grid-template-columns:1fr!important;gap:7px!important;margin-top:11px!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryClose{
+  order:1!important;display:flex!important;width:100%!important;min-height:54px!important;
+  align-items:center!important;justify-content:center!important;border:0!important;border-radius:17px!important;
+  background:#236fd3!important;color:#fff!important;font-size:14px!important;font-weight:900!important;
+}
+body.pol-consumer-mode #tripSummarySheet #summaryReplay.show{
+  order:2!important;display:flex!important;width:100%!important;min-height:44px!important;
+  align-items:center!important;justify-content:center!important;border:0!important;border-radius:15px!important;
+  background:#f1f4f8!important;color:#475569!important;font-size:10px!important;
+}
+
+@media(max-width:700px){
+  body.pol-consumer-mode.route-selection-mode #mapRouteSheet{
+    left:8px!important;right:8px!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+    padding:10px!important;border-radius:21px!important;
+    max-height:none!important;overflow:visible!important;
+  }
+  body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip{bottom:150px!important}
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{max-height:86dvh!important}
+}
+
+@media(max-width:380px){
+  body.pol-consumer-mode.route-selection-mode #mapRouteChoiceStrip{bottom:148px!important}
+  body.pol-consumer-mode.route-selection-mode .map-route-eta-block b{font-size:27px!important}
+  body.pol-consumer-mode.route-selection-mode #mapRouteDestination{font-size:14px!important}
 }
 </style>
 
@@ -37802,6 +38075,161 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
   }
 
   window.addEventListener('pagehide',clearHighlight);
+})();
+</script>
+
+
+
+<script id="pol-v7-7-simple-navigation-runtime">
+(function(){
+  const byId=id=>document.getElementById(id);
+
+  function setSimpleCopy(){
+    document.title='POL | نسخه ۷.۷.۰ | Simple Navigation Experience';
+
+    const launcher=byId('navLauncherButton');
+    const launcherTitle=launcher?.querySelector('.nav-launcher-copy b');
+    if(launcherTitle)launcherTitle.textContent='کجا می‌خوای بری؟';
+
+    const search=byId('navSheetSearchInput');
+    if(search)search.placeholder='کجا می‌خوای بری؟';
+
+    const start=byId('mapStartBtn');
+    if(start && !start.disabled)start.textContent='شروع مسیر';
+
+    const pick=byId('navPickOnMapAction');
+    const pickTitle=pick?.querySelector('b');
+    if(pickTitle)pickTitle.textContent='روی نقشه';
+
+    const recent=byId('navRecentAction');
+    const recentTitle=recent?.querySelector('b');
+    if(recentTitle)recentTitle.textContent='اخیر';
+
+    const summaryLabel=document.querySelector('#tripSummarySheet .summary-label');
+    if(summaryLabel)summaryLabel.textContent='سفر تمام شد';
+
+    const summaryClose=byId('summaryClose');
+    if(summaryClose)summaryClose.textContent='تمام';
+
+    const replay=byId('summaryReplay');
+    if(replay)replay.textContent='دیدن مسیر سفر';
+  }
+
+  function bestReadinessMessage(){
+    const ids=['readyRouteCheck','readyRealGpsCheck','readyLocationCheck','readyNetworkCheck'];
+    for(const id of ids){
+      const row=byId(id);
+      if(!row)continue;
+      if(row.classList.contains('bad') || row.classList.contains('warn')){
+        const msg=row.querySelector('span')?.textContent?.trim();
+        if(msg)return msg;
+      }
+    }
+    return 'شروع مسیر انجام نشد. موقعیت و مسیر را یک بار بررسی کن.';
+  }
+
+  async function simpleStartTrip(){
+    const start=byId('mapStartBtn');
+
+    try{
+      if(typeof routeAlternatives==='undefined' || !routeAlternatives.length || !routeCoords?.length){
+        if(typeof showMapStatus==='function')showMapStatus('ابتدا یک مقصد انتخاب کن.','bad');
+        return;
+      }
+
+      const integrity=typeof analyzeSelectedRoute==='function'
+        ?analyzeSelectedRoute()
+        :{critical:false};
+
+      if(integrity?.critical){
+        if(typeof showMapStatus==='function')showMapStatus('این مسیر برای شروع آماده نیست. مسیر دیگری را انتخاب کن.','bad');
+        return;
+      }
+
+      if(start){
+        start.disabled=true;
+        start.textContent='در حال آماده‌سازی…';
+      }
+
+      /* Saved/default vehicle is used silently. Advanced vehicle configuration
+         remains available in debug/settings, not in the normal trip journey. */
+      try{ vehicleConfirmedForRoute=true; }catch(_e){}
+
+      byId('preTripMissionSheet')?.classList.remove('open');
+      byId('tripReadySheet')?.classList.remove('open');
+
+      if(typeof showMapStatus==='function')showMapStatus('در حال آماده‌سازی مسیر…');
+
+      if(typeof startDrivingConfirmed!=='function')throw new Error('START_ENGINE_UNAVAILABLE');
+      await startDrivingConfirmed();
+
+      await new Promise(resolve=>setTimeout(resolve,80));
+
+      if(!document.body.classList.contains('driving-mode')){
+        const message=bestReadinessMessage();
+        if(typeof showMapStatus==='function')showMapStatus(message,'bad');
+      }
+    }catch(error){
+      console.error('POL simple start failed',error);
+      if(typeof showMapStatus==='function')showMapStatus('شروع مسیر انجام نشد. دوباره امتحان کن.','bad');
+    }finally{
+      if(start && !document.body.classList.contains('driving-mode')){
+        start.disabled=false;
+        start.textContent='شروع مسیر';
+      }
+    }
+  }
+
+  function bindStart(){
+    const start=byId('mapStartBtn');
+    if(start)start.onclick=simpleStartTrip;
+  }
+
+  function keepSimpleState(){
+    setSimpleCopy();
+    bindStart();
+
+    /* The consumer journey never exposes technical pre-drive sheets. */
+    if(document.body.classList.contains('pol-consumer-mode')){
+      byId('preTripMissionSheet')?.classList.remove('open');
+      byId('tripReadySheet')?.classList.remove('open');
+    }
+  }
+
+  const observer=new MutationObserver(()=>{
+    requestAnimationFrame(keepSimpleState);
+  });
+
+  observer.observe(document.body,{
+    attributes:true,
+    attributeFilter:['class'],
+    subtree:false
+  });
+
+  ['mapRouteSheet','tripSummarySheet','navSearchSheet'].forEach(id=>{
+    const el=byId(id);
+    if(el)observer.observe(el,{attributes:true,attributeFilter:['class']});
+  });
+
+  window.addEventListener('pageshow',()=>setTimeout(keepSimpleState,30));
+  document.addEventListener('DOMContentLoaded',keepSimpleState,{once:true});
+  keepSimpleState();
+
+  window.POL_SIMPLE_UX_DEBUG=()=>({
+    version:'7.7.0',
+    principle:'one destination, one route decision, one start tap',
+    routeSheetOpen:!!byId('mapRouteSheet')?.classList.contains('show'),
+    searchOpen:!!byId('navSearchSheet')?.classList.contains('open'),
+    driving:document.body.classList.contains('driving-mode'),
+    preTripMissionVisible:!!byId('preTripMissionSheet')?.classList.contains('open'),
+    readinessVisible:!!byId('tripReadySheet')?.classList.contains('open'),
+    hiddenDuringDrive:[
+      'driveReportBtn','driveOverviewBtn','driveZoomInBtn','driveZoomOutBtn','driveHeadingBtn','driveVoiceBtn'
+    ].filter(id=>{
+      const el=byId(id);if(!el)return true;
+      return getComputedStyle(el).display==='none';
+    })
+  });
 })();
 </script>
 
