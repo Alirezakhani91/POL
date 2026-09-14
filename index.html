@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۴.۰ | مقصدهای من</title>
+<title>POL | نسخه ۷.۵.۰ | Ahead Intelligence</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11750,6 +11750,15 @@ body.pol-consumer-mode #navSheetResults{
                   <small id="trafficCameraType">به دوربین نزدیک می‌شوید</small>
                   <b id="trafficCameraDistance">--</b>
                 </div>
+              </div>
+
+              <div id="driveAheadPill" class="drive-ahead-pill" role="status" aria-live="polite" aria-atomic="true">
+                <span id="driveAheadIcon" class="drive-ahead-icon">◈</span>
+                <div class="drive-ahead-copy">
+                  <small id="driveAheadLabel">جلوتر در مسیر</small>
+                  <b id="driveAheadText">—</b>
+                </div>
+                <strong id="driveAheadDistance">--</strong>
               </div>
 
               <div id="arrivalBanner" class="arrival-banner">به مقصد رسیدی ✓</div>
@@ -36970,5 +36979,371 @@ function createPolPlacesStore(storage){
 })();
 
 </script>
+
+<style id="pol-v7-5-0-ahead-intelligence">
+/* ============================================================
+   v7.5.0 — AHEAD INTELLIGENCE
+   One meaningful road-ahead message at a time. No persistent noise.
+   ============================================================ */
+.drive-ahead-pill{display:none}
+body.driving-mode #driveAheadPill.show{
+  position:absolute;
+  z-index:1290;
+  left:50%;
+  bottom:128px;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:31px minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  min-width:200px;
+  max-width:min(78vw,430px);
+  min-height:44px;
+  padding:7px 10px;
+  border-radius:16px;
+  background:rgba(8,16,25,.93);
+  border:1px solid rgba(96,165,250,.18);
+  color:#eaf2fb;
+  box-shadow:0 12px 30px rgba(2,8,23,.25);
+  backdrop-filter:blur(13px);
+  pointer-events:none;
+}
+body.driving-mode #driveAheadPill.warning{
+  background:rgba(54,36,8,.95);
+  border-color:rgba(245,158,11,.28);
+}
+body.driving-mode #driveAheadPill.verified{
+  background:rgba(10,38,28,.95);
+  border-color:rgba(34,197,94,.25);
+}
+body.driving-mode #driveAheadPill.camera{
+  background:rgba(49,30,8,.95);
+  border-color:rgba(245,158,11,.25);
+}
+.drive-ahead-icon{
+  width:31px;height:31px;border-radius:10px;display:grid;place-items:center;
+  background:rgba(96,165,250,.12);color:#9dccff;font-size:17px;font-weight:900
+}
+#driveAheadPill.warning .drive-ahead-icon,
+#driveAheadPill.camera .drive-ahead-icon{background:rgba(245,158,11,.13);color:#fcd34d}
+#driveAheadPill.verified .drive-ahead-icon{background:rgba(34,197,94,.13);color:#86efac}
+.drive-ahead-copy{min-width:0;text-align:right}
+.drive-ahead-copy small{display:block;font-size:6.5px;line-height:1.2;color:#8498ae}
+.drive-ahead-copy b{
+  display:block;margin-top:2px;font-size:9px;line-height:1.35;font-weight:900;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#driveAheadDistance{font-size:8px;line-height:1;white-space:nowrap;color:#b9c9da}
+#driveAheadPill.warning #driveAheadDistance,
+#driveAheadPill.camera #driveAheadDistance{color:#fde68a}
+#driveAheadPill.verified #driveAheadDistance{color:#a7f3d0}
+
+/* v7.5 owns the camera visual so the old camera pill cannot duplicate it. */
+body.driving-mode .traffic-camera-pill{display:none!important}
+
+/* During map exploration or an active reroute, map control wins over anticipatory UI. */
+body.driving-mode.map-manual-explore #driveAheadPill,
+body.driving-mode:has(#rerouteBanner.show) #driveAheadPill{display:none!important}
+
+body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
+
+@media(max-width:650px){
+  body.driving-mode #driveAheadPill.show{
+    bottom:122px;
+    min-width:184px;
+    max-width:calc(100vw - 118px);
+    padding:6px 8px;
+    border-radius:14px;
+  }
+  .drive-ahead-icon{width:29px;height:29px;border-radius:9px;font-size:16px}
+  .drive-ahead-copy b{font-size:8.5px}
+  #driveAheadDistance{font-size:7.5px}
+}
+@media(max-width:390px){
+  body.driving-mode #driveAheadPill.show{max-width:calc(100vw - 105px);min-width:170px}
+}
+</style>
+
+
+<script id="pol-v7-5-0-ahead-intelligence-runtime">
+/* v7.5.0 Ahead Intelligence — route-derived, priority-based, one-message UX. */
+(function(){
+  const el=id=>document.getElementById(id);
+  const state={
+    lastKey:'',
+    speedCacheKey:'',
+    speedDrops:[],
+    featureCacheKey:'',
+    features:[]
+  };
+
+  const finite=n=>Number.isFinite(Number(n));
+  const kmh=n=>Math.round(Number(n||0)).toLocaleString('fa-IR');
+
+  function hideAhead(){
+    const pill=el('driveAheadPill');
+    if(!pill)return;
+    pill.className='drive-ahead-pill';
+    state.lastKey='';
+  }
+
+  function profileSignature(){
+    const truthCount=typeof speedTruthState!=='undefined'&&Array.isArray(speedTruthState?.profile)?speedTruthState.profile.length:0;
+    const exact=typeof mappedSpeedState!=='undefined'?mappedSpeedState?.exactProfile:null;
+    const edgeCount=Array.isArray(exact?.edges)?exact.edges.length:0;
+    const first=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[0]:null;
+    const last=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[routeCoords.length-1]:null;
+    return [
+      Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0).toFixed(0),
+      first?.[0]?.toFixed?.(4)||'',first?.[1]?.toFixed?.(4)||'',
+      last?.[0]?.toFixed?.(4)||'',last?.[1]?.toFixed?.(4)||'',
+      (typeof speedTruthState!=='undefined'?speedTruthState?.status:'')||'',truthCount,
+      exact?.status||'',edgeCount
+    ].join('|');
+  }
+
+  function rebuildSpeedDrops(){
+    const sig=profileSignature();
+    if(sig===state.speedCacheKey)return;
+    state.speedCacheKey=sig;
+    state.speedDrops=[];
+
+    const truth=(typeof speedTruthState!=='undefined' && speedTruthState?.status==='ready' && Array.isArray(speedTruthState?.profile))
+      ?speedTruthState.profile:[];
+
+    if(truth.length>1){
+      for(let i=1;i<truth.length;i++){
+        const prev=truth[i-1],cur=truth[i];
+        const from=Number(prev?.limit||0),to=Number(cur?.limit||0),atM=Number(cur?.startM||0);
+        if(finite(from)&&finite(to)&&finite(atM)&&from>=10&&from<=160&&to>=10&&to<=160&&from-to>=10){
+          state.speedDrops.push({kind:'speed',atM,from,to,verified:true,road:cur?.road||''});
+        }
+      }
+      return;
+    }
+
+    const exact=typeof mappedSpeedState!=='undefined'?mappedSpeedState?.exactProfile:null;
+    const edges=(exact?.status==='ready' && Array.isArray(exact?.edges))?exact.edges:[];
+    if(edges.length<2)return;
+
+    for(let i=1;i<edges.length;i++){
+      const prev=edges[i-1],cur=edges[i];
+      const from=Number(prev?.speedLimit||0),to=Number(cur?.speedLimit||0),atM=Number(cur?.startM||0);
+      if(finite(from)&&finite(to)&&finite(atM)&&from>=10&&from<=160&&to>=10&&to<=160&&from-to>=10){
+        state.speedDrops.push({
+          kind:'speed',atM,from,to,verified:false,
+          road:cur?.resolvedName||cur?.rawName||cur?.name||''
+        });
+      }
+    }
+  }
+
+  function nextSpeedDrop(currentM){
+    rebuildSpeedDrops();
+    for(const row of state.speedDrops){
+      const ahead=Number(row.atM)-currentM;
+      if(ahead<-25)continue;
+      if(ahead>1200)break;
+      return {...row,aheadM:Math.max(0,ahead)};
+    }
+    return null;
+  }
+
+  function featureSignature(){
+    const exact=typeof mappedSpeedState!=='undefined'?mappedSpeedState?.exactProfile:null;
+    const first=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[0]:null;
+    const last=(typeof routeCoords!=='undefined'&&routeCoords?.length)?routeCoords[routeCoords.length-1]:null;
+    return [
+      Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0).toFixed(0),
+      first?.[0]?.toFixed?.(4)||'',first?.[1]?.toFixed?.(4)||'',
+      last?.[0]?.toFixed?.(4)||'',last?.[1]?.toFixed?.(4)||'',
+      exact?.status||'',Array.isArray(exact?.edges)?exact.edges.length:0
+    ].join('|');
+  }
+
+  function rebuildRouteFeatures(){
+    const sig=featureSignature();
+    if(sig===state.featureCacheKey)return;
+    state.featureCacheKey=sig;
+    state.features=[];
+
+    const exact=typeof mappedSpeedState!=='undefined'?mappedSpeedState?.exactProfile:null;
+    const edges=(exact?.status==='ready' && Array.isArray(exact?.edges))?exact.edges:[];
+    let tunnelOpen=false,rampOpen=false;
+
+    for(const edge of edges){
+      const atM=Number(edge?.startM||0);
+      if(!finite(atM))continue;
+
+      if(edge?.edgeTunnel===true && !tunnelOpen){
+        state.features.push({kind:'tunnel',atM,road:edge?.resolvedName||edge?.rawName||''});
+      }
+      if(edge?.edgeRamp===true && !rampOpen){
+        state.features.push({kind:'ramp',atM,road:edge?.resolvedName||edge?.rawName||''});
+      }
+      tunnelOpen=edge?.edgeTunnel===true;
+      rampOpen=edge?.edgeRamp===true;
+    }
+    state.features.sort((a,b)=>a.atM-b.atM);
+  }
+
+  function nextRouteFeature(currentM){
+    rebuildRouteFeatures();
+    for(const row of state.features){
+      const ahead=Number(row.atM)-currentM;
+      if(ahead<-30)continue;
+      if(ahead>900)break;
+      return {...row,aheadM:Math.max(0,ahead)};
+    }
+    return null;
+  }
+
+  function maneuverAhead(travelled){
+    if(typeof nextNavigationStep!=='function')return null;
+    const next=nextNavigationStep(travelled);
+    if(!next?.step)return null;
+    const type=typeof normalizedManeuverType==='function'
+      ?normalizedManeuverType(next.step.type)
+      :String(next.step.type||'').toLowerCase();
+    const mod=String(next.step.modifier||'').toLowerCase();
+    const distance=Math.max(0,Number(next.distance||0));
+    if(distance<220 || distance>1100)return null;
+
+    let label='',icon='';
+    if(mod.includes('uturn')){label='دوربرگردان جلوتر';icon='↶';}
+    else if(mod.includes('sharp left')){label='پیچ تند به چپ جلوتر';icon='↰';}
+    else if(mod.includes('sharp right')){label='پیچ تند به راست جلوتر';icon='↱';}
+    else if(type==='roundabout'){label='میدان جلوتر';icon='↻';}
+    else if(type==='off ramp'){label='خروجی جلوتر';icon='↗';}
+    else if(type==='on ramp'){label='ورودی رمپ جلوتر';icon='↗';}
+    else if(type==='fork'){label='دو راهی جلوتر';icon='⑂';}
+    else if(type==='merge'){label='ادغام مسیر جلوتر';icon='⇗';}
+    else return null;
+
+    return {kind:'maneuver',aheadM:distance,label,icon,priority:(mod.includes('sharp')||mod.includes('uturn'))?88:64};
+  }
+
+  function cameraAhead(progress,speed){
+    if(typeof nextTrafficCamera!=='function')return null;
+    const camera=nextTrafficCamera(progress,speed);
+    if(!camera || Number(camera.aheadM)>900)return null;
+    return {...camera,kind:'camera',priority:82};
+  }
+
+  function buildCandidates(progress){
+    const total=Math.max(0,Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0));
+    if(!total)return[];
+    const p=Math.max(0,Math.min(1,Number(progress||0)));
+    const currentM=total*p;
+    const speed=(typeof currentGuidanceSpeedKmh==='function')?Number(currentGuidanceSpeedKmh()||0):0;
+    const out=[];
+
+    const speedDrop=nextSpeedDrop(currentM);
+    if(speedDrop){
+      out.push({...speedDrop,priority:speedDrop.verified?100:76});
+    }
+
+    const camera=cameraAhead(p,speed);
+    if(camera)out.push(camera);
+
+    const man=maneuverAhead(currentM);
+    if(man)out.push(man);
+
+    const feature=nextRouteFeature(currentM);
+    if(feature){
+      out.push({...feature,priority:feature.kind==='tunnel'?55:48});
+    }
+
+    return out.filter(x=>finite(x.aheadM) && x.aheadM>=0 && x.aheadM<=1200);
+  }
+
+  function selectCandidate(progress){
+    const items=buildCandidates(progress);
+    if(!items.length)return null;
+
+    items.sort((a,b)=>{
+      const aClose=Math.max(0,1-Number(a.aheadM)/1200)*14;
+      const bClose=Math.max(0,1-Number(b.aheadM)/1200)*14;
+      return (Number(b.priority||0)+bClose)-(Number(a.priority||0)+aClose) || Number(a.aheadM)-Number(b.aheadM);
+    });
+    return items[0];
+  }
+
+  function present(event){
+    const pill=el('driveAheadPill');
+    if(!pill || !event){hideAhead();return;}
+
+    const icon=el('driveAheadIcon'),label=el('driveAheadLabel'),text=el('driveAheadText'),distance=el('driveAheadDistance');
+    pill.className='drive-ahead-pill show';
+    let title='جلوتر در مسیر',copy='',symbol='◈';
+
+    if(event.kind==='speed'){
+      symbol='↓';
+      title=event.verified?'تغییر حد سرعت تأییدشده':'اطلاعات مسیر جلوتر';
+      copy=`حد سرعت از ${kmh(event.from)} به ${kmh(event.to)}`;
+      pill.classList.add(event.verified?'verified':'warning');
+    }else if(event.kind==='camera'){
+      symbol='📷';title='جلوتر در مسیر';
+      copy=typeof cameraMarkerLabel==='function'?cameraMarkerLabel(event):'دوربین ثبت‌شده';
+      pill.classList.add('camera');
+    }else if(event.kind==='maneuver'){
+      symbol=event.icon||'↗';title='آماده باش';copy=event.label||'مانور مهم جلوتر';
+      pill.classList.add(event.priority>=85?'warning':'info');
+    }else if(event.kind==='tunnel'){
+      symbol='◐';title='جلوتر در مسیر';copy='ورود به تونل';
+      pill.classList.add('info');
+    }else if(event.kind==='ramp'){
+      symbol='↗';title='جلوتر در مسیر';copy='ورود به رمپ';
+      pill.classList.add('info');
+    }
+
+    if(icon)icon.textContent=symbol;
+    if(label)label.textContent=title;
+    if(text)text.textContent=copy;
+    if(distance)distance.textContent=Number(event.aheadM)<=25?'اکنون':(typeof distanceTextFa==='function'?distanceTextFa(event.aheadM):`${Math.round(event.aheadM)} متر`);
+
+    state.lastKey=[event.kind,Math.round(Number(event.atM||event.routeM||event.aheadM)/25),event.to||'',event.id||''].join(':');
+  }
+
+  function updateAheadIntelligence(progress){
+    if(!document.body.classList.contains('driving-mode')){hideAhead();return;}
+    if(document.body.classList.contains('map-manual-explore')){hideAhead();return;}
+    if(el('rerouteBanner')?.classList.contains('show')){hideAhead();return;}
+
+    const total=Math.max(0,Number(typeof routeDistanceM!=='undefined'?routeDistanceM:0));
+    const travelled=total*Math.max(0,Math.min(1,Number(progress||0)));
+    const immediate=typeof nextNavigationStep==='function'?nextNavigationStep(travelled):null;
+    const event=selectCandidate(progress);
+
+    // When the primary maneuver is happening now, suppress duplicate maneuver context.
+    if(event?.kind==='maneuver' && immediate && Number(immediate.distance)<=180){hideAhead();return;}
+    present(event);
+  }
+
+  window.POL_AHEAD_INTELLIGENCE={update:updateAheadIntelligence,hide:hideAhead,state};
+
+  if(typeof updateTurnByTurn==='function'){
+    const base=updateTurnByTurn;
+    updateTurnByTurn=function(progress){
+      const result=base.apply(this,arguments);
+      try{updateAheadIntelligence(progress)}catch(_e){hideAhead();}
+      return result;
+    };
+  }
+
+  if(typeof resetTurnByTurn==='function'){
+    const baseReset=resetTurnByTurn;
+    resetTurnByTurn=function(){
+      const result=baseReset.apply(this,arguments);
+      hideAhead();
+      return result;
+    };
+  }
+
+  window.addEventListener('pagehide',hideAhead);
+})();
+</script>
+
 </body>
 </html>
