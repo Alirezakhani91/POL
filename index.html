@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۸.۰ | Effortless Navigation UX</title>
+<title>POL | نسخه ۷.۹.۰ | First 30 Seconds UX</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38724,6 +38724,336 @@ body.driving-mode.drive-3d-active #driveAheadPill{z-index:1290!important}
     driving:document.body.classList.contains('driving-mode'),
     summaryOpen:!!summary?.classList.contains('open'),
     principle:'type → choose → start; intelligence stays behind the interface'
+  });
+})();
+</script>
+
+
+<style id="pol-v7-9-first-30-seconds-ux">
+/* ============================================================
+   POL v7.9.0 — FIRST 30 SECONDS UX
+   No tutorial. No new decision. Remove hesitation and dead time.
+   ============================================================ */
+
+/* Search should only show actions that are useful right now. */
+body.pol-consumer-mode #navSearchSheet.pol-no-history #navRecentAction,
+body.pol-consumer-mode #navSearchSheet.pol-no-history #navSheetRecentSection{
+  display:none!important;
+}
+body.pol-consumer-mode #navSearchSheet.pol-no-saved #polSavedQuickList,
+body.pol-consumer-mode #navSearchSheet.pol-no-saved .nav-sheet-section-title:first-of-type{
+  display:none!important;
+}
+body.pol-consumer-mode #navSearchSheet.pol-no-recents #polSavedQuickList + .nav-sheet-section-title,
+body.pol-consumer-mode #navSearchSheet.pol-no-recents #navSheetRecentList{
+  display:none!important;
+}
+body.pol-consumer-mode #navSearchSheet.pol-no-saved:not(.pol-no-recents) #navSheetRecentSection,
+body.pol-consumer-mode #navSearchSheet.pol-no-recents:not(.pol-no-saved) #navSheetRecentSection{
+  margin-top:6px!important;
+}
+
+/* Saved destinations should feel like shortcuts, not settings. */
+body.pol-consumer-mode #polSavedQuickList{
+  flex-wrap:nowrap!important;
+  overflow-x:auto!important;
+  gap:7px!important;
+  padding:2px 0 7px!important;
+  scrollbar-width:none;
+}
+body.pol-consumer-mode #polSavedQuickList::-webkit-scrollbar{display:none}
+body.pol-consumer-mode #polSavedQuickList .pol-place-chip{
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  padding:7px 11px!important;
+  border-radius:999px!important;
+  background:#edf4ff!important;
+  border-color:#dbeafe!important;
+  font-size:10px!important;
+  box-shadow:none!important;
+}
+
+/* Route preparation fills the dead moment after a destination tap. */
+.pol-journey-feedback{
+  display:none;
+  position:absolute;
+  z-index:1240;
+  left:50%;
+  bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  transform:translateX(-50%);
+  width:min(calc(100% - 24px),520px);
+  min-height:72px;
+  padding:11px 12px;
+  border-radius:20px;
+  background:rgba(255,255,255,.975);
+  border:1px solid rgba(15,23,42,.07);
+  box-shadow:0 16px 44px rgba(15,23,42,.20);
+  color:#172033;
+  backdrop-filter:blur(16px);
+  grid-template-columns:40px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  pointer-events:auto;
+}
+.pol-journey-feedback.show{display:grid;animation:polJourneyIn 210ms var(--pol-ease,cubic-bezier(.22,.8,.28,1)) both}
+@keyframes polJourneyIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.pol-journey-feedback-icon{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:#edf4ff;color:#236fd3;font-size:18px;font-weight:900;
+}
+.pol-journey-feedback.loading .pol-journey-feedback-icon::before{
+  content:"";width:18px;height:18px;border-radius:50%;border:2px solid #bfdbfe;border-top-color:#236fd3;
+  animation:polJourneySpin .78s linear infinite;
+}
+@keyframes polJourneySpin{to{transform:rotate(360deg)}}
+.pol-journey-feedback.ready .pol-journey-feedback-icon{background:#e8f7ee;color:#16834b}
+.pol-journey-feedback.ready .pol-journey-feedback-icon::before{content:"✓"}
+.pol-journey-feedback.error .pol-journey-feedback-icon{background:#fff1f2;color:#c2414e}
+.pol-journey-feedback.error .pol-journey-feedback-icon::before{content:"!"}
+.pol-journey-feedback-copy{min-width:0;text-align:right}
+.pol-journey-feedback-copy b{display:block;font-size:12px;line-height:1.45;color:#172033}
+.pol-journey-feedback-copy span{display:block;margin-top:2px;font-size:8px;line-height:1.6;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pol-journey-feedback button{
+  display:none;width:auto!important;min-width:82px!important;min-height:38px!important;padding:6px 10px!important;
+  border-radius:12px!important;background:#236fd3!important;color:#fff!important;border:0!important;font-size:9px!important;
+}
+.pol-journey-feedback.error button{display:block}
+body.route-selection-mode .pol-journey-feedback,
+body.driving-mode .pol-journey-feedback{display:none!important}
+body.pol-journey-busy:not(.route-selection-mode) #navLauncher{opacity:0!important;pointer-events:none!important;transform:translateX(-50%) translateY(6px)!important}
+body.pol-consumer-mode #navLauncher{transition:opacity 150ms ease,transform 180ms ease!important}
+
+/* Small location confidence inside search; no extra banner. */
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current.pol-origin-ready .nav-current-dot{
+  background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.11)!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current.pol-origin-locating .nav-current-dot{
+  background:#f59e0b!important;animation:mapPulse 1.2s infinite!important;
+}
+body.pol-consumer-mode #navSearchSheet .nav-sheet-current.pol-origin-missing .nav-current-dot{
+  background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.09)!important;
+}
+
+/* Route-ready transition is fast and decisive. */
+body.pol-consumer-mode.route-selection-mode #mapRouteSheet.show{
+  animation-duration:190ms!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn{
+  min-height:50px!important;
+}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn:not(:disabled){
+  box-shadow:0 8px 20px rgba(35,111,211,.20)!important;
+}
+
+/* Mobile keyboard + bottom sheet need breathing room. */
+@media(max-width:650px){
+  body.pol-consumer-mode #navSearchSheet .nav-sheet-card{
+    padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .pol-journey-feedback{
+    bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    width:calc(100% - 16px);
+    border-radius:18px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .pol-journey-feedback.show{animation:none!important}
+  .pol-journey-feedback.loading .pol-journey-feedback-icon::before{animation-duration:1.5s!important}
+}
+</style>
+
+
+<script id="pol-v7-9-first-30-seconds-runtime">
+(function(){
+  const byId=id=>document.getElementById(id);
+  document.title='POL | نسخه ۷.۹.۰ | First 30 Seconds UX';
+  document.body.classList.add('pol-first-30-ux');
+
+  /* No onboarding screen. The live interface itself explains what is possible. */
+  const mapHost=byId('tripMapCard')?.querySelector('div[style*="position:relative"]') || byId('tripMapCard');
+  let feedback=byId('polJourneyFeedback');
+  if(!feedback && mapHost){
+    feedback=document.createElement('div');
+    feedback.id='polJourneyFeedback';
+    feedback.className='pol-journey-feedback';
+    feedback.setAttribute('role','status');
+    feedback.setAttribute('aria-live','polite');
+    feedback.innerHTML='\n      <span class="pol-journey-feedback-icon" aria-hidden="true"></span>\n      <span class="pol-journey-feedback-copy"><b></b><span></span></span>\n      <button type="button">دوباره تلاش کن</button>';
+    mapHost.append(feedback);
+  }
+  const feedbackTitle=feedback?.querySelector('.pol-journey-feedback-copy b');
+  const feedbackDetail=feedback?.querySelector('.pol-journey-feedback-copy span');
+  const feedbackRetry=feedback?.querySelector('button');
+  let feedbackTimer=0;
+  let retryAction=null;
+
+  function clearFeedbackTimer(){if(feedbackTimer){clearTimeout(feedbackTimer);feedbackTimer=0;}}
+  function showFeedback(state,title,detail='',action=null){
+    if(!feedback)return;
+    clearFeedbackTimer();
+    feedback.className='pol-journey-feedback show '+state;
+    if(feedbackTitle)feedbackTitle.textContent=title||'';
+    if(feedbackDetail)feedbackDetail.textContent=detail||'';
+    retryAction=typeof action==='function'?action:null;
+    if(feedbackRetry)feedbackRetry.textContent='دوباره تلاش کن';
+    document.body.classList.toggle('pol-journey-busy',state==='loading');
+  }
+  function hideFeedback(delay=0){
+    clearFeedbackTimer();
+    const run=()=>{
+      feedback?.classList.remove('show','loading','ready','error');
+      document.body.classList.remove('pol-journey-busy');
+      retryAction=null;
+    };
+    if(delay>0)feedbackTimer=setTimeout(run,delay); else run();
+  }
+  feedbackRetry?.addEventListener('click',()=>{ if(retryAction)retryAction(); });
+
+  /* Search metadata: mobile keyboard and useful-only shortcuts. */
+  const searchInput=byId('navSheetSearchInput');
+  if(searchInput){
+    searchInput.setAttribute('enterkeyhint','search');
+    searchInput.setAttribute('aria-label','جست‌وجوی مقصد');
+    searchInput.placeholder='مقصد یا آدرس را جست‌وجو کن';
+  }
+
+  function refreshSearchShortcuts(){
+    const sheet=byId('navSearchSheet');
+    if(!sheet)return;
+    const savedCount=byId('polSavedQuickList')?.querySelectorAll('.pol-place-chip').length||0;
+    const recentCount=byId('navSheetRecentList')?.querySelectorAll('.nav-sheet-recent-item').length||0;
+    sheet.classList.toggle('pol-no-saved',savedCount===0);
+    sheet.classList.toggle('pol-no-recents',recentCount===0);
+    sheet.classList.toggle('pol-no-history',savedCount===0&&recentCount===0);
+  }
+
+  const saved=byId('polSavedQuickList');
+  const recents=byId('navSheetRecentList');
+  [saved,recents].forEach(el=>{
+    if(el)new MutationObserver(refreshSearchShortcuts).observe(el,{childList:true,subtree:true});
+  });
+  refreshSearchShortcuts();
+
+  /* Translate the existing origin state into one glance; nothing extra is added. */
+  function refreshOriginState(){
+    const row=byId('navSearchSheet')?.querySelector('.nav-sheet-current');
+    if(!row)return;
+    row.classList.remove('pol-origin-ready','pol-origin-locating','pol-origin-missing');
+    let ready=false;
+    try{ready=!!originConfirmed;}catch(_e){}
+    const dot=byId('mapOriginDot');
+    if(ready)row.classList.add('pol-origin-ready');
+    else if(dot?.classList.contains('locating'))row.classList.add('pol-origin-locating');
+    else row.classList.add('pol-origin-missing');
+  }
+  const originText=byId('navSheetOriginText');
+  if(originText)new MutationObserver(refreshOriginState).observe(originText,{childList:true,subtree:true,characterData:true});
+  const originDot=byId('mapOriginDot');
+  if(originDot)new MutationObserver(refreshOriginState).observe(originDot,{attributes:true,attributeFilter:['class']});
+  refreshOriginState();
+
+  /* Destination tap -> immediate acknowledgement -> route ready. */
+  try{
+    if(typeof stageDestination==='function' && !stageDestination.__polFirst30Wrapped){
+      const baseStage=stageDestination;
+      const wrapped=async function(dest,options={}){
+        const autoRoute=!!options?.autoRoute;
+        if(autoRoute){
+          let hasOrigin=false;
+          try{hasOrigin=!!originConfirmed;}catch(_e){}
+          showFeedback(
+            'loading',
+            hasOrigin?'مسیر را آماده می‌کنیم…':'موقعیتت را پیدا می‌کنیم…',
+            dest?.label||'مقصد انتخاب شد'
+          );
+        }
+        try{
+          return await baseStage.apply(this,arguments);
+        }finally{
+          if(autoRoute){
+            let hasRoute=false;
+            try{hasRoute=Array.isArray(routeAlternatives)&&routeAlternatives.length>0;}catch(_e){}
+            if(!hasRoute && !document.body.classList.contains('route-selection-mode'))hideFeedback(120);
+          }
+          refreshOriginState();
+        }
+      };
+      wrapped.__polFirst30Wrapped=true;
+      stageDestination=wrapped;
+    }
+  }catch(error){console.warn('POL first-30 destination feedback unavailable',error)}
+
+  try{
+    if(typeof loadRoute==='function' && !loadRoute.__polFirst30Wrapped){
+      const baseLoad=loadRoute;
+      const wrapped=async function(){
+        const destination=(typeof navDestination!=='undefined'&&navDestination?.label)?navDestination.label:'مقصد';
+        showFeedback('loading','مسیر را آماده می‌کنیم…',destination);
+        const result=await baseLoad.apply(this,arguments);
+        let hasRoute=false;
+        try{hasRoute=Array.isArray(routeAlternatives)&&routeAlternatives.length>0&&Array.isArray(routeCoords)&&routeCoords.length>0;}catch(_e){}
+        if(hasRoute){
+          showFeedback('ready','مسیر آماده است',destination);
+          hideFeedback(320);
+        }else{
+          showFeedback('error','مسیر آماده نشد','اتصال اینترنت یا مقصد را بررسی کن.',async()=>{
+            showFeedback('loading','دوباره تلاش می‌کنیم…',destination);
+            try{await wrapped();}catch(_e){}
+          });
+        }
+        return result;
+      };
+      wrapped.__polFirst30Wrapped=true;
+      loadRoute=wrapped;
+    }
+  }catch(error){console.warn('POL first-30 route feedback unavailable',error)}
+
+  /* A route ready state should never retain a loading surface. */
+  const routeSheet=byId('mapRouteSheet');
+  if(routeSheet){
+    new MutationObserver(()=>{
+      if(routeSheet.classList.contains('show'))hideFeedback(100);
+    }).observe(routeSheet,{attributes:true,attributeFilter:['class']});
+  }
+
+  /* Search opens cleanly. Empty first-use sections disappear automatically. */
+  const searchSheet=byId('navSearchSheet');
+  if(searchSheet){
+    new MutationObserver(()=>{
+      if(searchSheet.classList.contains('open')){
+        refreshSearchShortcuts();
+        refreshOriginState();
+      }
+    }).observe(searchSheet,{attributes:true,attributeFilter:['class']});
+  }
+
+  /* Escape is a natural desktop close path; mobile behavior stays untouched. */
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape' && searchSheet?.classList.contains('open')){
+      try{closeNavSearchSheet();}catch(_e){searchSheet.classList.remove('open')}
+    }
+  });
+
+  /* Keep copy concise if an older layer rewrites it. */
+  const copyObserver=new MutationObserver(()=>{
+    const start=byId('mapStartBtn');
+    if(start && !start.disabled && !document.body.classList.contains('driving-mode') && start.textContent.trim()!=='شروع مسیر'){
+      start.textContent='شروع مسیر';
+    }
+    refreshSearchShortcuts();
+  });
+  copyObserver.observe(document.body,{childList:true,subtree:true});
+
+  window.POL_FIRST_30_UX_DEBUG=()=>({
+    version:'7.9.0',
+    principle:'no tutorial; every state answers the next question',
+    originReady:(()=>{try{return !!originConfirmed}catch(_e){return false}})(),
+    savedShortcuts:byId('polSavedQuickList')?.querySelectorAll('.pol-place-chip').length||0,
+    recentShortcuts:byId('navSheetRecentList')?.querySelectorAll('.nav-sheet-recent-item').length||0,
+    journeyFeedback:feedback?.className||'',
+    searchOpen:!!searchSheet?.classList.contains('open'),
+    routeReady:!!routeSheet?.classList.contains('show')
   });
 })();
 </script>
