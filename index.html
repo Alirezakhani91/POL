@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>POL | نسخه ۷.۳.۵ | اصلاح چیدمان موبایل</title>
+<title>POL | نسخه ۷.۴.۰ | مقصدهای من</title>
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11589,6 +11589,8 @@ body.pol-consumer-mode #navSheetResults{
                   <div id="navSheetResults" class="nav-sheet-results"></div>
 
                   <div id="navSheetRecentSection" class="nav-sheet-section">
+                    <div class="nav-sheet-section-title"><b>مقصدهای من</b><button id="polManagePlaces" type="button">مدیریت</button></div>
+                    <div id="polSavedQuickList"></div>
                     <div class="nav-sheet-section-title">
                       <b>مقصدهای اخیر</b>
                       <button id="navSheetClearRecent">پاک‌کردن</button>
@@ -11641,6 +11643,7 @@ body.pol-consumer-mode #navSheetResults{
                     <small id="mapRouteKicker">مسیر آماده است</small>
                     <b id="mapRouteDestination">--</b>
                   </div>
+                  <button id="polSaveDestination" type="button" title="ذخیره مقصد" aria-label="ذخیره مقصد">☆</button>
                   <button id="mapRouteCloseBtn" class="map-route-close">×</button>
                 </div>
 
@@ -12499,6 +12502,12 @@ body.pol-consumer-mode #navSheetResults{
 
       <div class="profileActions">
         <button id="resetProfile">پاک‌کردن پروفایل آزمایشی</button>
+      </div>
+    
+      <div class="section-card unfinished-trips-card">
+        <div class="section-head"><h3>سفرهای پایان‌نیافته</h3></div>
+        <p id="unfinishedTripNotice" class="unfinished-trip-notice"></p>
+        <div id="unfinishedTripList"></div>
       </div>
     </section>
   </main>
@@ -21216,6 +21225,7 @@ function openNavSearchSheet({showRecent=true}={}){
   liveSearchSeq++;
   syncNavSheetOrigin();
   renderNavSheetRecents();
+  window.POL_SAVED_PLACES?.render();
   $('navSheetRecentSection').style.display=showRecent?"block":"none";
   setTimeout(()=>$('navSheetSearchInput')?.focus(),100);
 }
@@ -32430,6 +32440,10 @@ async function startCoreDrive(){
     $('scenario').disabled=false;
     timer=setInterval(step,100);
   }
+  window.POL_TRIP_JOURNAL?.begin({
+    mode:isRealGpsMode()?'real-gps':'simulation',
+    origin:navOrigin?.label,destination:navDestination?.label
+  },()=>({samples:isRealGpsMode()?realTelemetryState.rows.length:rows.length}));
 }
 function fallbackTripResultAfterFinish(error=null){
   // This path must not invoke the analysis that may just have failed.
@@ -32621,11 +32635,13 @@ function finish(){
         );
     }
 
+    window.POL_TRIP_JOURNAL?.complete(lastTripResult);
     presentTripSummaryAfterFinish();
   }
 }
 
 function reset(full=true,keepRoute=false){
+  window.POL_TRIP_JOURNAL?.abandon();
   tripFinishHandled=false;
   lastTripResult=null;
   stopRealGps();
@@ -34639,6 +34655,7 @@ setTimeout(
       }catch(e){}
     }
     if(name==='profile'){
+      window.POL_TRIP_JOURNAL?.render();
       try{ renderTrustedRealTrips(); }catch(e){}
     }
   }
@@ -36685,5 +36702,273 @@ window.POL_START_CTA_DEBUG=()=>{
 };
 </script>
 
+<style id="pol-v7-3-6-trip-journal">
+.unfinished-trip-notice{font-size:12px;line-height:1.9;color:#94a3b8}
+#unfinishedTripList{max-height:360px;overflow:auto;overscroll-behavior:contain}
+#unfinishedTripList>p{font-size:13px;color:#94a3b8}
+.unfinished-trip-item{display:grid;gap:6px;padding:14px 0;border-bottom:1px solid #334155;overflow-wrap:anywhere}
+.unfinished-trip-item:last-child{border-bottom:0}
+.unfinished-trip-item b{font-size:14px;color:#fbbf24}
+.unfinished-trip-item span{font-size:13px;color:#e2e8f0}
+.unfinished-trip-item small{font-size:11px;color:#94a3b8;line-height:1.8}
+</style>
+<script id="pol-v7-3-6-trip-journal-runtime">
+(function(){
+  'use strict';
+  // Summary-only checkpoints: no raw GPS, score reconstruction or reward writes.
+  const prefix='pol.unfinished-trip.v1.';
+  let current=null,readSample=null,ticker=null,storageFailed=false;
+  const byId=id=>document.getElementById(id);
+  const finiteCount=value=>Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):0;
+  function storageError(){
+    if(!storageFailed && typeof showMapStatus==='function'){
+      showMapStatus('ذخیرهٔ خلاصه سفر در این مرورگر ممکن نشد.','bad');
+    }
+    storageFailed=true;
+  }
+  function entries(){
+    const found=[];
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(!key?.startsWith(prefix))continue;
+        try{
+          const value=JSON.parse(localStorage.getItem(key));
+          if(value?.version===1 && key===prefix+value.id &&
+             Number.isFinite(value.startedAt) && Number.isFinite(value.savedAt) &&
+             ['unfinished','analysis-unavailable'].includes(value.status))found.push(value);
+        }catch(_e){/* A damaged entry must not prevent reading the others. */}
+      }
+    }catch(_e){storageError();}
+    return found.sort((a,b)=>b.savedAt-a.savedAt);
+  }
+  function render(){
+    const list=byId('unfinishedTripList'),notice=byId('unfinishedTripNotice');
+    if(!list||!notice)return;
+    const records=entries().filter(x=>x.id!==current?.id).slice(0,20);
+    notice.textContent=storageFailed
+      ?'ذخیره‌سازی مرورگر در دسترس نیست؛ حفظ خلاصه پس از بستن صفحه تضمین نمی‌شود.'
+      :'این خلاصه‌ها پایان تأییدشده ندارند یا تحلیلشان کامل نشده است. دادهٔ گمشده بازیابی نمی‌شود و از این خلاصه‌ها امتیاز یا پاداش محاسبه نمی‌شود. ممکن است سفری در تب دیگری باز باشد.';
+    list.replaceChildren();
+    if(!records.length){
+      const empty=document.createElement('p');
+      empty.textContent=current?'خلاصهٔ سفر جاری در حال ثبت است.':'سفر پایان‌نیافته‌ای ثبت نشده است.';
+      list.append(empty);return;
+    }
+    for(const record of records){
+      const item=document.createElement('div');item.className='unfinished-trip-item';
+      const title=document.createElement('b');
+      title.textContent=record.status==='analysis-unavailable'?'تحلیل سفر کامل نشد':'پایان سفر ثبت نشده';
+      const route=document.createElement('span');
+      route.textContent=String(record.origin||'مبدأ')+' ← '+String(record.destination||'مقصد');
+      const meta=document.createElement('small');
+      meta.textContent=(record.mode==='real-gps'?'سفر واقعی':'سفر آزمایشی')+' • آخرین ثبت: '+
+        new Date(record.savedAt).toLocaleString('fa-IR')+' • '+finiteCount(record.samples).toLocaleString('fa-IR')+' نمونه';
+      item.append(title,route,meta);list.append(item);
+    }
+  }
+  function checkpoint(){
+    if(!current)return;
+    try{
+      const sample=readSample?.()||{};
+      current.samples=finiteCount(sample.samples);
+      current.savedAt=Date.now();
+      localStorage.setItem(prefix+current.id,JSON.stringify(current));
+    }catch(_e){storageError();}
+  }
+  function detach(){
+    if(ticker!==null)clearInterval(ticker);
+    ticker=null;current=null;readSample=null;
+  }
+  function abandon(){checkpoint();detach();render();}
+  function begin(info,sampler){
+    if(current)abandon();
+    const now=Date.now();
+    const id=window.crypto?.randomUUID?.()||now.toString(36)+'-'+Math.random().toString(36).slice(2);
+    current={version:1,id,status:'unfinished',startedAt:now,savedAt:now,
+      mode:info.mode==='real-gps'?'real-gps':'simulation',
+      origin:String(info.origin||'مبدأ').slice(0,180),
+      destination:String(info.destination||'مقصد').slice(0,180),samples:0};
+    readSample=sampler;checkpoint();ticker=setInterval(checkpoint,5000);render();
+  }
+  function complete(result){
+    if(!current)return;
+    checkpoint();
+    try{
+      if(result?.finishFallback){
+        current.status='analysis-unavailable';
+        localStorage.setItem(prefix+current.id,JSON.stringify(current));
+      }else{
+        localStorage.removeItem(prefix+current.id);
+      }
+    }catch(_e){storageError();}
+    detach();render();
+  }
+  window.POL_TRIP_JOURNAL={begin,complete,abandon,render};
+  window.addEventListener('pagehide',checkpoint);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden')checkpoint();
+    else render();
+  });
+  window.addEventListener('storage',event=>{
+    if(event.key===null||event.key.startsWith(prefix))render();
+  });
+  render();
+})();
+
+</script>
+<dialog id="polPlacesDialog" aria-labelledby="polPlacesTitle" dir="rtl">
+  <div class="pol-places-heading"><h2 id="polPlacesTitle">مقصدهای من</h2><button id="polClosePlaces" type="button" aria-label="بستن مقصدهای من">×</button></div>
+  <form id="polPlaceEditor" hidden>
+    <p id="polPlaceAddress"></p>
+    <label for="polPlaceKind">ذخیره به‌عنوان</label>
+    <select id="polPlaceKind"><option value="home">خانه</option><option value="work">محل کار</option><option value="custom">مقصد دلخواه</option></select>
+    <label for="polPlaceName">نام مقصد</label><input id="polPlaceName" maxlength="60" autocomplete="off" placeholder="مثلاً باشگاه">
+    <div class="pol-place-editor-actions"><button type="submit">ذخیره مقصد</button><button id="polCancelPlaceEdit" type="button">انصراف</button></div>
+  </form>
+  <p id="polPlacesMessage" role="status" aria-live="polite"></p>
+  <div id="polPlacesList"></div>
+  <p class="pol-places-footnote">روی همین مرورگر ذخیره می‌شود.</p>
+</dialog>
+<style id="pol-v7-4-0-saved-places">
+body #polSavedQuickList{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 14px;font-size:12px;line-height:1.8;color:#64748b}
+body #polSavedQuickList .pol-place-chip{width:auto!important;max-width:100%;min-height:44px!important;padding:9px 14px!important;border-radius:16px!important;background:#eaf2ff!important;color:#174a8b!important;border:1px solid #d2e3ff!important;font:600 13px Vazirmatn,Tahoma,sans-serif!important;overflow-wrap:anywhere}
+body #polManagePlaces{min-height:44px!important;font-size:12px!important}
+body #polSaveDestination{flex:0 0 42px!important;width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;border-radius:14px!important;background:#eaf2ff!important;color:#2056a0!important;font-size:24px!important;border:1px solid #d2e3ff!important}
+body .map-route-sheet-main>div:first-child{flex:1 1 auto;min-width:0!important}
+#polPlacesDialog{box-sizing:border-box;width:calc(100% - 24px);max-width:500px;max-height:calc(100dvh - 24px);margin:auto;padding:22px;border:1px solid #dbe4ee;border-radius:24px;background:#f8fafc;color:#172033;box-shadow:0 20px 80px #0f172a40;font-family:Vazirmatn,Tahoma,sans-serif;overflow-y:auto;overscroll-behavior:contain}
+#polPlacesDialog::backdrop{background:#0f172a80;backdrop-filter:blur(4px)}
+#polPlacesDialog [hidden]{display:none!important}
+#polPlacesDialog button,#polPlacesDialog input,#polPlacesDialog select{box-sizing:border-box;font:500 14px Vazirmatn,Tahoma,sans-serif;min-height:44px;border-radius:12px;border:1px solid #d7e2ef;padding:10px;background:#fff;color:#172033}
+#polPlacesDialog button{cursor:pointer}
+#polPlacesDialog :focus-visible{outline:3px solid #3b82f6;outline-offset:2px}
+.pol-places-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pol-places-heading h2{font-size:21px;margin:0}
+#polPlacesDialog #polClosePlaces{width:44px;font-size:24px;padding:0}
+#polPlaceEditor{margin:16px 0;padding:16px;background:#eaf2ff;border-radius:16px}
+#polPlaceEditor label{display:block;margin:10px 0 6px;font-size:13px;color:#334155}
+#polPlaceEditor input,#polPlaceEditor select{width:100%}
+#polPlaceAddress{font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.pol-place-editor-actions{display:flex;gap:8px;margin-top:16px}
+#polPlaceEditor button[type=submit]{flex:1;background:#2563eb;color:white;border-color:#2563eb}
+#polPlacesMessage{font-size:13px;line-height:1.8;color:#174a8b}
+.pol-place-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid #e2e8f0}
+#polPlacesDialog .pol-place-main{border:0;background:transparent;text-align:right;overflow-wrap:anywhere}
+.pol-place-main small{display:block;font-size:11px;color:#64748b;line-height:1.6}
+.pol-places-footnote{font-size:11px;color:#64748b;margin-top:20px}
+@media(max-width:700px){#polPlacesDialog{width:100%;max-width:100%;margin:auto 0 0;max-height:calc(100dvh - 16px);padding:18px 14px calc(18px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0}}
+</style>
+
+<script id="pol-v7-4-0-saved-places-runtime">
+function createPolPlacesStore(storage){
+  const key='pol.saved-places.v1';
+  const valid=p=>p && typeof p.id==='string' && ['home','work','custom'].includes(p.kind) &&
+    typeof p.name==='string' && p.name.trim().length>0 && p.name.length<=60 &&
+    typeof p.lat==='number' && Number.isFinite(p.lat) && Math.abs(p.lat)<=90 &&
+    typeof p.lng==='number' && Number.isFinite(p.lng) && Math.abs(p.lng)<=180;
+  function list(){
+    const raw=storage.getItem(key);if(raw===null)return[];
+    const data=JSON.parse(raw);
+    if(data?.version!==1 || !Array.isArray(data.places) || data.places.length>14 || !data.places.every(valid))throw Error('invalid-store');
+    return data.places;
+  }
+  function save(input){
+    const places=list();
+    const value={id:input.id||'place-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),
+      kind:input.kind,name:String(input.name||'').trim().slice(0,60),
+      lat:input.lat,lng:input.lng,address:String(input.address||'').slice(0,240)};
+    if(!valid(value))throw Error('invalid-place');
+    // Fixed slots stay unique. A custom location saved twice updates its entry.
+    const duplicate=places.find(p=>p.id!==input.id && (value.kind!=='custom'?p.kind===value.kind:
+      p.kind==='custom' && Math.abs(p.lat-value.lat)<.00001 && Math.abs(p.lng-value.lng)<.00001));
+    if(duplicate && !input.id)value.id=duplicate.id;
+    const next=places.filter(p=>p.id!==value.id && p.id!==input.id && p.id!==duplicate?.id);
+    if(next.length>=14)throw Error('limit');
+    next.push(value);storage.setItem(key,JSON.stringify({version:1,places:next}));return value;
+  }
+  function remove(id){const next=list().filter(p=>p.id!==id);storage.setItem(key,JSON.stringify({version:1,places:next}));}
+  return {key,list,save,remove};
+}
+(function(){
+  const $p=id=>document.getElementById(id);
+  const dialog=$p('polPlacesDialog');
+  // Access storage inside the methods so a browser security restriction stays recoverable.
+  const store=createPolPlacesStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
+  let editing=null,busy=false;
+  const icon=kind=>kind==='home'?'⌂':kind==='work'?'▣':'☆';
+  function error(message='ذخیره‌سازی در دسترس نیست یا دادهٔ ذخیره‌شده قابل خواندن نیست.'){ $p('polPlacesMessage').textContent=message; }
+  function sorted(){const order={home:0,work:1,custom:2};return store.list().sort((a,b)=>order[a.kind]-order[b.kind]);}
+  function showDialog(){if(!dialog.open)dialog.showModal();}
+  function edit(place){
+    editing={...place};$p('polPlaceEditor').hidden=false;
+    $p('polPlaceKind').value=place.kind||'custom';$p('polPlaceName').value=place.name||place.label||'';
+    syncKind();$p('polPlaceAddress').textContent=place.address||place.label||place.name||'مقصد انتخاب‌شده';
+    $p('polPlacesMessage').textContent='';showDialog();$p('polPlaceKind').focus();
+  }
+  function syncKind(){
+    const kind=$p('polPlaceKind').value;
+    $p('polPlaceName').disabled=kind!=='custom';
+    if(kind==='home')$p('polPlaceName').value='خانه';
+    if(kind==='work')$p('polPlaceName').value='محل کار';
+    if(kind==='custom')$p('polPlaceName').value=editing?.kind==='custom'?(editing.name||editing.label||''):(editing?.label||'');
+  }
+  async function navigate(place){
+    if(busy)return;
+    if(document.body.classList.contains('driving-mode')){showMapStatus('ابتدا سفر جاری را پایان بده.');return;}
+    busy=true;
+    if(dialog.open)dialog.close();
+    closeNavSearchSheet();
+    try{await stageDestination({lat:place.lat,lng:place.lng,label:place.name,address:place.address},{source:'saved',autoRoute:true});}
+    catch(_e){showMapStatus('مسیر آماده نشد؛ اتصال اینترنت را بررسی کن و دوباره تلاش کن.','bad');}
+    finally{busy=false;}
+  }
+  function button(text,handler,label){const b=document.createElement('button');b.type='button';b.textContent=text;if(label)b.setAttribute('aria-label',label);b.addEventListener('click',handler);return b;}
+  function render(){
+    const quick=$p('polSavedQuickList'),manage=$p('polPlacesList');quick.replaceChildren();manage.replaceChildren();
+    let places;
+    try{places=sorted();}catch(_e){quick.textContent='مقصدهای ذخیره‌شده قابل خواندن نیستند.';error();return;}
+    if(!places.length){
+      quick.textContent='برای ذخیرهٔ خانه یا محل کار، مقصد را انتخاب کن و روی ☆ در کارت مسیر بزن.';
+      manage.textContent='هنوز مقصدی ذخیره نکرده‌ای.';
+    }
+    for(const p of places){
+      const q=button(icon(p.kind)+' '+p.name,()=>navigate(p),'مسیریابی به '+p.name);q.className='pol-place-chip';quick.append(q);
+      const row=document.createElement('div');row.className='pol-place-row';
+      const main=button(icon(p.kind)+' '+p.name,()=>navigate(p),'مسیریابی به '+p.name);main.className='pol-place-main';
+      const subtitle=document.createElement('small');subtitle.textContent=p.address||'';main.append(subtitle);
+      const editBtn=button('ویرایش',()=>edit(p),'ویرایش '+p.name);
+      const del=button('حذف',()=>{
+        if(!confirm('«'+p.name+'» از مقصدهای ذخیره‌شده حذف شود؟'))return;
+        try{store.remove(p.id);if(editing?.id===p.id){editing=null;$p('polPlaceEditor').hidden=true;}render();}
+        catch(_e){error('حذف انجام نشد؛ ذخیره‌سازی مرورگر را بررسی کن.');}
+      },'حذف '+p.name);
+      row.append(main,editBtn,del);manage.append(row);
+    }
+  }
+  $p('polManagePlaces').addEventListener('click',()=>{editing=null;$p('polPlaceEditor').hidden=true;$p('polPlacesMessage').textContent='';render();showDialog();});
+  $p('polClosePlaces').addEventListener('click',()=>dialog.close());
+  $p('polCancelPlaceEdit').addEventListener('click',()=>{editing=null;$p('polPlaceEditor').hidden=true;});
+  $p('polPlaceKind').addEventListener('change',syncKind);
+  $p('polSaveDestination').addEventListener('click',()=>{
+    if(!destinationConfirmed || !navDestination || !routeCoords.length){showMapStatus('ابتدا یک مقصد و مسیر انتخاب کن.');return;}
+    render();edit({kind:'custom',label:navDestination.label,name:navDestination.label,
+      lat:Number(navDestination.lat),lng:Number(navDestination.lng),address:navDestination.label});
+  });
+  $p('polPlaceEditor').addEventListener('submit',event=>{
+    event.preventDefault();if(!editing)return;
+    const kind=$p('polPlaceKind').value,name=$p('polPlaceName').value.trim();
+    if(!name){error('یک نام برای مقصد بنویس.');$p('polPlaceName').focus();return;}
+    try{
+      const existing=store.list().find(p=>p.kind===kind && kind!=='custom' && p.id!==editing.id);
+      if(existing && !confirm('موقعیت ذخیره‌شدهٔ «'+existing.name+'» با این مقصد جایگزین شود؟'))return;
+      store.save({...editing,kind,name});editing=null;$p('polPlaceEditor').hidden=true;render();
+      $p('polPlacesMessage').textContent='مقصد ذخیره شد؛ از پنجرهٔ جست‌وجو در دسترس است.';
+    }catch(e){error(e.message==='limit'?'حداکثر ۱۴ مقصد می‌توان ذخیره کرد. ابتدا یکی را حذف کن.':'ذخیره انجام نشد؛ مقصدهای قبلی تغییر نکردند.');}
+  });
+  window.addEventListener('storage',event=>{if(event.key===null||event.key===store.key)render();});
+  window.POL_SAVED_PLACES={render};render();
+})();
+
+</script>
 </body>
 </html>
