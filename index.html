@@ -40148,5 +40148,312 @@ body.pol-map-calm-ux.drive-3d-active #drive3dMap .maplibregl-ctrl-group:hover{
 })();
 </script>
 
+
+<style id="pol-v713-style">
+/* ===== POL v7.13 — Arrival Experience + Vehicle-Specific Navigation Markers ===== */
+.pol-route-vehicle-icon{background:transparent!important;border:none!important}
+.nav-car-rotor.pol-vehicle-rotor,
+.pol-3d-car-marker.pol-v13-vehicle-root{
+  position:relative;
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  filter:drop-shadow(0 8px 16px rgba(15,23,42,.24));
+}
+.pol-3d-car-marker.pol-v13-vehicle-root{
+  width:46px;
+  height:46px;
+}
+.nav-car-pulse{
+  position:absolute;
+  inset:-1px;
+  border-radius:50%;
+  border:1.5px solid rgba(37,99,235,.18);
+  background:radial-gradient(circle,rgba(59,130,246,.10) 0%,rgba(59,130,246,0) 68%);
+}
+.pol-route-vehicle-shell{
+  position:absolute;
+  inset:2px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(241,245,249,.98));
+  border:1.5px solid rgba(255,255,255,.96);
+  box-shadow:0 0 0 1px rgba(148,163,184,.12),0 10px 20px rgba(15,23,42,.18),0 1px 0 rgba(255,255,255,.75) inset;
+  overflow:hidden;
+}
+.pol-route-vehicle-shell::before{
+  content:"";
+  position:absolute;
+  top:4px;left:6px;right:6px;height:9px;
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,0));
+  pointer-events:none;
+}
+.pol-route-vehicle-bob{position:relative;width:28px;height:28px;animation:polVehicleBob 1.8s ease-in-out infinite}
+.pol-3d-car-marker.pol-v13-vehicle-root .pol-route-vehicle-bob{width:30px;height:30px}
+@keyframes polVehicleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.1px)}}
+.pol-vehicle-sprite{position:relative;width:100%;height:100%;--veh-main:#2563eb;--veh-dark:#1d4ed8;--veh-glass:#dbeafe;--wheel:#0f172a;--trim:#e2e8f0}
+.pol-route-vehicle-shell[data-vehicle="car"] .pol-vehicle-sprite,
+.pol-3d-car-marker[data-vehicle="car"] .pol-vehicle-sprite{--veh-main:#2563eb;--veh-dark:#1d4ed8;--veh-glass:#dbeafe}
+.pol-route-vehicle-shell[data-vehicle="motorcycle"] .pol-vehicle-sprite,
+.pol-3d-car-marker[data-vehicle="motorcycle"] .pol-vehicle-sprite{--veh-main:#f97316;--veh-dark:#ea580c;--veh-glass:#ffedd5}
+.pol-route-vehicle-shell[data-vehicle="scooter"] .pol-vehicle-sprite,
+.pol-3d-car-marker[data-vehicle="scooter"] .pol-vehicle-sprite{--veh-main:#14b8a6;--veh-dark:#0f766e;--veh-glass:#ccfbf1}
+.pol-route-vehicle-shell[data-vehicle="van"] .pol-vehicle-sprite,
+.pol-3d-car-marker[data-vehicle="van"] .pol-vehicle-sprite{--veh-main:#0ea5e9;--veh-dark:#0284c7;--veh-glass:#e0f2fe}
+.pol-route-vehicle-shell[data-vehicle="truck"] .pol-vehicle-sprite,
+.pol-3d-car-marker[data-vehicle="truck"] .pol-vehicle-sprite{--veh-main:#8b5cf6;--veh-dark:#7c3aed;--veh-glass:#ede9fe}
+.pol-vehicle-sprite span{position:absolute;display:block;box-sizing:border-box}
+.pol-vehicle-wheel{width:7px;height:7px;border-radius:50%;background:var(--wheel);border:1px solid rgba(255,255,255,.65);bottom:4px;box-shadow:0 -1px 0 rgba(255,255,255,.25) inset}
+.pol-vehicle-wheel.left{left:4px}.pol-vehicle-wheel.right{right:4px}.pol-vehicle-wheel.mid{left:11px}
+/* car */
+.pol-vehicle-car .pol-car-body{left:4px;right:4px;bottom:7px;height:9px;border-radius:7px 8px 5px 5px;background:linear-gradient(180deg,var(--veh-main),var(--veh-dark));box-shadow:0 1px 0 rgba(255,255,255,.22) inset}
+.pol-vehicle-car .pol-car-roof{left:8px;right:8px;bottom:13px;height:8px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#93c5fd,#60a5fa)}
+.pol-vehicle-car .pol-car-window{left:10px;right:10px;bottom:14px;height:5px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--veh-glass),#eff6ff)}
+/* van */
+.pol-vehicle-van .pol-van-body{left:3px;right:3px;bottom:7px;height:11px;border-radius:5px 8px 5px 5px;background:linear-gradient(180deg,var(--veh-main),var(--veh-dark))}
+.pol-vehicle-van .pol-van-cabin{left:15px;right:4px;bottom:14px;height:7px;border-radius:5px 6px 2px 2px;background:linear-gradient(180deg,#7dd3fc,#38bdf8)}
+.pol-vehicle-van .pol-van-window{left:17px;right:7px;bottom:15px;height:4px;border-radius:4px;background:linear-gradient(180deg,var(--veh-glass),#f0f9ff)}
+/* truck */
+.pol-vehicle-truck .pol-truck-box{left:2px;width:15px;bottom:9px;height:10px;border-radius:4px 2px 3px 3px;background:linear-gradient(180deg,#c4b5fd,var(--veh-main));box-shadow:0 0 0 1px rgba(255,255,255,.15) inset}
+.pol-vehicle-truck .pol-truck-cab{right:3px;width:11px;bottom:9px;height:10px;border-radius:4px 5px 3px 3px;background:linear-gradient(180deg,var(--veh-main),var(--veh-dark))}
+.pol-vehicle-truck .pol-truck-window{right:5px;width:6px;bottom:14px;height:4px;border-radius:3px;background:linear-gradient(180deg,var(--veh-glass),#faf5ff)}
+/* motorcycle */
+.pol-vehicle-motorcycle .pol-moto-frame{left:8px;right:7px;bottom:9px;height:4px;border-radius:999px;background:linear-gradient(180deg,var(--veh-main),var(--veh-dark));transform:rotate(-12deg);transform-origin:center}
+.pol-vehicle-motorcycle .pol-moto-seat{left:11px;width:8px;bottom:13px;height:4px;border-radius:4px;background:var(--veh-main)}
+.pol-vehicle-motorcycle .pol-moto-handle{right:7px;bottom:13px;width:6px;height:4px;border-left:2px solid var(--veh-dark);border-top:2px solid var(--veh-dark);border-radius:5px 0 0 0;transform:rotate(6deg)}
+.pol-vehicle-motorcycle .pol-moto-rider{left:12px;bottom:16px;width:4px;height:4px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+/* scooter */
+.pol-vehicle-scooter .pol-scooter-deck{left:8px;right:7px;bottom:9px;height:4px;border-radius:999px;background:linear-gradient(180deg,var(--veh-main),var(--veh-dark))}
+.pol-vehicle-scooter .pol-scooter-stem{right:10px;bottom:11px;width:2px;height:10px;background:var(--veh-dark);border-radius:999px}
+.pol-vehicle-scooter .pol-scooter-handle{right:8px;bottom:20px;width:8px;height:2px;border-radius:999px;background:var(--veh-dark)}
+.pol-vehicle-scooter .pol-scooter-head{left:11px;bottom:16px;width:4px;height:4px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+/* calmer arrival approach */
+#arrivalApproachPill{display:none}
+body.pol-consumer-mode.driving-mode #arrivalApproachPill.show{
+  position:fixed!important;
+  z-index:7600!important;
+  left:16px!important;
+  right:16px!important;
+  bottom:110px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  padding:12px 14px!important;
+  border-radius:18px!important;
+  background:rgba(255,255,255,.94)!important;
+  color:#172033!important;
+  box-shadow:0 14px 40px rgba(15,23,42,.18)!important;
+  backdrop-filter:blur(14px)!important;
+}
+#arrivalApproachPill .approach-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+#arrivalApproachPill small{font-size:10px;color:#5f6b7a;line-height:1.2}
+#arrivalApproachPill b{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+#arrivalApproachPill strong{font-size:14px;font-weight:900;color:#2563eb;white-space:nowrap}
+/* richer arrival moment */
+body.pol-consumer-mode.driving-mode #arrivalBanner.show{gap:6px!important;min-height:162px!important}
+body.pol-consumer-mode.driving-mode #arrivalBanner small{font-size:10px!important}
+@media (max-width:420px){
+  body.pol-consumer-mode.driving-mode #arrivalBanner.show{width:min(calc(100% - 28px),320px)!important}
+  #arrivalApproachPill .approach-copy b{max-width:170px}
+}
+</style>
+<script id="pol-v713-script">
+(()=>{
+  const byId=id=>document.getElementById(id);
+  try{document.title=document.title.replace('۷.۱۲.۰','۷.۱۳.۰')}catch(_e){}
+
+  function currentVehicleKind(){
+    try{
+      const id=(typeof currentVehicleProfile!=='undefined' && currentVehicleProfile?.id)?currentVehicleProfile.id:'car';
+      return ['car','motorcycle','scooter','van','truck'].includes(id)?id:'car';
+    }catch(_e){return 'car'}
+  }
+
+  function vehicleMarkerSpriteHtml(kind=currentVehicleKind()){
+    switch(kind){
+      case 'motorcycle':
+        return '<div class="pol-vehicle-sprite pol-vehicle-motorcycle"><span class="pol-vehicle-wheel left"></span><span class="pol-vehicle-wheel right"></span><span class="pol-moto-frame"></span><span class="pol-moto-seat"></span><span class="pol-moto-handle"></span><span class="pol-moto-rider"></span></div>';
+      case 'scooter':
+        return '<div class="pol-vehicle-sprite pol-vehicle-scooter"><span class="pol-vehicle-wheel left"></span><span class="pol-vehicle-wheel right"></span><span class="pol-scooter-deck"></span><span class="pol-scooter-stem"></span><span class="pol-scooter-handle"></span><span class="pol-scooter-head"></span></div>';
+      case 'van':
+        return '<div class="pol-vehicle-sprite pol-vehicle-van"><span class="pol-van-body"></span><span class="pol-van-cabin"></span><span class="pol-van-window"></span><span class="pol-vehicle-wheel left"></span><span class="pol-vehicle-wheel right"></span></div>';
+      case 'truck':
+        return '<div class="pol-vehicle-sprite pol-vehicle-truck"><span class="pol-truck-box"></span><span class="pol-truck-cab"></span><span class="pol-truck-window"></span><span class="pol-vehicle-wheel left"></span><span class="pol-vehicle-wheel mid"></span><span class="pol-vehicle-wheel right"></span></div>';
+      case 'car':
+      default:
+        return '<div class="pol-vehicle-sprite pol-vehicle-car"><span class="pol-car-body"></span><span class="pol-car-roof"></span><span class="pol-car-window"></span><span class="pol-vehicle-wheel left"></span><span class="pol-vehicle-wheel right"></span></div>';
+    }
+  }
+
+  function vehicleMarkerShellHtml(kind=currentVehicleKind()){
+    return '<div class="pol-route-vehicle-shell" data-vehicle="'+kind+'"><div class="pol-route-vehicle-bob">'+vehicleMarkerSpriteHtml(kind)+'</div></div>';
+  }
+
+  function buildLeafletVehicleIcon(){
+    const kind=currentVehicleKind();
+    return L.divIcon({
+      className:'pol-route-vehicle-icon',
+      html:'<div class="nav-car-rotor pol-vehicle-rotor" data-vehicle="'+kind+'">'+vehicleMarkerShellHtml(kind)+'<div class="nav-car-pulse"></div></div>',
+      iconSize:[44,44],
+      iconAnchor:[22,22]
+    });
+  }
+
+  function refreshLeafletVehicleMarker(){
+    try{
+      if(!window.L || !carMarker)return;
+      const latlng=carMarker.getLatLng?.();
+      carMarker.setIcon(buildLeafletVehicleIcon());
+      carMarker.options.__smoothNavMarker=true;
+      if(latlng)carMarker.setLatLng(latlng);
+      if(typeof applyCarMarkerHeading==='function' && Number.isFinite(Number(carMarker.__heading))){
+        applyCarMarkerHeading(carMarker, carMarker.__heading);
+      }else if(Number.isFinite(Number(carMarker?.__heading))){
+        const rotor=carMarker.getElement?.()?.querySelector('.nav-car-rotor');
+        if(rotor)rotor.style.transform='rotate('+Number(carMarker.__heading)+'deg)';
+      }
+    }catch(error){console.warn('POL vehicle marker refresh (leaflet) failed',error)}
+  }
+
+  function refreshDrive3DVehicleMarker(){
+    try{
+      const root=drive3DCarMarker?.getElement?.();
+      if(!root)return;
+      const kind=currentVehicleKind();
+      root.classList.add('pol-v13-vehicle-root');
+      root.classList.add('pol-3d-car-marker');
+      root.setAttribute('data-vehicle',kind);
+      root.innerHTML=vehicleMarkerShellHtml(kind);
+    }catch(error){console.warn('POL vehicle marker refresh (3d) failed',error)}
+  }
+
+  function refreshAllVehicleMarkers(){
+    refreshLeafletVehicleMarker();
+    refreshDrive3DVehicleMarker();
+  }
+
+  if(typeof tagCarMarkerForSmoothMotion==='function'){
+    const coreTagCarMarkerForSmoothMotion=tagCarMarkerForSmoothMotion;
+    tagCarMarkerForSmoothMotion=function(){
+      const result=coreTagCarMarkerForSmoothMotion.apply(this,arguments);
+      refreshLeafletVehicleMarker();
+      return result;
+    };
+  }
+
+  if(typeof updateDrive3DCar==='function'){
+    const coreUpdateDrive3DCar=updateDrive3DCar;
+    updateDrive3DCar=function(){
+      const result=coreUpdateDrive3DCar.apply(this,arguments);
+      refreshDrive3DVehicleMarker();
+      return result;
+    };
+  }
+
+  if(typeof saveVehiclePreference==='function'){
+    const coreSaveVehiclePreference=saveVehiclePreference;
+    saveVehiclePreference=function(){
+      const result=coreSaveVehiclePreference.apply(this,arguments);
+      setTimeout(refreshAllVehicleMarkers,0);
+      return result;
+    };
+  }
+
+  function destinationLabel(){
+    return (typeof navDestination!=='undefined' && navDestination?.label)
+      ? navDestination.label
+      : 'مقصد';
+  }
+
+  function ensureArrivalUi(){
+    const arrival=byId('arrivalBanner');
+    if(arrival && !arrival.dataset.polV13Ready){
+      arrival.dataset.polV13Ready='1';
+      arrival.innerHTML='<div class="pol-arrival-check">✓</div><b>رسیدی</b><small id="arrivalBannerDestination">'+destinationLabel()+'</small>';
+    }
+
+    if(arrival && !byId('arrivalApproachPill')){
+      const pill=document.createElement('div');
+      pill.id='arrivalApproachPill';
+      pill.innerHTML='<div class="approach-copy"><small>نزدیک مقصد هستی</small><b id="arrivalApproachDestination">'+destinationLabel()+'</b></div><strong id="arrivalApproachDistance">--</strong>';
+      arrival.insertAdjacentElement('afterend',pill);
+    }
+  }
+
+  function updateArrivalUx(progress){
+    ensureArrivalUi();
+    const dest=destinationLabel();
+    const bannerLabel=byId('arrivalBannerDestination');
+    if(bannerLabel)bannerLabel.textContent=dest;
+
+    const remaining=Math.max(0,Number(routeDistanceM||0)*(1-Math.max(0,Math.min(1,Number(progress||0)))));
+    const approach=byId('arrivalApproachPill');
+    const showApproach=document.body.classList.contains('driving-mode') && remaining<=500 && remaining>35 && Number(progress||0)<.995;
+    if(approach){
+      approach.classList.toggle('show',showApproach);
+      const destEl=byId('arrivalApproachDestination');
+      const distEl=byId('arrivalApproachDistance');
+      if(destEl)destEl.textContent=dest;
+      if(distEl){
+        try{distEl.textContent=typeof distanceTextFa==='function'?distanceTextFa(remaining):Math.round(remaining)+' متر';}
+        catch(_e){distEl.textContent=Math.round(remaining)+' متر';}
+      }
+    }
+  }
+
+  if(typeof updateTurnByTurn==='function'){
+    const coreUpdateTurnByTurn=updateTurnByTurn;
+    updateTurnByTurn=function(progress){
+      const result=coreUpdateTurnByTurn.apply(this,arguments);
+      updateArrivalUx(progress);
+      return result;
+    };
+  }
+
+  if(typeof resetTurnByTurn==='function'){
+    const coreResetTurnByTurn=resetTurnByTurn;
+    resetTurnByTurn=function(){
+      const result=coreResetTurnByTurn.apply(this,arguments);
+      byId('arrivalApproachPill')?.classList.remove('show');
+      return result;
+    };
+  }
+
+  if(typeof presentTripSummaryAfterFinish==='function'){
+    const corePresentTripSummaryAfterFinish=presentTripSummaryAfterFinish;
+    presentTripSummaryAfterFinish=function(){
+      const arrived=byId('arrivalBanner')?.classList.contains('show');
+      setTimeout(()=>corePresentTripSummaryAfterFinish.apply(this,arguments),arrived?900:120);
+    };
+  }
+
+  if(typeof finish==='function'){
+    const coreFinish=finish;
+    finish=function(){
+      byId('arrivalApproachPill')?.classList.remove('show');
+      return coreFinish.apply(this,arguments);
+    };
+  }
+
+  ensureArrivalUi();
+  setTimeout(refreshAllVehicleMarkers,0);
+
+  window.POL_ARRIVAL_VEHICLE_DEBUG=()=>({
+    version:'7.13.0',
+    vehicle:currentVehicleKind(),
+    destination:destinationLabel(),
+    leafletMarker:!!carMarker,
+    drive3dMarker:!!drive3DCarMarker,
+    approachVisible:!!byId('arrivalApproachPill')?.classList.contains('show'),
+    arrivalVisible:!!byId('arrivalBanner')?.classList.contains('show')
+  });
+})();
+</script>
+
 </body>
 </html>
