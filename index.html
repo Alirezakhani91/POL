@@ -40971,5 +40971,408 @@ body.pol-consumer-mode #map .leaflet-tile-pane{
 })();
 </script>
 
+
+<style id="pol-v715-waze-first-style">
+/* ============================================================
+   POL v7.15 — WAZE-FIRST REBUILD
+   Goal: interaction composition first, not merely Waze-like colors.
+   No Waze trademarks, logos, characters or proprietary artwork are copied.
+   ============================================================ */
+:root{
+  --wz-purple:#6546d7;
+  --wz-purple-2:#5638ca;
+  --wz-cyan:#27bce6;
+  --wz-pink:#ef3c86;
+  --wz-yellow:#ffc83d;
+  --wz-black:#050608;
+  --wz-map:#eef1f2;
+  --wz-text:#171b22;
+  --wz-muted:#747f8c;
+}
+
+/* ---------- HOME: almost nothing but the map + Where to ---------- */
+body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #floatingMapControls{
+  top:14px!important;right:12px!important;bottom:auto!important;gap:8px!important;
+}
+body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #floatingMapControls>button{
+  width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+  border:0!important;border-radius:50%!important;background:#fff!important;color:#24303d!important;
+  box-shadow:0 8px 22px rgba(15,23,42,.17)!important;font-size:19px!important;
+}
+body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #mapFitRouteBtn,
+body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #mapSavedBtn{display:none!important}
+body.pol-consumer-mode.map-first-mode:not(.route-selection-mode):not(.driving-mode) #navLauncher{
+  left:12px!important;right:12px!important;bottom:14px!important;transform:none!important;width:auto!important;max-width:560px!important;margin:auto!important;
+}
+body.pol-consumer-mode #navLauncherButton{
+  min-height:62px!important;border-radius:31px!important;padding:7px 12px!important;
+  grid-template-columns:46px minmax(0,1fr)!important;background:#fff!important;border:0!important;
+  box-shadow:0 12px 32px rgba(15,23,42,.23)!important;
+}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-icon{
+  width:44px!important;height:44px!important;border-radius:50%!important;background:#edf1f4!important;color:#27313d!important;
+  font-size:0!important;
+}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-icon::before{content:'⌕';font-size:24px;line-height:1}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-copy b{font-size:15px!important;color:#171b22!important;font-weight:900!important}
+body.pol-consumer-mode #navLauncherButton .nav-launcher-copy small{display:none!important}
+
+/* ---------- SEARCH: big clean destination sheet ---------- */
+body.pol-consumer-mode .nav-search-sheet{background:rgba(10,15,22,.28)!important;backdrop-filter:blur(5px)!important}
+body.pol-consumer-mode .nav-sheet-card{
+  width:min(100%,620px)!important;max-height:91dvh!important;min-height:68dvh!important;
+  background:#fff!important;color:#172033!important;border-radius:28px 28px 0 0!important;
+  padding:10px 14px 18px!important;box-shadow:0 -20px 58px rgba(15,23,42,.22)!important;
+}
+body.pol-consumer-mode .nav-sheet-handle{width:38px!important;background:#d2d9e0!important;margin-bottom:11px!important}
+body.pol-consumer-mode .nav-sheet-search-row{grid-template-columns:42px 1fr 42px!important;gap:8px!important}
+body.pol-consumer-mode .nav-sheet-search-row input{
+  height:54px!important;border-radius:18px!important;border:0!important;background:#f0f3f5!important;
+  color:#172033!important;font-size:14px!important;padding-inline:14px!important;
+}
+body.pol-consumer-mode .nav-sheet-back,
+body.pol-consumer-mode .nav-sheet-search-btn{
+  width:42px!important;height:48px!important;min-height:48px!important;border-radius:50%!important;
+  background:#eef2f5!important;color:#1f2937!important;border:0!important;
+}
+body.pol-consumer-mode .nav-sheet-current{margin-top:7px!important;padding:8px 5px!important}
+body.pol-consumer-mode .nav-quick-actions{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:5px!important}
+body.pol-consumer-mode .nav-quick-actions button{
+  min-height:54px!important;border-radius:16px!important;border:1px solid #edf0f2!important;background:#fff!important;
+  box-shadow:none!important;padding:7px 9px!important;
+}
+body.pol-consumer-mode .nav-sheet-result,
+body.pol-consumer-mode .nav-sheet-recent-item{min-height:58px!important;border-bottom:1px solid #edf0f2!important}
+
+/* ---------- ROUTE PICKER: one decision, not a dashboard ---------- */
+body.pol-consumer-mode.route-selection-mode #mapRouteReason,
+body.pol-consumer-mode.route-selection-mode .route-confidence-row,
+body.pol-consumer-mode.route-selection-mode #mapRouteCompareBtn,
+body.pol-consumer-mode.route-selection-mode #mapRoutePreviewBtn,
+body.pol-consumer-mode.route-selection-mode #mapSpeedTruthBtn,
+body.pol-consumer-mode.route-selection-mode .map-route-vehicle-btn,
+body.pol-consumer-mode.route-selection-mode #mapDevBtn{display:none!important}
+body.pol-consumer-mode.route-selection-mode .map-route-sheet{
+  left:8px!important;right:8px!important;bottom:8px!important;max-width:590px!important;padding:12px 13px 13px!important;
+  border-radius:24px!important;background:#fff!important;border:0!important;color:#172033!important;
+  box-shadow:0 16px 44px rgba(15,23,42,.24)!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-sheet-main{min-height:34px!important;align-items:center!important}
+body.pol-consumer-mode.route-selection-mode .map-route-sheet-main small{display:none!important}
+body.pol-consumer-mode.route-selection-mode .map-route-sheet-main b{font-size:13px!important;font-weight:900!important;color:#172033!important}
+body.pol-consumer-mode.route-selection-mode #polSaveDestination{background:#eef2f5!important;color:#465363!important;border:0!important}
+body.pol-consumer-mode.route-selection-mode .map-route-primary{
+  grid-template-columns:1fr auto!important;align-items:end!important;margin-top:5px!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-eta-block b{font-size:31px!important;color:#15aedc!important;font-weight:950!important}
+body.pol-consumer-mode.route-selection-mode .map-route-eta-block span{font-size:8px!important;color:#768392!important}
+body.pol-consumer-mode.route-selection-mode .map-route-secondary b{font-size:12px!important;color:#26313e!important}
+body.pol-consumer-mode.route-selection-mode .map-route-secondary span{font-size:6.5px!important;color:#8a95a2!important}
+body.pol-consumer-mode.route-selection-mode .map-route-actions{display:block!important;margin-top:9px!important}
+body.pol-consumer-mode.route-selection-mode #mapStartBtn{
+  width:100%!important;min-height:52px!important;border-radius:17px!important;background:#22b8e6!important;color:#fff!important;
+  border:0!important;font-size:14px!important;font-weight:950!important;box-shadow:0 9px 22px rgba(34,184,230,.24)!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-strip{
+  left:8px!important;right:8px!important;bottom:183px!important;justify-content:flex-start!important;gap:7px!important;z-index:1230!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip{
+  min-width:112px!important;max-width:154px!important;min-height:50px!important;padding:6px 9px!important;border-radius:15px!important;
+  grid-template-columns:26px 1fr!important;gap:6px!important;background:#fff!important;border:0!important;color:#1b2430!important;
+  box-shadow:0 7px 20px rgba(15,23,42,.15)!important;
+}
+body.pol-consumer-mode.route-selection-mode .map-route-choice-chip.active{
+  background:var(--wz-purple)!important;color:#fff!important;box-shadow:0 9px 24px rgba(101,70,215,.27)!important;
+}
+body.pol-consumer-mode.route-selection-mode .route-chip-copy b{font-size:12px!important}
+body.pol-consumer-mode.route-selection-mode .route-chip-copy span{font-size:6.5px!important}
+
+/* ---------- DRIVING: recognizable Waze composition ---------- */
+body.pol-consumer-mode.driving-mode #turnCard{
+  top:0!important;left:0!important;right:0!important;width:100%!important;max-width:none!important;
+  min-height:104px!important;padding:8px 13px 9px!important;border-radius:0!important;
+  display:grid!important;grid-template-columns:74px minmax(0,1fr)!important;gap:9px!important;align-items:center!important;
+  background:#050608!important;border:0!important;box-shadow:0 5px 18px rgba(0,0,0,.24)!important;backdrop-filter:none!important;
+}
+body.pol-consumer-mode.driving-mode .turn-arrow{
+  width:70px!important;height:82px!important;display:grid!important;place-items:center!important;
+  background:transparent!important;border:0!important;border-radius:0!important;color:#fff!important;box-shadow:none!important;
+  font-size:50px!important;font-weight:950!important;
+}
+body.pol-consumer-mode.driving-mode .turn-distance{
+  margin:0 0 2px!important;color:#fff!important;font-size:23px!important;line-height:1!important;font-weight:950!important;
+}
+body.pol-consumer-mode.driving-mode .turn-instruction{
+  color:#dfe4e9!important;font-size:11px!important;line-height:1.25!important;font-weight:700!important;
+}
+body.pol-consumer-mode.driving-mode .turn-street{
+  margin-top:2px!important;color:#2fc3ee!important;font-size:15px!important;line-height:1.25!important;font-weight:950!important;
+}
+body.pol-consumer-mode.driving-mode .turn-approach-rail,
+body.pol-consumer-mode.driving-mode .turn-meta-row,
+body.pol-consumer-mode.driving-mode .next-turn-preview{display:none!important}
+body.pol-consumer-mode.driving-mode .lane-guidance.show{
+  display:flex!important;align-items:center!important;gap:8px!important;margin-top:6px!important;padding:4px 0 0!important;
+  border:0!important;background:transparent!important;
+}
+body.pol-consumer-mode.driving-mode .lane-guidance-label{display:none!important}
+body.pol-consumer-mode.driving-mode .lane-guidance-items{gap:4px!important}
+body.pol-consumer-mode.driving-mode .lane-pill{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.10)!important;color:#8b949e!important}
+body.pol-consumer-mode.driving-mode .lane-pill.valid{background:#fff!important;border-color:#fff!important;color:#15191f!important;box-shadow:none!important}
+
+/* Waze has contextual bubbles, not a second dashboard. */
+body.pol-consumer-mode.driving-mode #driveAheadPill.show{
+  top:112px!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;
+  width:auto!important;max-width:min(calc(100% - 96px),390px)!important;min-height:38px!important;padding:7px 10px!important;
+  background:#fff!important;color:#172033!important;border:0!important;border-radius:17px!important;box-shadow:0 7px 22px rgba(15,23,42,.18)!important;
+}
+body.pol-consumer-mode.driving-mode #driveAheadPill .drive-ahead-icon{width:30px!important;height:30px!important;border-radius:50%!important;background:#eef2f5!important}
+body.pol-consumer-mode.driving-mode #driveAheadPill small{font-size:6.5px!important;color:#8a95a2!important}
+body.pol-consumer-mode.driving-mode #driveAheadPill b{font-size:8.5px!important;color:#1b2430!important}
+body.pol-consumer-mode.driving-mode #driveAheadPill strong{font-size:9px!important;color:var(--wz-purple)!important}
+
+/* Route name = small purple road label floating over the route. */
+body.pol-consumer-mode.driving-mode .drive-current-road-bar,
+body.pol-consumer-mode.driving-mode.drive-3d-active .drive-current-road-bar{
+  left:50%!important;right:auto!important;bottom:78px!important;transform:translateX(-50%)!important;
+  width:auto!important;max-width:58vw!important;min-height:27px!important;padding:4px 10px!important;border-radius:8px!important;
+  background:var(--wz-purple)!important;border:0!important;box-shadow:0 4px 12px rgba(91,67,214,.25)!important;
+}
+body.pol-consumer-mode.driving-mode .drive-current-road-bar span{display:none!important}
+body.pol-consumer-mode.driving-mode .drive-current-road-bar b{font-size:8px!important;color:#fff!important;font-weight:950!important}
+
+/* Bottom ETA is a true navigation footer, not a floating card. */
+body.pol-consumer-mode.driving-mode .nav-bottom-strip{
+  left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100%!important;max-width:none!important;
+  min-height:70px!important;padding:8px 52px 7px 10px!important;border-radius:0!important;
+  background:rgba(5,6,8,.97)!important;border:0!important;box-shadow:0 -6px 18px rgba(0,0,0,.20)!important;color:#fff!important;
+}
+body.pol-consumer-mode.driving-mode .nav-bottom-main{grid-template-columns:1.25fr 1fr 1fr!important;gap:0!important;direction:rtl!important;align-items:center!important}
+body.pol-consumer-mode.driving-mode .nav-bottom-main>div{padding:2px 6px!important;border:0!important}
+body.pol-consumer-mode.driving-mode .nav-bottom-arrival b{font-size:22px!important;color:#fff!important;font-weight:950!important}
+body.pol-consumer-mode.driving-mode .nav-bottom-distance b,
+body.pol-consumer-mode.driving-mode .nav-bottom-time b{font-size:11px!important;color:#fff!important;font-weight:850!important}
+body.pol-consumer-mode.driving-mode .nav-bottom-main span{font-size:6px!important;color:#a7afb9!important}
+body.pol-consumer-mode.driving-mode .route-progress-rail,
+body.pol-consumer-mode.driving-mode .live-eta-source{display:none!important}
+#wazeInlineEndBtn{
+  right:10px!important;top:50%!important;width:34px!important;height:34px!important;min-height:34px!important;
+  background:#252a31!important;color:#d9dfe5!important;border:0!important;border-radius:50%!important;font-size:19px!important;
+}
+
+/* Bottom-left speed stack. */
+body.pol-consumer-mode.driving-mode #currentSpeedGauge{
+  left:9px!important;bottom:79px!important;width:54px!important;height:54px!important;border-radius:50%!important;
+  background:#3b4047!important;color:#fff!important;border:4px solid #fff!important;box-shadow:0 5px 16px rgba(15,23,42,.22)!important;
+}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge b{font-size:20px!important;color:#fff!important}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge small{display:none!important}
+body.pol-consumer-mode.driving-mode #currentSpeedGauge span{font-size:5.5px!important;color:#e4e8ec!important}
+body.pol-consumer-mode.driving-mode .mapHUD{left:15px!important;right:auto!important;bottom:136px!important;top:auto!important}
+body.pol-consumer-mode.driving-mode .speedSign{
+  width:40px!important;height:40px!important;border-radius:50%!important;background:#fff!important;color:#111!important;border:4px solid #e53935!important;
+  font-size:12px!important;box-shadow:0 4px 12px rgba(15,23,42,.14)!important;
+}
+body.pol-consumer-mode.driving-mode .speed-limit-source-badge{display:none!important}
+
+/* Right-side Waze-like floating actions. */
+body.pol-consumer-mode.driving-mode #driveReportBtn{
+  display:block!important;right:10px!important;bottom:82px!important;width:48px!important;height:48px!important;min-height:48px!important;
+  border-radius:50%!important;background:var(--wz-yellow)!important;color:#1f242a!important;border:4px solid #fff!important;
+  box-shadow:0 6px 18px rgba(15,23,42,.22)!important;opacity:1!important;font-size:0!important;
+}
+body.pol-consumer-mode.driving-mode #driveReportBtn::before{content:'!';font-size:24px;font-weight:950;line-height:1}
+body.pol-consumer-mode.driving-mode .drive-control-cluster{
+  right:11px!important;bottom:auto!important;top:122px!important;width:48px!important;max-width:48px!important;gap:8px!important;
+}
+body.pol-consumer-mode.driving-mode .drive-control-cluster>button{display:none!important}
+body.pol-consumer-mode.driving-mode #driveVoiceBtn{
+  display:grid!important;width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+  border-radius:50%!important;background:var(--wz-pink)!important;color:#fff!important;border:4px solid #fff!important;
+  box-shadow:0 6px 17px rgba(15,23,42,.19)!important;font-size:17px!important;
+}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed{
+  display:grid!important;position:fixed!important;left:50%!important;right:auto!important;top:auto!important;bottom:80px!important;
+  transform:translateX(-50%)!important;width:46px!important;min-width:46px!important;height:46px!important;min-height:46px!important;
+  padding:0!important;border-radius:50%!important;background:#fff!important;color:#27313d!important;border:0!important;
+  box-shadow:0 7px 19px rgba(15,23,42,.19)!important;
+}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed .drive-recenter-label{display:none!important}
+body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed .drive-recenter-icon{font-size:20px!important}
+body.pol-consumer-mode.driving-mode #driveEndBtn,
+body.pol-consumer-mode.driving-mode #driveOverviewBtn,
+body.pol-consumer-mode.driving-mode #driveZoomInBtn,
+body.pol-consumer-mode.driving-mode #driveZoomOutBtn,
+body.pol-consumer-mode.driving-mode #driveHeadingBtn{display:none!important}
+
+/* No native zoom stacks in active navigation. */
+body.pol-consumer-mode.driving-mode #map .leaflet-control-zoom,
+body.pol-consumer-mode.drive-3d-active #drive3dMap .maplibregl-ctrl-top-left{display:none!important}
+
+/* Arrow: simple cyan navigation pointer with white halo. */
+.pol-waze-nav-marker{width:46px!important;height:46px!important;filter:drop-shadow(0 5px 9px rgba(15,23,42,.24))!important}
+.pol-waze-nav-halo{inset:1px!important;background:#fff!important;box-shadow:0 0 0 3px rgba(39,188,230,.13)!important;border:1px solid rgba(15,23,42,.08)!important}
+.pol-waze-nav-arrow{
+  width:27px!important;height:31px!important;background:linear-gradient(180deg,#54d0f3,#24b7e2 58%,#159bc8)!important;
+  clip-path:polygon(50% 0%,94% 82%,54% 67%,50% 100%,46% 67%,6% 82%)!important;
+}
+
+/* Arrival stays calm and white, consistent with Waze overlays. */
+body.pol-consumer-mode.driving-mode #arrivalApproachPill.show{
+  left:50%!important;right:auto!important;bottom:82px!important;transform:translateX(-50%)!important;
+  width:min(calc(100% - 112px),390px)!important;background:#fff!important;border:0!important;border-radius:18px!important;
+  box-shadow:0 8px 25px rgba(15,23,42,.20)!important;
+}
+body.pol-consumer-mode.driving-mode #arrivalBanner.show{border-radius:24px!important;background:#fff!important;color:#172033!important}
+
+/* Map should recede; route should dominate. */
+body.pol-consumer-mode #map{background:var(--wz-map)!important}
+body.pol-consumer-mode #map .leaflet-tile-pane{filter:saturate(.66) contrast(.91) brightness(1.075)!important}
+body.pol-consumer-mode.route-selection-mode #map .leaflet-tile-pane{filter:saturate(.62) contrast(.90) brightness(1.08)!important}
+
+@media(max-width:430px){
+  body.pol-consumer-mode.driving-mode #turnCard{min-height:100px!important;grid-template-columns:64px 1fr!important;padding:7px 10px 8px!important}
+  body.pol-consumer-mode.driving-mode .turn-arrow{width:60px!important;height:76px!important;font-size:44px!important}
+  body.pol-consumer-mode.driving-mode .turn-distance{font-size:21px!important}
+  body.pol-consumer-mode.driving-mode .turn-street{font-size:14px!important}
+  body.pol-consumer-mode.driving-mode #driveAheadPill.show{top:107px!important;max-width:calc(100% - 86px)!important}
+  body.pol-consumer-mode.driving-mode .drive-control-cluster{top:111px!important;right:8px!important}
+  body.pol-consumer-mode.driving-mode #driveVoiceBtn{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+  body.pol-consumer-mode.driving-mode #currentSpeedGauge{left:7px!important;bottom:77px!important;width:51px!important;height:51px!important}
+  body.pol-consumer-mode.driving-mode .mapHUD{left:13px!important;bottom:132px!important}
+  body.pol-consumer-mode.driving-mode #driveReportBtn{right:8px!important;bottom:80px!important;width:45px!important;height:45px!important;min-height:45px!important}
+  body.pol-consumer-mode.driving-mode .drive-current-road-bar{bottom:75px!important;max-width:56vw!important}
+  body.pol-consumer-mode.route-selection-mode .map-route-choice-strip{bottom:176px!important}
+}
+</style>
+<script id="pol-v715-waze-first-script">
+(()=>{
+  const byId=id=>document.getElementById(id);
+  const PURPLE='#6546d7';
+  const ALT='#9ba3ad';
+  try{document.title='POL | نسخه ۷.۱۵.۰ | Waze-First UX'}catch(_e){}
+
+  /* Copy only the general interaction pattern; keep POL wording and product identity. */
+  const launcherCopy=document.querySelector('#navLauncherButton .nav-launcher-copy b');
+  if(launcherCopy)launcherCopy.textContent='کجا می‌ری؟';
+  const sheetInput=byId('navSheetSearchInput');
+  if(sheetInput)sheetInput.placeholder='کجا می‌ری؟';
+  const mapInput=byId('mapDestinationSearch');
+  if(mapInput)mapInput.placeholder='کجا می‌ری؟';
+  if(byId('mapStartBtn'))byId('mapStartBtn').textContent='بزن بریم';
+
+  function setRouteVisuals(){
+    try{
+      routeLine?.setStyle?.({color:PURPLE,weight:9,opacity:1,lineCap:'round',lineJoin:'round'});
+      const layers=Array.isArray(routeAltLayers)?routeAltLayers:[];
+      layers.forEach(layer=>layer?.setStyle?.({color:ALT,weight:6,opacity:.36,lineCap:'round',lineJoin:'round'}));
+      routeLine?.bringToFront?.();
+    }catch(_e){}
+  }
+
+  function safeSet(id,prop,val){try{if(drive3DMap?.getLayer?.(id))drive3DMap.setPaintProperty(id,prop,val)}catch(_e){}}
+  function setMapLibreVisuals(){
+    if(!drive3DMapLoaded||!drive3DMap)return;
+    safeSet('pol-full-route','line-color','#806de2');
+    safeSet('pol-full-route','line-opacity',.13);
+    safeSet('pol-active-route-halo','line-color','#fff');
+    safeSet('pol-active-route-halo','line-opacity',.98);
+    safeSet('pol-active-route-halo','line-width',['interpolate',['linear'],['zoom'],12,9,15,12,18,15,20,17]);
+    safeSet('pol-active-route','line-color',PURPLE);
+    safeSet('pol-active-route','line-opacity',1);
+    safeSet('pol-active-route','line-width',['interpolate',['linear'],['zoom'],12,5,15,7,18,9.5,20,10.5]);
+    try{
+      const layers=drive3DMap.getStyle?.()?.layers||[];
+      for(const layer of layers){
+        const id=String(layer.id||'');const low=id.toLowerCase();
+        try{
+          if(layer.type==='background')drive3DMap.setPaintProperty(id,'background-color','#eef1f2');
+          if(layer.type==='fill'&&/water/.test(low))drive3DMap.setPaintProperty(id,'fill-color','#d9edf3');
+          if(layer.type==='fill'&&/(park|grass|wood|forest|green)/.test(low))drive3DMap.setPaintProperty(id,'fill-color','#e1f1e7');
+          if(layer.type==='fill'&&/building/.test(low)){
+            drive3DMap.setPaintProperty(id,'fill-color','#e4e8eb');
+            try{drive3DMap.setPaintProperty(id,'fill-opacity',.42)}catch(_e){}
+          }
+          if(layer.type==='symbol'&&/(poi|shop|amenity)/.test(low)){
+            try{drive3DMap.setPaintProperty(id,'icon-opacity',.10)}catch(_e){}
+            try{drive3DMap.setPaintProperty(id,'text-opacity',.17)}catch(_e){}
+          }
+        }catch(_e){}
+      }
+    }catch(_e){}
+  }
+
+  /* Waze-like camera: more road, less cinematic horizon. */
+  if(typeof drive3DPitchForState==='function'){
+    drive3DPitchForState=function(progress,speedKmh=0){
+      const d=typeof nextTurnDistanceAtProgress==='function'?nextTurnDistanceAtProgress(progress):null;
+      const speed=Math.max(0,Number(speedKmh||0));
+      const vp=typeof drive3DViewportProfile==='function'?drive3DViewportProfile():{portrait:true,wide:false};
+      const near=Number.isFinite(Number(d))?Math.max(0,Math.min(1,(220-Number(d))/180)):0;
+      const base=vp.wide?54:(vp.portrait?49:52);
+      return Math.max(42,Math.min(58,base-(4.5*near)+Math.min(2.2,speed/55)));
+    };
+  }
+  if(typeof drive3DZoomForState==='function'){
+    drive3DZoomForState=function(progress,speedKmh=0){
+      const d=typeof nextTurnDistanceAtProgress==='function'?nextTurnDistanceAtProgress(progress):null;
+      const speed=Math.max(0,Number(speedKmh||0));
+      const vp=typeof drive3DViewportProfile==='function'?drive3DViewportProfile():{portrait:true,wide:false};
+      const near=Number.isFinite(Number(d))?Math.max(0,Math.min(1,(520-Number(d))/480)):0;
+      let z=17.7-Math.min(1.15,speed/100*1.15)+(near*.9)+(vp.wide?.28:0);
+      return typeof clamp==='function'?clamp(z+Number(drive3DManualZoomDelta||0),3,19.2):z;
+    };
+  }
+
+  if(typeof installDrive3DRouteLayers==='function'){
+    const core=installDrive3DRouteLayers;
+    installDrive3DRouteLayers=function(){const r=core.apply(this,arguments);setMapLibreVisuals();return r};
+  }
+  if(typeof activateDrive3DMap==='function'){
+    const core=activateDrive3DMap;
+    activateDrive3DMap=async function(){const r=await core.apply(this,arguments);setMapLibreVisuals();return r};
+  }
+  if(typeof renderRouteAlternatives==='function'){
+    const core=renderRouteAlternatives;
+    renderRouteAlternatives=function(){const r=core.apply(this,arguments);setRouteVisuals();return r};
+  }
+  if(typeof selectRouteAlternative==='function'){
+    const core=selectRouteAlternative;
+    selectRouteAlternative=function(){const r=core.apply(this,arguments);setRouteVisuals();return r};
+  }
+
+  function keepArrowOnly(){
+    try{
+      if(typeof forceLeafletArrow==='function')forceLeafletArrow();
+      if(typeof forceDrive3DArrow==='function')forceDrive3DArrow();
+    }catch(_e){}
+  }
+
+  /* Keep voice as the one optional top-side action. */
+  if(byId('driveVoiceBtn')){
+    byId('driveVoiceBtn').title='راهنمای صوتی';
+    byId('driveVoiceBtn').setAttribute('aria-label','راهنمای صوتی');
+  }
+
+  setTimeout(()=>{setRouteVisuals();setMapLibreVisuals();keepArrowOnly()},0);
+  new MutationObserver(()=>{
+    if(document.body.classList.contains('driving-mode')){
+      setMapLibreVisuals();keepArrowOnly();
+    }
+  }).observe(document.body,{attributes:true,attributeFilter:['class']});
+
+  window.POL_WAZE_FIRST_DEBUG=()=>({
+    version:'7.15.0',
+    driving:document.body.classList.contains('driving-mode'),
+    routeColor:PURPLE,
+    renderer:(typeof isDrive3DActive==='function'&&isDrive3DActive())?'maplibre-3d':'leaflet',
+    marker:'cyan-navigation-arrow',
+    footer:'full-width-black-eta',
+    maneuverHeader:'full-width-black',
+    principle:'Waze-first composition; POL identity; no Waze brand assets'
+  });
+})();
+</script>
+
 </body>
 </html>
