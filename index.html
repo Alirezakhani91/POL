@@ -39406,6 +39406,46 @@ body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed{
   body.pol-consumer-mode.driving-mode #turnCard,
   body.pol-consumer-mode.driving-mode #turnCard .turn-arrow{transition:none!important}
 }
+
+
+/* ============================================================
+   v7.11.0 PREMIUM MOTION & CAMERA UX
+   Purpose: motion quality only — no new user-facing feature.
+   ============================================================ */
+
+/* The map should feel continuous rather than animated in pieces. */
+body.pol-premium-motion-ux.driving-mode #drive3dMap .maplibregl-canvas{
+  image-rendering:auto!important;
+}
+body.pol-premium-motion-ux.driving-mode .pol-3d-car-marker{
+  will-change:transform;
+  transform:translateZ(0);
+}
+body.pol-premium-motion-ux.driving-mode .pol-3d-car-shell{
+  box-shadow:
+    0 0 0 2px rgba(37,99,235,.16),
+    0 7px 18px rgba(15,23,42,.22)!important;
+}
+
+/* Camera state changes should not visually compete with guidance. */
+body.pol-premium-motion-ux.driving-mode #turnCard,
+body.pol-premium-motion-ux.driving-mode .nav-bottom-strip,
+body.pol-premium-motion-ux.driving-mode .drive-current-road-bar{
+  backface-visibility:hidden;
+  transform:translateZ(0);
+}
+
+/* Recenter handoff feels intentional instead of abrupt. */
+body.pol-premium-motion-ux.driving-mode #driveRecenterBtn.is-needed{
+  transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease!important;
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.pol-premium-motion-ux.driving-mode #driveRecenterBtn.is-needed{
+    transition:none!important;
+  }
+}
+
 </style>
 
 <script id="pol-v7-10-glance-first-driving-runtime">
@@ -39491,6 +39531,295 @@ body.pol-consumer-mode.driving-mode #driveRecenterBtn.is-needed{
     recenterVisible:!!byId('driveRecenterBtn')?.classList.contains('is-needed'),
     endSheetOpen:endSheet.classList.contains('open'),
     principle:'one glance, one priority, back to the road'
+  });
+})();
+</script>
+
+
+<script id="pol-v7-11-premium-motion-camera-runtime">
+(function(){
+  document.title='POL | نسخه ۷.۱۱.۰ | Premium Motion & Camera UX';
+  document.body.classList.add('pol-premium-motion-ux');
+
+  const smoothStep=(a,b,x)=>{
+    if(!Number.isFinite(Number(x)))return 0;
+    if(a===b)return Number(x)>=b?1:0;
+    const t=Math.max(0,Math.min(1,(Number(x)-a)/(b-a)));
+    return t*t*(3-2*t);
+  };
+
+  /* Continuous zoom curve: no threshold jumps / no "zoom pumping". */
+  drive3DZoomForState=function(progress,speedKmh=0){
+    const d=nextTurnDistanceAtProgress(progress);
+    const speed=Math.max(0,Number(speedKmh||0));
+    const viewport=drive3DViewportProfile();
+
+    const speedZoom=18.08-Math.min(1.46,(speed/105)*1.46);
+    const maneuverInfluence=Number.isFinite(d)
+      ?1-smoothStep(32,620,d)
+      :0;
+    const turnBoost=1.34*maneuverInfluence;
+
+    let zoom=speedZoom+turnBoost;
+    if(viewport.wide)zoom+=.62;
+    else if(viewport.portrait)zoom+=.10;
+
+    return clamp(
+      zoom+Number(drive3DManualZoomDelta||0),
+      3,
+      19.55
+    );
+  };
+
+  /* Pitch also changes continuously. Near a junction the camera becomes a
+     little flatter, making the intersection easier to read without a jump. */
+  drive3DPitchForState=function(progress,speedKmh=0){
+    const d=nextTurnDistanceAtProgress(progress);
+    const speed=Math.max(0,Number(speedKmh||0));
+    const viewport=drive3DViewportProfile();
+
+    const base=viewport.wide?70.5:(viewport.portrait?64.5:67.5);
+    const nearTurn=Number.isFinite(d)
+      ?1-smoothStep(28,190,d)
+      :0;
+    const speedLift=Math.min(1.2,(speed/100)*1.2);
+
+    return clamp(base-(5.3*nearTurn)+speedLift,57,72);
+  };
+
+  /* Stable screen anchor. The vehicle remains low enough to expose the road
+     ahead, but does not bob up/down as camera state changes. */
+  drive3DVehicleOffsetPx=function(){
+    const viewport=drive3DViewportProfile();
+    const ratio=viewport.wide?.175:(viewport.portrait?.215:.195);
+    return -clamp(
+      Math.round(viewport.height*ratio),
+      112,
+      viewport.wide?238:204
+    );
+  };
+
+  /* Adaptive visual smoothing. Poor GPS gets more positional filtering;
+     turns get faster bearing response; zoom/pitch remain deliberately slow. */
+  renderDrive3DSmoothFrame=function(ts){
+    drive3DSmoothFrameId=0;
+
+    if(!isDrive3DActive() || !drive3DSmoothTarget)return;
+    ensureDrive3DSmoothLoop();
+
+    if(manualExploreLock || userManuallyMovedDrivingMap || drive3DUserZooming){
+      drive3DSmoothLastFrameAt=ts;
+      return;
+    }
+
+    const desired=predictedDrive3DRenderState(ts);
+    if(!desired)return;
+
+    const dt=drive3DSmoothLastFrameAt
+      ?Math.min(50,Math.max(8,ts-drive3DSmoothLastFrameAt))
+      :16;
+    drive3DSmoothLastFrameAt=ts;
+
+    const turnDistance=nextTurnDistanceAtProgress(desired.progress);
+    const nearTurn=Number.isFinite(turnDistance)
+      ?1-smoothStep(35,260,turnDistance)
+      :0;
+
+    const gpsAccuracy=Number(realGpsState?.accuracy||0);
+    const realPointTau=isRealGpsMode()
+      ?(gpsAccuracy>35?300:gpsAccuracy>20?240:gpsAccuracy>12?195:165)
+      :72;
+
+    const pointAlpha=drive3DSmoothingAlpha(dt,realPointTau);
+    const bearingTau=isRealGpsMode()
+      ?(175-(55*nearTurn))
+      :(135-(48*nearTurn));
+    const bearingAlpha=drive3DSmoothingAlpha(dt,bearingTau);
+    const zoomAlpha=drive3DSmoothingAlpha(dt,360);
+    const pitchAlpha=drive3DSmoothingAlpha(dt,390);
+    const offsetAlpha=drive3DSmoothingAlpha(dt,300);
+
+    if(!drive3DSmoothVisual){
+      drive3DSmoothVisual={
+        progress:desired.progress,
+        lat:Number(desired.point[0]),
+        lng:Number(desired.point[1]),
+        zoom:desired.zoom,
+        pitch:desired.pitch,
+        bearing:desired.bearing,
+        offsetY:desired.offsetY
+      };
+    }
+
+    drive3DSmoothVisual.progress=drive3DLerpNumber(
+      drive3DSmoothVisual.progress,desired.progress,pointAlpha
+    );
+    drive3DSmoothVisual.lat=drive3DLerpNumber(
+      drive3DSmoothVisual.lat,Number(desired.point[0]),pointAlpha
+    );
+    drive3DSmoothVisual.lng=drive3DLerpNumber(
+      drive3DSmoothVisual.lng,Number(desired.point[1]),pointAlpha
+    );
+    drive3DSmoothVisual.bearing=drive3DLerpBearing(
+      drive3DSmoothVisual.bearing,desired.bearing,bearingAlpha
+    );
+
+    /* Tiny target changes are ignored to remove camera micro-breathing. */
+    if(Math.abs(Number(desired.zoom)-Number(drive3DSmoothVisual.zoom))>.015){
+      drive3DSmoothVisual.zoom=drive3DLerpNumber(
+        drive3DSmoothVisual.zoom,desired.zoom,zoomAlpha
+      );
+    }
+    if(Math.abs(Number(desired.pitch)-Number(drive3DSmoothVisual.pitch))>.08){
+      drive3DSmoothVisual.pitch=drive3DLerpNumber(
+        drive3DSmoothVisual.pitch,desired.pitch,pitchAlpha
+      );
+    }
+    drive3DSmoothVisual.offsetY=drive3DLerpNumber(
+      drive3DSmoothVisual.offsetY,desired.offsetY,offsetAlpha
+    );
+
+    drive3DLastBearing=drive3DSmoothVisual.bearing;
+    drive3DProgrammaticCameraUntil=performance.now()+80;
+
+    try{
+      drive3DMap.jumpTo({
+        center:[drive3DSmoothVisual.lng,drive3DSmoothVisual.lat],
+        zoom:drive3DSmoothVisual.zoom,
+        bearing:headingUpEnabled?drive3DSmoothVisual.bearing:0,
+        pitch:drive3DSmoothVisual.pitch
+      });
+      drive3DMap.panBy([0,drive3DSmoothVisual.offsetY],{
+        animate:false,
+        essential:true
+      });
+    }catch(_e){}
+
+    updateDrive3DCar(
+      [drive3DSmoothVisual.lat,drive3DSmoothVisual.lng],
+      drive3DSmoothVisual.progress,
+      desired.speedKmh
+    );
+  };
+
+  /* Leaflet fallback: let each pan settle before starting the next one.
+     This removes the stop/start feeling on devices without WebGL. */
+  let premiumLeafletCameraAt=0;
+  let premiumLeafletZoomAt=0;
+  updateDrivingCamera=function(progress,currentPoint,speedKmh=0,{force=false}={}){
+    if(!document.body.classList.contains('driving-mode'))return;
+
+    if(isDrive3DActive()){
+      updateDrive3DCamera(progress,currentPoint,speedKmh,{force});
+      return;
+    }
+
+    if((userManuallyMovedDrivingMap || manualExploreLock) && !force)return;
+
+    const now=performance.now();
+    if(!force && now-premiumLeafletCameraAt<175)return;
+    premiumLeafletCameraAt=now;
+
+    const zoom=desiredDrivingZoom(progress,speedKmh);
+    const lookAhead=navigationLookAheadPoint(progress,speedKmh);
+    const target=L.latLng(lookAhead[0],lookAhead[1]);
+
+    applyNavigationHeading(progress,currentPoint,speedKmh,{force});
+
+    try{
+      const current=map.getCenter();
+      const centerDistance=hav([current.lat,current.lng],[target.lat,target.lng]);
+      const currentZoom=Number(map.getZoom()||zoom);
+      const zoomGap=Math.abs(currentZoom-zoom);
+
+      if(force || centerDistance>1200){
+        map.flyTo(target,zoom,{
+          animate:true,
+          duration:force?.38:.46,
+          noMoveStart:true
+        });
+      }else if(centerDistance>8){
+        map.panTo(target,{
+          animate:true,
+          duration:.16,
+          noMoveStart:true
+        });
+      }
+
+      if(
+        zoomGap>.45 &&
+        (force || now-premiumLeafletZoomAt>650)
+      ){
+        map.setZoom(zoom,{animate:true});
+        premiumLeafletZoomAt=now;
+        coreDrivingCameraLastZoom=zoom;
+      }
+    }catch(_e){
+      try{map.setView(target,zoom,{animate:true})}catch(__e){}
+    }
+
+    updateDriveRouteCorridor(progress,speedKmh);
+  };
+
+  /* Recenter is a handoff back to Follow Mode, not a camera teleport. */
+  const originalDrive3DRecenterFromState=drive3DRecenterFromState;
+  drive3DRecenterFromState=function(){
+    if(!isDrive3DActive())return false;
+    try{drive3DMap.stop()}catch(_e){}
+    resumeFollowAfterManualExplore();
+    resetDriveNavigationZoom();
+
+    const s=drive3DCurrentState();
+    const targetZoom=drive3DZoomForState(s.progress,s.speed);
+    const targetPitch=drive3DPitchForState(s.progress,s.speed);
+    const rawBearing=drive3DRouteBearing(s.progress,s.point,s.speed);
+    const targetBearing=headingUpEnabled&&Number.isFinite(Number(rawBearing))
+      ?Number(rawBearing):0;
+
+    /* Seed the smoothing state from the current visual pose so returning to
+       navigation glides naturally from wherever the user explored. */
+    try{
+      const c=drive3DMap.getCenter();
+      drive3DSmoothVisual={
+        progress:Number(s.progress||0),
+        lat:Number(c.lat),
+        lng:Number(c.lng),
+        zoom:Number(drive3DMap.getZoom()||targetZoom),
+        pitch:Number(drive3DMap.getPitch()||targetPitch),
+        bearing:Number(drive3DMap.getBearing()||targetBearing),
+        offsetY:0
+      };
+    }catch(_e){
+      drive3DSmoothVisual=null;
+    }
+
+    drive3DSmoothLastFrameAt=0;
+    setDrive3DSmoothTarget({
+      progress:s.progress,
+      point:s.point,
+      speedKmh:s.speed,
+      zoom:targetZoom,
+      pitch:targetPitch,
+      bearing:targetBearing,
+      offsetY:drive3DVehicleOffsetPx(),
+      force:false
+    });
+    return true;
+  };
+
+  window.POL_PREMIUM_MOTION_DEBUG=()=>({
+    version:'7.11.0',
+    renderer:isDrive3DActive()?'maplibre-3d':'leaflet',
+    driving:document.body.classList.contains('driving-mode'),
+    followPaused:!!(manualExploreLock||userManuallyMovedDrivingMap),
+    zoomDelta:Number(drive3DManualZoomDelta||0),
+    smoothTarget:drive3DSmoothTarget?{
+      progress:Number(drive3DSmoothTarget.progress||0),
+      zoom:Number(drive3DSmoothTarget.zoom||0),
+      pitch:Number(drive3DSmoothTarget.pitch||0),
+      bearing:Number(drive3DSmoothTarget.bearing||0)
+    }:null,
+    principle:'continuous motion, stable scale, calm camera'
   });
 })();
 </script>
