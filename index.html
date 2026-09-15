@@ -39824,5 +39824,329 @@ body.pol-premium-motion-ux.driving-mode #driveRecenterBtn.is-needed{
 })();
 </script>
 
+
+<style id="pol-v7-12-map-readability-style">
+/* ============================================================
+   v7.12.0 MAP READABILITY & VISUAL CALM
+   Purpose: make the route visually obvious without adding UI.
+   ============================================================ */
+
+/* Raster fallback / route-selection map: lower visual noise, keep labels readable. */
+body.pol-map-calm-ux #map .leaflet-tile-pane{
+  filter:saturate(.72) contrast(.94) brightness(1.055)!important;
+}
+body.pol-map-calm-ux.route-selection-mode #map .leaflet-tile-pane{
+  filter:saturate(.68) contrast(.93) brightness(1.065)!important;
+}
+body.pol-map-calm-ux.driving-mode:not(.drive-3d-active) #map .leaflet-tile-pane{
+  filter:saturate(.64) contrast(.92) brightness(1.07)!important;
+}
+
+/* Active route is the only strong map color. */
+body.pol-map-calm-ux.driving-mode .drive-route-corridor-halo{
+  stroke:#ffffff!important;
+  stroke-opacity:.95!important;
+  stroke-width:13!important;
+}
+body.pol-map-calm-ux.driving-mode .drive-route-corridor-line{
+  stroke:#236fd3!important;
+  stroke-opacity:1!important;
+  stroke-width:8!important;
+  filter:drop-shadow(0 3px 4px rgba(35,111,211,.18))!important;
+}
+
+/* Endpoint markers: visible but not oversized. */
+.pol-calm-destination-3d{
+  width:34px;
+  height:42px;
+  display:grid;
+  place-items:start center;
+  pointer-events:none;
+  filter:drop-shadow(0 5px 9px rgba(15,23,42,.25));
+}
+.pol-calm-destination-pin{
+  position:relative;
+  width:28px;
+  height:28px;
+  border-radius:50% 50% 50% 0;
+  transform:rotate(-45deg);
+  background:#ef4444;
+  border:3px solid #fff;
+  box-shadow:0 0 0 2px rgba(239,68,68,.12);
+}
+.pol-calm-destination-pin::after{
+  content:"";
+  position:absolute;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#fff;
+  left:7px;
+  top:7px;
+}
+
+/* Car is dominant, but leaves enough route visible underneath it. */
+body.pol-map-calm-ux.driving-mode .pol-3d-car-marker{
+  width:44px!important;
+  height:44px!important;
+}
+body.pol-map-calm-ux.driving-mode .pol-3d-car-shell{
+  width:40px!important;
+  height:40px!important;
+  border-width:3px!important;
+  box-shadow:
+    0 0 0 2px rgba(35,111,211,.17),
+    0 7px 16px rgba(15,23,42,.22)!important;
+}
+body.pol-map-calm-ux.driving-mode .pol-3d-car-arrow{
+  border-left-width:9px!important;
+  border-right-width:9px!important;
+  border-bottom-width:23px!important;
+  border-bottom-color:#2897d1!important;
+}
+
+/* One coherent POL blue language — old purple road pill removed. */
+body.pol-map-calm-ux.driving-mode.drive-3d-active .drive-current-road-bar{
+  background:rgba(35,111,211,.96)!important;
+  border:1px solid rgba(255,255,255,.32)!important;
+  box-shadow:0 8px 21px rgba(35,111,211,.22)!important;
+}
+
+/* Controls remain visible but visually secondary to route and maneuver. */
+body.pol-map-calm-ux.driving-mode #map .leaflet-control-zoom,
+body.pol-map-calm-ux.drive-3d-active #drive3dMap .maplibregl-ctrl-group{
+  opacity:.72!important;
+}
+body.pol-map-calm-ux.driving-mode #map .leaflet-control-zoom:hover,
+body.pol-map-calm-ux.drive-3d-active #drive3dMap .maplibregl-ctrl-group:hover{
+  opacity:1!important;
+}
+
+@media(max-width:430px){
+  body.pol-map-calm-ux.driving-mode .pol-3d-car-marker{
+    width:42px!important;
+    height:42px!important;
+  }
+  body.pol-map-calm-ux.driving-mode .pol-3d-car-shell{
+    width:38px!important;
+    height:38px!important;
+  }
+  .pol-calm-destination-3d{transform:scale(.94)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.pol-map-calm-ux #map .leaflet-tile-pane{transition:none!important}
+}
+</style>
+
+
+<script id="pol-v7-12-map-readability-runtime">
+(function(){
+  document.title='POL | نسخه ۷.۱۲.۰ | Map Readability & Visual Calm';
+  document.body.classList.add('pol-map-calm-ux');
+
+  let calmDestination3D=null;
+  let calmStyleAppliedAt=0;
+
+  function safeSetPaint(layerId,prop,value){
+    try{
+      if(drive3DMap?.getLayer?.(layerId))drive3DMap.setPaintProperty(layerId,prop,value);
+    }catch(_e){}
+  }
+
+  function layerHasText(layer){
+    try{return !!layer?.layout?.['text-field']}catch(_e){return false}
+  }
+
+  function calmMapLibreBasemap(){
+    if(!drive3DMapLoaded || !drive3DMap)return;
+    const now=Date.now();
+    if(now-calmStyleAppliedAt<350)return;
+    calmStyleAppliedAt=now;
+
+    let layers=[];
+    try{layers=drive3DMap.getStyle()?.layers||[]}catch(_e){return}
+
+    for(const layer of layers){
+      const id=String(layer?.id||'');
+      const low=id.toLowerCase();
+      if(!id || id.startsWith('pol-'))continue;
+
+      if(layer.type==='symbol'){
+        const poi=/(poi|amenity|shop|hospital|school|park|transit|station|airport|aeroway|housenumber|house-number)/.test(low);
+        const road=/(road|street|highway|motorway|trunk|primary|secondary|tertiary|path)/.test(low);
+        const place=/(place|city|town|village|suburb|neighbourhood|neighborhood|settlement)/.test(low);
+
+        if(poi){
+          safeSetPaint(id,'icon-opacity',.08);
+          if(layerHasText(layer))safeSetPaint(id,'text-opacity',.12);
+        }else if(road){
+          safeSetPaint(id,'icon-opacity',.40);
+          if(layerHasText(layer)){
+            safeSetPaint(id,'text-opacity',.82);
+            safeSetPaint(id,'text-color','#4f6072');
+            safeSetPaint(id,'text-halo-color','rgba(250,252,254,.94)');
+            safeSetPaint(id,'text-halo-width',1.15);
+          }
+        }else if(place){
+          safeSetPaint(id,'icon-opacity',.28);
+          if(layerHasText(layer))safeSetPaint(id,'text-opacity',.46);
+        }else{
+          safeSetPaint(id,'icon-opacity',.18);
+          if(layerHasText(layer))safeSetPaint(id,'text-opacity',.30);
+        }
+      }else if(layer.type==='fill' && /(building)/.test(low)){
+        safeSetPaint(id,'fill-opacity',.24);
+      }else if(layer.type==='fill-extrusion'){
+        safeSetPaint(id,'fill-extrusion-opacity',.12);
+      }
+    }
+  }
+
+  function calmRouteLayers3D(){
+    if(!drive3DMapLoaded || !drive3DMap)return;
+    try{
+      if(drive3DMap.getLayer('pol-full-route')){
+        drive3DMap.setPaintProperty('pol-full-route','line-color','#4f86bf');
+        drive3DMap.setPaintProperty('pol-full-route','line-opacity',.16);
+        drive3DMap.setPaintProperty('pol-full-route','line-width',[
+          'interpolate',['linear'],['zoom'],
+          12,3.2,15,4.2,18,5.4,20,6.2
+        ]);
+      }
+      if(drive3DMap.getLayer('pol-active-route-halo')){
+        drive3DMap.setPaintProperty('pol-active-route-halo','line-color','#ffffff');
+        drive3DMap.setPaintProperty('pol-active-route-halo','line-opacity',.96);
+        drive3DMap.setPaintProperty('pol-active-route-halo','line-width',[
+          'interpolate',['linear'],['zoom'],
+          12,10,15,12.5,18,15.5,20,17
+        ]);
+      }
+      if(drive3DMap.getLayer('pol-active-route')){
+        drive3DMap.setPaintProperty('pol-active-route','line-color','#236fd3');
+        drive3DMap.setPaintProperty('pol-active-route','line-opacity',1);
+        drive3DMap.setPaintProperty('pol-active-route','line-width',[
+          'interpolate',['linear'],['zoom'],
+          12,5.5,15,7.2,18,9.2,20,10.2
+        ]);
+      }
+    }catch(_e){}
+  }
+
+  function removeCalmDestination3D(){
+    if(!calmDestination3D)return;
+    try{calmDestination3D.remove()}catch(_e){}
+    calmDestination3D=null;
+  }
+
+  function syncCalmDestination3D(){
+    if(!isDrive3DActive?.() || !drive3DMap || !window.maplibregl){
+      removeCalmDestination3D();
+      return;
+    }
+    const lat=Number(navDestination?.lat);
+    const lng=Number(navDestination?.lng);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng)){
+      removeCalmDestination3D();
+      return;
+    }
+    if(!calmDestination3D){
+      const el=document.createElement('div');
+      el.className='pol-calm-destination-3d';
+      el.setAttribute('aria-hidden','true');
+      el.innerHTML='<div class="pol-calm-destination-pin"></div>';
+      calmDestination3D=new maplibregl.Marker({
+        element:el,
+        anchor:'bottom',
+        rotationAlignment:'viewport',
+        pitchAlignment:'viewport'
+      }).setLngLat([lng,lat]).addTo(drive3DMap);
+    }else{
+      calmDestination3D.setLngLat([lng,lat]);
+    }
+  }
+
+  function calmLeafletRoutePresentation(){
+    try{
+      if(routeLine && !document.body.classList.contains('driving-mode')){
+        routeLine.setStyle({color:'#236fd3',weight:8,opacity:1});
+      }
+      const layers=Array.isArray(routeAltLayers)?routeAltLayers:[];
+      layers.forEach(layer=>{
+        if(!layer?.setStyle)return;
+        const currentOpacity=Number(layer.options?.opacity);
+        if(currentOpacity>.01){
+          layer.setStyle({color:'#77899b',weight:5,opacity:.30});
+        }
+      });
+    }catch(_e){}
+  }
+
+  /* Route-layer install is the safest hook: style is already loaded. */
+  if(typeof installDrive3DRouteLayers==='function'){
+    const coreInstallDrive3DRouteLayers=installDrive3DRouteLayers;
+    installDrive3DRouteLayers=function(){
+      const result=coreInstallDrive3DRouteLayers.apply(this,arguments);
+      calmMapLibreBasemap();
+      calmRouteLayers3D();
+      syncCalmDestination3D();
+      return result;
+    };
+  }
+
+  if(typeof activateDrive3DMap==='function'){
+    const coreActivateDrive3DMap=activateDrive3DMap;
+    activateDrive3DMap=async function(){
+      const result=await coreActivateDrive3DMap.apply(this,arguments);
+      if(result){
+        calmMapLibreBasemap();
+        calmRouteLayers3D();
+        syncCalmDestination3D();
+      }
+      return result;
+    };
+  }
+
+  if(typeof renderRouteAlternatives==='function'){
+    const coreRenderRouteAlternatives=renderRouteAlternatives;
+    renderRouteAlternatives=function(){
+      const result=coreRenderRouteAlternatives.apply(this,arguments);
+      calmLeafletRoutePresentation();
+      return result;
+    };
+  }
+
+  if(typeof renderNavMarkers==='function'){
+    const coreRenderNavMarkers=renderNavMarkers;
+    renderNavMarkers=function(){
+      const result=coreRenderNavMarkers.apply(this,arguments);
+      calmLeafletRoutePresentation();
+      syncCalmDestination3D();
+      return result;
+    };
+  }
+
+  /* No permanent style observer is used here. MapLibre emits styledata for
+     every paint change; observing that event would create needless churn.
+     The activation + route-layer hooks above are deterministic and enough. */
+
+  new MutationObserver(()=>{
+    if(!document.body.classList.contains('driving-mode'))removeCalmDestination3D();
+    else if(isDrive3DActive?.())syncCalmDestination3D();
+  }).observe(document.body,{attributes:true,attributeFilter:['class']});
+
+  calmLeafletRoutePresentation();
+
+  window.POL_MAP_READABILITY_DEBUG=()=>({
+    version:'7.12.0',
+    renderer:isDrive3DActive?.()?'maplibre-3d':'leaflet',
+    driving:document.body.classList.contains('driving-mode'),
+    destinationVisible:!!calmDestination3D,
+    routeColor:'#236fd3',
+    principle:'quiet basemap, obvious route, clear vehicle and destination'
+  });
+})();
+</script>
+
 </body>
 </html>
